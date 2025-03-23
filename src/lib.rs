@@ -129,4 +129,12 @@ mod tests {
         }
         assert_eq!(dp.range(), Some((12,125)));
     }
+    #[test]
+    fn dicepool_count_roll_works() {
+        let some_rolls: &[u8] = &[2,1,1,2,1,1,2];
+        let dp: DicePool = some_rolls.into();
+        assert_eq!(dp.count_roll(2), 3);
+        assert_eq!(dp.count_roll(1), 4);
+        assert_eq!(dp.count_roll(6), 0);
+    }
 }

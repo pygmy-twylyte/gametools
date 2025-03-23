@@ -100,4 +100,8 @@ impl DicePool {
 
         Some((*min, *max))
     }
+    /// Counts the number of times a particular value was rolled in the pool
+    pub fn count_roll(&self, value: u8) -> usize {
+        self.rolls.iter().filter(|&r| *r == value).count()
+    }
 }
