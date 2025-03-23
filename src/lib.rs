@@ -105,8 +105,8 @@ mod tests {
         for roll in some_rolls {
             dp.add_roll(roll);
         }
-        dp.buff(3);
-        assert_eq!(dp.results(), [4u8, 5, 6, 255]);
+        let buffed_dp = dp.buff(3);
+        assert_eq!(buffed_dp.results(), [4u8, 5, 6, 255]);
     }
     #[test]
     fn dicepool_nerf_works() {
@@ -115,8 +115,8 @@ mod tests {
         for roll in some_rolls {
             dp.add_roll(roll);
         }
-        dp.nerf(2);
-        assert_eq!(dp.results(), [0u8, 0, 1]);
+        let nerfed_pool = dp.nerf(2);
+        assert_eq!(nerfed_pool.results(), [0u8, 0, 1]);
     }
     #[test]
     fn dicepool_range_works() {

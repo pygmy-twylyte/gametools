@@ -41,9 +41,7 @@ impl From<&[u8]> for DicePool {
 }
 impl From<Vec<u8>> for DicePool {
     fn from(rolls: Vec<u8>) -> Self {
-        Self {
-            rolls,
-        }
+        Self { rolls }
     }
 }
 impl DicePool {
@@ -70,32 +68,48 @@ impl DicePool {
         self.rolls.len()
     }
     /// Adds a buff / bonus to all rolls in the pool, with a maximum of 255 (u8_max).
-    pub fn buff(&mut self, bonus: u8) {
-        self.rolls = self
+    pub fn buff(&self, bonus: u8) -> Self {
+        let buffed_rolls = self
             .rolls
-            .iter_mut()
+            .iter()
             .map(|roll| roll.saturating_add(bonus))
             .collect::<Vec<u8>>();
+        
+        Self {
+            rolls: buffed_rolls,
+        }
     }
     /// Nerfs / reduces all rolls in the pool by the specified amount
     /// with a minimum of zero.
-    pub fn nerf(&mut self, penalty: u8) {
-        self.rolls = self.rolls.iter_mut().map(|roll| roll.saturating_sub(penalty)).collect::<Vec<u8>>();
+    pub fn nerf(&mut self, penalty: u8) -> Self {
+        let nerfed_rolls = self
+            .rolls
+            .iter_mut()
+            .map(|roll| roll.saturating_sub(penalty))
+            .collect::<Vec<u8>>();
+
+        Self {
+            rolls: nerfed_rolls,
+        }
     }
 
-    /// Returns an Option tuple with Some(min, max) of the rolls in the pool, or None if the pool is empty
+    /// Returns an tuple in an Option::Some((min, max)) of the rolls in the pool, or None if the pool is empty
     /// or no minimum or maximum can be determined.
     pub fn range(&self) -> Option<(u8, u8)> {
         if self.rolls.is_empty() {
-            return None
+            return None;
         }
         let max = match self.rolls.iter().max() {
             Some(roll) => roll,
-            None => { return None; },
+            None => {
+                return None;
+            }
         };
         let min = match self.rolls.iter().min() {
             Some(roll) => roll,
-            None => { return None; },
+            None => {
+                return None;
+            }
         };
 
         Some((*min, *max))
