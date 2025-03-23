@@ -15,7 +15,7 @@ impl Die {
         rand::random_range(1..=self.sides)
     }
     /// Rolls the die multiple times and returns results as a DicePool.
-    pub fn roll_many(&self, times: u64) -> DicePool {
+    pub fn roll_n(&self, times: u64) -> DicePool {
         DicePool {
             rolls: (0..times).map(|_| self.roll()).collect(),
         }
