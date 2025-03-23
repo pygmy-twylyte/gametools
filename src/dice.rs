@@ -74,7 +74,7 @@ impl DicePool {
             .iter()
             .map(|roll| roll.saturating_add(bonus))
             .collect::<Vec<u8>>();
-        
+
         Self {
             rolls: buffed_rolls,
         }
@@ -117,5 +117,21 @@ impl DicePool {
     /// Counts the number of times a particular value was rolled in the pool
     pub fn count_roll(&self, value: u8) -> usize {
         self.rolls.iter().filter(|&r| *r == value).count()
+    }
+
+    /// Returns a new pool with only the highest scoring 'n' rolls, discarding the rest.
+    /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
+    /// unchanged pool is returned. 
+    pub fn take_highest(&self, count: usize) -> Self {
+        match count {
+            0 => DicePool::new(),
+            _ if count < self.size() => {
+                let mut best_rolls = self.rolls.clone();
+                best_rolls.sort_by(|a, b| b.cmp(a));
+                best_rolls.truncate(count);
+                best_rolls.into()
+            } 
+            _ => self.clone(),
+        }
     }
 }

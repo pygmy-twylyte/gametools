@@ -137,4 +137,18 @@ mod tests {
         assert_eq!(dp.count_roll(1), 4);
         assert_eq!(dp.count_roll(6), 0);
     }
+    #[test]
+    fn dicepool_take_highest_works() {
+        let some_rolls = vec![5,4,3,2,1u8];
+        let dp: DicePool = some_rolls.into();
+
+        let take_3 = dp.take_highest(3);
+        assert_eq!(take_3.results(), [5,4,3]);
+
+        let take_0 = dp.take_highest(0);
+        assert_eq!(take_0.results(), []);
+
+        let take_too_many = dp.take_highest(1_000_000);
+        assert_eq!(take_too_many.results(), [5,4,3,2,1])
+    }
 }
