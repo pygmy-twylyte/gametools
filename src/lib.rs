@@ -35,4 +35,41 @@ mod tests {
             assert!(*value_rolled, "value {} was never rolled on a d20", i + 1);
         }
     }
+    #[test]
+    fn die_roll_many_returns_correct_dicepool() {
+        let d6 = Die::new(6);
+        let d6_pool = d6.roll_many(20);
+        let rolls = d6_pool.results();
+        // checks right number of rolls and that all are in expected range
+        assert_eq!(rolls.len(), 20);
+        for roll in rolls {
+            assert!(
+                (1..=6).contains(roll),
+                "DicePool contained invalid d6 roll ({})",
+                roll
+            );
+        }
+    }
+    #[test]
+    fn create_empty_dicepool() {
+        let dp = DicePool::new();
+        let rolls = dp.results();
+        assert!(rolls.is_empty(), "new dicepool did not have empty results!")
+    }
+    #[test]
+    fn add_roll_to_dicepool() {
+        let mut dp = DicePool::new();
+        dp.add_die(1);
+        assert_eq!(dp.results().len(), 1);
+        assert_eq!(dp.results(), [1u8]);
+    }
+    #[test]
+    fn sum_rolls_in_dicepool() {
+        let some_rolls = [1u8, 2, 3, 4];
+        let mut dp = DicePool::new();
+        for roll in some_rolls {
+            dp.add_die(roll);
+        }
+        assert_eq!(dp.sum(), 10);
+    }
 }
