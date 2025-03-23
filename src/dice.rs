@@ -6,7 +6,7 @@ pub struct Die {
     pub sides: u8,
 }
 impl Die {
-    /// Creates a new die with the specified number of sides, up to 256 (u8). 
+    /// Creates a new die with the specified number of sides, up to 256 (u8).
     pub fn new(sides: u8) -> Die {
         Die { sides }
     }
@@ -17,7 +17,7 @@ impl Die {
     /// Rolls the die multiple times and returns results as a DicePool.
     pub fn roll_many(&self, times: u64) -> DicePool {
         DicePool {
-            rolls: (0..times).map(|_| self.roll()).collect()
+            rolls: (0..times).map(|_| self.roll()).collect(),
         }
     }
 }
@@ -26,6 +26,11 @@ impl Die {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DicePool {
     rolls: Vec<u8>,
+}
+impl Default for DicePool {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl DicePool {
     /// Creates a new, empty DicePool
@@ -38,12 +43,47 @@ impl DicePool {
     pub fn results(&self) -> &[u8] {
         &self.rolls
     }
-    /// Adds a roll to the pool.
-    pub fn add_die(&mut self, roll: u8) {
+    /// Adds a roll (u8) to the pool.
+    pub fn add_roll(&mut self, roll: u8) {
         self.rolls.push(roll)
     }
-    /// Returns sum of all die rolls in this pool.
+    /// Returns sum of all die rolls in the pool.
     pub fn sum(&self) -> u64 {
         self.rolls.iter().map(|x| *x as u64).sum()
+    }
+    /// Returns number of die rolls in the pool.
+    pub fn size(&self) -> usize {
+        self.rolls.len()
+    }
+    /// Adds a buff / bonus to all rolls in the pool, with a maximum of 255 (u8_max).
+    pub fn buff(&mut self, bonus: u8) {
+        self.rolls = self
+            .rolls
+            .iter_mut()
+            .map(|roll| roll.saturating_add(bonus))
+            .collect::<Vec<u8>>();
+    }
+    /// Nerfs / reduces all rolls in the pool by the specified amount
+    /// with a minimum of zero.
+    pub fn nerf(&mut self, penalty: u8) {
+        self.rolls = self.rolls.iter_mut().map(|roll| roll.saturating_sub(penalty)).collect::<Vec<u8>>();
+    }
+
+    /// Returns an Option tuple with Some(min, max) of the rolls in the pool, or None if the pool is empty
+    /// or no minimum or maximum can be determined.
+    pub fn range(&self) -> Option<(u8, u8)> {
+        if self.rolls.is_empty() {
+            return None
+        }
+        let max = match self.rolls.iter().max() {
+            Some(roll) => roll,
+            None => { return None; },
+        };
+        let min = match self.rolls.iter().min() {
+            Some(roll) => roll,
+            None => { return None; },
+        };
+
+        Some((*min, *max))
     }
 }

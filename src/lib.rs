@@ -59,17 +59,56 @@ mod tests {
     #[test]
     fn add_roll_to_dicepool() {
         let mut dp = DicePool::new();
-        dp.add_die(1);
+        dp.add_roll(1);
         assert_eq!(dp.results().len(), 1);
         assert_eq!(dp.results(), [1u8]);
+    }
+    #[test]
+    fn dicepool_size_is_correct() {
+        let mut dp = DicePool::new();
+        assert_eq!(dp.size(), 0);
+        dp.add_roll(21);
+        dp.add_roll(12);
+        assert_eq!(dp.size(), 2);
     }
     #[test]
     fn sum_rolls_in_dicepool() {
         let some_rolls = [1u8, 2, 3, 4];
         let mut dp = DicePool::new();
         for roll in some_rolls {
-            dp.add_die(roll);
+            dp.add_roll(roll);
         }
         assert_eq!(dp.sum(), 10);
+    }
+    #[test]
+    fn dicepool_buff_works() {
+        let some_rolls = [1u8, 2, 3];
+        let mut dp = DicePool::new();
+        for roll in some_rolls {
+            dp.add_roll(roll);
+        }
+        dp.buff(3);
+        assert_eq!(dp.results(), [4u8, 5, 6]);
+    }
+    #[test]
+    fn dicepool_nerf_works() {
+        let some_rolls = [1u8, 2, 3];
+        let mut dp = DicePool::new();
+        for roll in some_rolls {
+            dp.add_roll(roll);
+        }
+        dp.nerf(2);
+        assert_eq!(dp.results(), [0u8, 0, 1]);
+    }
+    #[test]
+    fn dicepool_range_works() {
+        let mut dp = DicePool::new();
+        assert_eq!(dp.range(), None);
+
+        let some_rolls = [21, 12, 90, 125];
+        for roll in some_rolls {
+            dp.add_roll(roll);
+        }
+        assert_eq!(dp.range(), Some((12,125)));
     }
 }
