@@ -32,6 +32,20 @@ impl Default for DicePool {
         Self::new()
     }
 }
+impl From<&[u8]> for DicePool {
+    fn from(rolls: &[u8]) -> Self {
+        Self {
+            rolls: rolls.to_vec(),
+        }
+    }
+}
+impl From<Vec<u8>> for DicePool {
+    fn from(rolls: Vec<u8>) -> Self {
+        Self {
+            rolls,
+        }
+    }
+}
 impl DicePool {
     /// Creates a new, empty DicePool
     pub fn new() -> DicePool {

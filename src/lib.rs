@@ -57,6 +57,24 @@ mod tests {
         assert!(rolls.is_empty(), "new dicepool did not have empty results!")
     }
     #[test]
+    fn create_dicepool_from_slice() {
+        let some_rolls: &[u8] = &[21,12];
+        let pool_from_slice: DicePool = some_rolls.into();
+        let mut test_pool = DicePool::new();
+        test_pool.add_roll(21);
+        test_pool.add_roll(12);
+        assert_eq!(pool_from_slice, test_pool);
+    }
+    #[test]
+    fn create_dicepool_from_vec_u8() {
+        let some_rolls: Vec<u8> = vec![21u8,12];
+        let pool_from_vec: DicePool = some_rolls.into();
+        let mut test_pool = DicePool::new();
+        test_pool.add_roll(21);
+        test_pool.add_roll(12);
+        assert_eq!(pool_from_vec, test_pool);
+    }
+    #[test]
     fn add_roll_to_dicepool() {
         let mut dp = DicePool::new();
         dp.add_roll(1);
@@ -82,13 +100,13 @@ mod tests {
     }
     #[test]
     fn dicepool_buff_works() {
-        let some_rolls = [1u8, 2, 3];
+        let some_rolls = [1u8, 2, 3, 255];
         let mut dp = DicePool::new();
         for roll in some_rolls {
             dp.add_roll(roll);
         }
         dp.buff(3);
-        assert_eq!(dp.results(), [4u8, 5, 6]);
+        assert_eq!(dp.results(), [4u8, 5, 6, 255]);
     }
     #[test]
     fn dicepool_nerf_works() {
