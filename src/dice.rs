@@ -81,10 +81,10 @@ impl DicePool {
     }
     /// Nerfs / reduces all rolls in the pool by the specified amount
     /// with a minimum of zero.
-    pub fn nerf(&mut self, penalty: u8) -> Self {
+    pub fn nerf(&self, penalty: u8) -> Self {
         let nerfed_rolls = self
             .rolls
-            .iter_mut()
+            .iter()
             .map(|roll| roll.saturating_sub(penalty))
             .collect::<Vec<u8>>();
 
@@ -119,7 +119,7 @@ impl DicePool {
         self.rolls.iter().filter(|&r| *r == value).count()
     }
 
-    /// Returns a new pool with only the highest scoring 'n' rolls, discarding the rest.
+    /// Returns a new pool with only the highest-scoring 'n' rolls, discarding the rest.
     /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
     /// unchanged pool is returned. 
     pub fn take_highest(&self, count: usize) -> Self {
@@ -127,7 +127,23 @@ impl DicePool {
             0 => DicePool::new(),
             _ if count < self.size() => {
                 let mut best_rolls = self.rolls.clone();
-                best_rolls.sort_by(|a, b| b.cmp(a));
+                best_rolls.sort_unstable_by(|a, b| b.cmp(a));
+                best_rolls.truncate(count);
+                best_rolls.into()
+            } 
+            _ => self.clone(),
+        }
+    }
+
+    /// Returns a new pool with only the lowest-scoring 'n' rolls, discarding the rest.
+    /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
+    /// unchanged pool is returned. 
+    pub fn take_lowest(&self, count: usize) -> Self {
+        match count {
+            0 => DicePool::new(),
+            _ if count < self.size() => {
+                let mut best_rolls = self.rolls.clone();
+                best_rolls.sort_unstable();
                 best_rolls.truncate(count);
                 best_rolls.into()
             } 
