@@ -10,6 +10,7 @@ mod tests {
 
         assert_eq!(d, Die { sides: 6 });
     }
+
     #[test]
     fn die_rolls_are_in_range() {
         let d4 = Die::new(4);
@@ -24,6 +25,7 @@ mod tests {
             assert!((1..=20).contains(&roll), "d20.roll() returned {}", roll);
         }
     }
+
     #[test]
     fn die_rolls_cover_all_sides() {
         let d20 = Die::new(20);
@@ -35,6 +37,7 @@ mod tests {
             assert!(*value_rolled, "value {} was never rolled on a d20", i + 1);
         }
     }
+
     #[test]
     fn die_roll_n_returns_correct_dicepool() {
         let d6 = Die::new(6);
@@ -50,12 +53,14 @@ mod tests {
             );
         }
     }
+
     #[test]
     fn create_empty_dicepool() {
         let dp = DicePool::new();
         let rolls = dp.results();
         assert!(rolls.is_empty(), "new dicepool did not have empty results!")
     }
+
     #[test]
     fn create_dicepool_from_slice() {
         let some_rolls: &[u8] = &[21, 12];
@@ -65,6 +70,7 @@ mod tests {
         test_pool.add_roll(12);
         assert_eq!(pool_from_slice, test_pool);
     }
+
     #[test]
     fn create_dicepool_from_vec_u8() {
         let some_rolls: Vec<u8> = vec![21u8, 12];
@@ -74,6 +80,7 @@ mod tests {
         test_pool.add_roll(12);
         assert_eq!(pool_from_vec, test_pool);
     }
+
     #[test]
     fn add_roll_to_dicepool() {
         let mut dp = DicePool::new();
@@ -81,6 +88,7 @@ mod tests {
         assert_eq!(dp.results().len(), 1);
         assert_eq!(dp.results(), [1u8]);
     }
+
     #[test]
     fn dicepool_size_is_correct() {
         let mut dp = DicePool::new();
@@ -89,6 +97,7 @@ mod tests {
         dp.add_roll(12);
         assert_eq!(dp.size(), 2);
     }
+
     #[test]
     fn sum_rolls_in_dicepool() {
         let some_rolls = [1u8, 2, 3, 4];
@@ -98,6 +107,7 @@ mod tests {
         }
         assert_eq!(dp.sum(), 10);
     }
+
     #[test]
     fn dicepool_buff_works() {
         let some_rolls = [1u8, 2, 3, 255];
@@ -108,6 +118,7 @@ mod tests {
         let buffed_dp = dp.buff(3);
         assert_eq!(buffed_dp.results(), [4u8, 5, 6, 255]);
     }
+
     #[test]
     fn dicepool_nerf_works() {
         let some_rolls = [1u8, 2, 3];
@@ -118,6 +129,7 @@ mod tests {
         let nerfed_pool = dp.nerf(2);
         assert_eq!(nerfed_pool.results(), [0u8, 0, 1]);
     }
+
     #[test]
     fn dicepool_range_works() {
         let mut dp = DicePool::new();
@@ -129,6 +141,7 @@ mod tests {
         }
         assert_eq!(dp.range(), Some((12, 125)));
     }
+    
     #[test]
     fn dicepool_count_roll_works() {
         let some_rolls: &[u8] = &[2, 1, 1, 2, 1, 1, 2];
@@ -137,6 +150,7 @@ mod tests {
         assert_eq!(dp.count_roll(1), 4);
         assert_eq!(dp.count_roll(6), 0);
     }
+
     #[test]
     fn dicepool_take_highest_works() {
         let some_rolls = vec![5, 3, 2, 4, 1u8];
@@ -151,6 +165,7 @@ mod tests {
         let take_too_many = dp.take_highest(1_000_000);
         assert_eq!(take_too_many.results(), [5, 3, 2, 4, 1])
     }
+
     #[test]
     fn dicepool_take_lowest_works() {
         let some_rolls = vec![5, 2, 1, 3, 4u8];
@@ -165,6 +180,7 @@ mod tests {
         let take_too_many = dp.take_lowest(1_000_000);
         assert_eq!(take_too_many.results(), [5, 2, 1, 3, 4])
     }
+
     #[test]
     fn dicepool_reroll_if_replaces_values_correctly() {
         let one_sided_die = Die::new(1); // always rolls a 1
