@@ -121,7 +121,7 @@ impl DicePool {
 
     /// Returns a new pool with only the highest-scoring 'n' rolls, discarding the rest.
     /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
-    /// unchanged pool is returned. 
+    /// unchanged pool is returned.
     pub fn take_highest(&self, count: usize) -> Self {
         match count {
             0 => DicePool::new(),
@@ -130,14 +130,14 @@ impl DicePool {
                 best_rolls.sort_unstable_by(|a, b| b.cmp(a));
                 best_rolls.truncate(count);
                 best_rolls.into()
-            } 
+            }
             _ => self.clone(),
         }
     }
 
     /// Returns a new pool with only the lowest-scoring 'n' rolls, discarding the rest.
     /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
-    /// unchanged pool is returned. 
+    /// unchanged pool is returned.
     pub fn take_lowest(&self, count: usize) -> Self {
         match count {
             0 => DicePool::new(),
@@ -146,8 +146,22 @@ impl DicePool {
                 best_rolls.sort_unstable();
                 best_rolls.truncate(count);
                 best_rolls.into()
-            } 
+            }
             _ => self.clone(),
         }
     }
-}
+
+    /// Rerolls any die that meets a predicate criteria
+    pub fn reroll_if<F>(&self, die: &Die, predicate: F) -> DicePool
+    where
+        F: Fn(u8) -> bool,
+    {
+        let rerolled: Vec<u8> = self
+            .rolls
+            .iter()
+            .map(|&r| if predicate(r) { die.roll() } else { r })
+            .collect();
+        
+        DicePool::from(rerolled) 
+    }
+}   

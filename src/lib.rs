@@ -165,4 +165,13 @@ mod tests {
         let take_too_many = dp.take_lowest(1_000_000);
         assert_eq!(take_too_many.results(), [5, 2, 1, 3, 4])
     }
+    #[test]
+    fn dicepool_reroll_if_replaces_values_correctly() {
+        let one_sided_die = Die::new(1); // always rolls a 1
+        let some_rolls = vec![3, 2, 1, 1, 2u8];
+        let dp = DicePool::from(some_rolls);
+
+        let rerolled_twos = dp.reroll_if(&one_sided_die, |r| r == 2);
+        assert_eq!(rerolled_twos.results(), &[3,1,1,1,1])
+    }
 }
