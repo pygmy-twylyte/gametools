@@ -24,6 +24,25 @@ impl Die {
             rolls: (0..times).map(|_| self.roll()).collect(),
         }
     }
+    
+    /// Rolls the die one and explodes (rolls again automatically and recurrently)
+    /// if the specified trigger number is rolled.
+    /// 
+    /// The value returned is maxed at 255 so that exploding dice results can still
+    /// be used in a DicePool. Even with a d20, it would take rolling 13 consecutive 20s to hit the cap.
+    pub fn roll_explode_on(&self, trigger: u8) -> u8 {
+        let mut total = self.roll();
+        if total == trigger {
+            total = total.saturating_add(self.roll_explode_on(trigger));
+        } 
+        total      
+    }
+
+    /// Shortcut to the common case where a die "explodes" when the maximum is rolled (6 on a d6, 20 on a d20, etc.)
+    pub fn roll_exploding(&self) -> u8 {
+        self.roll_explode_on(self.sides)
+    }
+
 }
 
 /// A pool of multiple rolls of a single die type (e.g. d6, d20)

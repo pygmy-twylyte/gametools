@@ -12,7 +12,7 @@
 
 ## 🔧 Upcoming Features to Implement
 
-### 1. Exploding Dice
+###✅  1. Exploding Dice
 - Add method to roll with exploding dice (reroll on max value).
 - Consider naming: `roll_exploding()` or `roll_with_exploding()`.
 - Possibly return `u32` to allow chaining.

@@ -55,10 +55,45 @@ mod tests {
     }
 
     #[test]
+    fn die_roll_explode_on_works() {
+        // a d6 that explodes on 6 cannot roll a six... because that immediately
+        // causes another roll that's at least 1, making an end result of 6 impossible.
+        // so, for an exploding d6, all rolls should be in range 1..=5 or >= 7.
+        let d6 = Die::new(6);
+        let mut can_roll_over_die_max = false;
+
+        // exploding roll enough times that we're sure we'll have at least one explode
+        for _ in 1..=10000 {
+            let roll = d6.roll_explode_on(6);
+            assert!(roll != 6, "exploding d6 rolled a six -- should be impossible!");
+            if roll > 6 { can_roll_over_die_max = true; }
+        }
+        assert!(can_roll_over_die_max, "no values over max (# sides) returned from exploding roll")
+    }
+
+    #[test]
+    fn die_roll_exploding_works() {
+        let sides = 12;
+        let die = Die::new(sides);
+        let mut can_roll_over_die_max = false;
+
+        // exploding roll enough times that we're sure we'll have at least one explode
+        for _ in 1..=10000 {
+            // a die that explodes on n, where n in the max roll, can never roll any multiple of n
+            let roll = die.roll_exploding();
+            assert!(roll % die.sides != 0, "exploding d{} rolled a {} -- should be impossible!", die.sides, roll);
+
+            // die should be able to roll higher than max sides when it explodes, too
+            if roll > die.sides { can_roll_over_die_max = true; }
+        }
+        assert!(can_roll_over_die_max, "no values over non-exploding max (= # sides) ever returned from exploding roll")
+    }
+
+    #[test]
     fn create_empty_dicepool() {
         let dp = DicePool::new();
         let rolls = dp.results();
-        assert!(rolls.is_empty(), "new dicepool did not have empty results!")
+        assert!(rolls.is_empty(), "new dicepool did not have empty results!");
     }
 
     #[test]
@@ -141,7 +176,7 @@ mod tests {
         }
         assert_eq!(dp.range(), Some((12, 125)));
     }
-    
+
     #[test]
     fn dicepool_count_roll_works() {
         let some_rolls: &[u8] = &[2, 1, 1, 2, 1, 1, 2];
