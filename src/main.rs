@@ -6,7 +6,7 @@ fn main() {
     let d20 = Die::new(20);
     let dice_pool = d20.roll_n(20);
     println!("Initial pool of d20 rolls:\n{:?}", dice_pool);
-    
+
     let roll_count = dice_pool.size();
     let crit_count = dice_pool.count_roll(20);
     let fail_count = dice_pool.count_roll(1);
@@ -21,11 +21,19 @@ fn main() {
     println!("After ones rerolled:\n{:?}", ones_rerolled);
 
     // reroll ones and then take only the top 5 rolls
-    let new_pool = dice_pool.reroll_if(&d20, |r|r == 1).take_highest(5);
+    let new_pool = dice_pool.reroll_if(&d20, |r| r == 1).take_highest(5);
     println!("Ones rerolled and top 5 taken:\n{:?}", new_pool);
 
     // power up! all rolls buffed +3!
     let new_pool = dice_pool.buff(3);
     println!("Rolls all buffed by 3:\n{:?}", new_pool);
-   
+
+    let d6 = Die::new(6);
+    let mut exploders = vec![];
+
+    for _ in 1..100 {
+        exploders.push(d6.roll_exploding());
+    }
+    exploders.sort_by(|a, b| b.cmp(a));
+    println!("{:?}", exploders);
 }

@@ -65,10 +65,18 @@ mod tests {
         // exploding roll enough times that we're sure we'll have at least one explode
         for _ in 1..=10000 {
             let roll = d6.roll_explode_on(6);
-            assert!(roll != 6, "exploding d6 rolled a six -- should be impossible!");
-            if roll > 6 { can_roll_over_die_max = true; }
+            assert!(
+                roll != 6,
+                "exploding d6 rolled a six -- should be impossible!"
+            );
+            if roll > 6 {
+                can_roll_over_die_max = true;
+            }
         }
-        assert!(can_roll_over_die_max, "no values over max (# sides) returned from exploding roll")
+        assert!(
+            can_roll_over_die_max,
+            "no values over max (# sides) returned from exploding roll"
+        )
     }
 
     #[test]
@@ -81,12 +89,22 @@ mod tests {
         for _ in 1..=10000 {
             // a die that explodes on n, where n in the max roll, can never roll any multiple of n
             let roll = die.roll_exploding();
-            assert!(roll % die.sides != 0, "exploding d{} rolled a {} -- should be impossible!", die.sides, roll);
+            assert!(
+                roll % die.sides != 0,
+                "exploding d{} rolled a {} -- should be impossible!",
+                die.sides,
+                roll
+            );
 
             // die should be able to roll higher than max sides when it explodes, too
-            if roll > die.sides { can_roll_over_die_max = true; }
+            if roll > die.sides {
+                can_roll_over_die_max = true;
+            }
         }
-        assert!(can_roll_over_die_max, "no values over non-exploding max (= # sides) ever returned from exploding roll")
+        assert!(
+            can_roll_over_die_max,
+            "no values over non-exploding max (= # sides) ever returned from exploding roll"
+        )
     }
 
     #[test]
@@ -223,6 +241,6 @@ mod tests {
         let dp = DicePool::from(some_rolls);
 
         let rerolled_twos = dp.reroll_if(&one_sided_die, |r| r == 2);
-        assert_eq!(rerolled_twos.results(), &[3,1,1,1,1])
+        assert_eq!(rerolled_twos.results(), &[3, 1, 1, 1, 1])
     }
 }
