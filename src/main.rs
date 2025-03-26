@@ -4,7 +4,7 @@ fn main() {
     // playground / example dev for gametools library
 
     let d20 = Die::new(20);
-    let dice_pool = d20.roll_n(20);
+    let dice_pool = d20.roll_into_pool(20);
     println!("Initial pool of d20 rolls:\n{:?}", dice_pool);
 
     let roll_count = dice_pool.size();
@@ -38,11 +38,11 @@ fn main() {
     println!("{:?}", exploders);
 
     // create and roll a pool of ten d10's and count success rolls of 8 or higher
-    let wins = Die::new(10).roll_n(10).count_success_over(7);
+    let wins = Die::new(10).roll_into_pool(10).count_success_over(7);
     println!("Success on {wins}/10 d10 rolls.");
 
     // same thing, but this time player has a bonus +1 to all rolls
-    let wins = Die::new(10).roll_n(10).buff(1).count_success_over(7);
+    let wins = Die::new(10).roll_into_pool(10).buff(1).count_success_over(7);
     println!("Success on another {wins}/10 d10 rolls after +1 buff.");
 
 }

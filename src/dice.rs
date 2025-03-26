@@ -19,7 +19,7 @@ impl Die {
     }
 
     /// Rolls the die multiple times and returns results as a DicePool.
-    pub fn roll_n(&self, times: u64) -> DicePool {
+    pub fn roll_into_pool(&self, times: usize) -> DicePool {
         DicePool {
             rolls: (0..times).map(|_| self.roll()).collect(),
         }
@@ -201,7 +201,6 @@ impl DicePool {
         F: Fn(u8) -> bool,
     {
         self.rolls
-            .clone()
             .iter()
             .filter(|r| predicate(**r))
             .count()

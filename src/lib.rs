@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn die_roll_n_returns_correct_dicepool() {
         let d6 = Die::new(6);
-        let d6_pool = d6.roll_n(20);
+        let d6_pool = d6.roll_into_pool(20);
         let rolls = d6_pool.results();
         // checks right number of rolls and that all are in expected range
         assert_eq!(rolls.len(), 20);
