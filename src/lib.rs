@@ -243,4 +243,31 @@ mod tests {
         let rerolled_twos = dp.reroll_if(&one_sided_die, |r| r == 2);
         assert_eq!(rerolled_twos.results(), &[3, 1, 1, 1, 1])
     }
+
+    #[test]
+    fn dicepool_count_success_using_works() {
+        let some_rolls = vec![7, 7, 7, 8, 8, 8, 9, 9, 9];
+        let pool = DicePool::from(some_rolls);
+
+        let rolls_over_8 = pool.count_success_using(|r| r > 8);
+        let even_rolls = pool.count_success_using(|r| r % 2 == 0);
+        let rolled_7_or_9 = pool.count_success_using(|r| r == 7 || r == 9);
+
+        assert_eq!(rolls_over_8, 3);
+        assert_eq!(even_rolls, 3);
+        assert_eq!(rolled_7_or_9, 6);
+    }
+
+    #[test]
+    fn dicepool_count_success_over_is_correct() {
+        let some_rolls = vec![7, 7, 7, 8, 8, 8, 9, 9, 9];
+        let pool = DicePool::from(some_rolls);
+        let success_threshold = 7;
+        let successes = pool.count_success_over(success_threshold);
+        assert_eq!(successes, 6);
+
+        let success_threshold = 10;
+        let successes = pool.count_success_over(success_threshold);
+        assert_eq!(successes, 0);
+    }
 }

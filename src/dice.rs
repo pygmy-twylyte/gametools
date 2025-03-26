@@ -194,4 +194,26 @@ impl DicePool {
 
         DicePool::from(rerolled)
     }
+
+    /// Counts the number of rolls in the pool that meet a certain "success" criteria.
+    pub fn count_success_using<F>(&self, predicate: F) -> usize 
+    where
+        F: Fn(u8) -> bool,
+    {
+        self.rolls
+            .clone()
+            .iter()
+            .filter(|r| predicate(**r))
+            .count()
+    }
+
+    /// Counts the number of rolls in the pool over a specified threshold 
+    /// "success" value.
+    /// 
+    /// This is a convenience function that simply calls count_success_using with the
+    /// appropriate closure.
+    pub fn count_success_over(&self, threshold: u8) -> usize {
+        self.count_success_using(|r| r > threshold)
+    } 
 }
+

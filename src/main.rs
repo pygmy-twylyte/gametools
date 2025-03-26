@@ -28,12 +28,21 @@ fn main() {
     let new_pool = dice_pool.buff(3);
     println!("Rolls all buffed by 3:\n{:?}", new_pool);
 
+    // exploding dice! rolling max allows you to keep rolling
     let d6 = Die::new(6);
     let mut exploders = vec![];
-
-    for _ in 1..100 {
+    for _ in 1..15 {
         exploders.push(d6.roll_exploding());
     }
     exploders.sort_by(|a, b| b.cmp(a));
     println!("{:?}", exploders);
+
+    // create and roll a pool of ten d10's and count success rolls of 8 or higher
+    let wins = Die::new(10).roll_n(10).count_success_over(7);
+    println!("Success on {wins}/10 d10 rolls.");
+
+    // same thing, but this time player has a bonus +1 to all rolls
+    let wins = Die::new(10).roll_n(10).buff(1).count_success_over(7);
+    println!("Success on another {wins}/10 d10 rolls after +1 buff.");
+
 }
