@@ -68,6 +68,7 @@ impl From<Vec<u8>> for DicePool {
     }
 }
 
+
 impl DicePool {
     /// Creates a new, empty DicePool
     pub fn new() -> DicePool {
@@ -151,7 +152,7 @@ impl DicePool {
 
     /// Returns a new pool with only the highest-scoring 'n' rolls, discarding the rest.
     /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
-    /// unchanged pool is returned.
+    /// unchanged (cloned) pool is returned.
     pub fn take_highest(&self, count: usize) -> Self {
         match count {
             0 => DicePool::new(),
@@ -167,7 +168,7 @@ impl DicePool {
 
     /// Returns a new pool with only the lowest-scoring 'n' rolls, discarding the rest.
     /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
-    /// unchanged pool is returned.
+    /// unchanged (cloned) pool is returned.
     pub fn take_lowest(&self, count: usize) -> Self {
         match count {
             0 => DicePool::new(),
