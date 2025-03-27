@@ -1,7 +1,9 @@
 [package]
 name = "gametools"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
 rand = "0.9.0"
+strum = "0.27.1"
+strum_macros = "0.27.1"
