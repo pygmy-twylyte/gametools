@@ -1,6 +1,8 @@
 // strum crate allows up to easily iterate through enums -- makes deck creation easy
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use rand::seq::SliceRandom;
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, EnumIter)]
 pub enum Rank {
@@ -18,6 +20,25 @@ pub enum Rank {
     King,
     Ace,
 }
+impl Rank {
+    pub fn as_str(&self) -> &'static str {
+        match &self {
+            Rank::Two => "Two",
+            Rank::Three => "Three",
+            Rank::Four => "Four",
+            Rank::Five => "Five",
+            Rank::Six => "Six",
+            Rank::Seven => "Seven",
+            Rank::Eight => "Eight",
+            Rank::Nine => "Nine",
+            Rank::Ten => "Ten",
+            Rank::Jack => "Jack",
+            Rank::Queen => "Queen",
+            Rank::King => "King",
+            Rank::Ace => "Ace",
+        }
+    }
+}
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, EnumIter)]
 pub enum Suit {
     Clubs,
@@ -25,13 +46,29 @@ pub enum Suit {
     Spades,
     Hearts,
 }
+impl Suit {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Suit::Clubs => "Clubs",
+            Suit::Diamonds => "Diamonds",
+            Suit::Spades => "Spades",
+            Suit::Hearts => "Hearts",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Card {
     pub rank: Rank,
     pub suit: Suit,
 }
+impl Display for Card {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({} of {})", self.rank.as_str(), self.suit.as_str())
+    }
+}
 
+#[derive(Debug, Clone)]
 pub struct Deck {
     pub cards: Vec<Card>,
     pub name: String,
@@ -63,6 +100,12 @@ impl Deck {
         }
 
         Some(self.cards.drain(..count).collect())
+    }
+
+    /// Shuffles the cards in the deck in place.
+    pub fn shuffle(&mut self) {
+        let mut rng = rand::rng();
+        self.cards.shuffle(&mut rng);
     }
 
 }
