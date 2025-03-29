@@ -57,6 +57,12 @@ impl Suit {
     }
 }
 
+/// Any collection of cards that you can draw 1 or more from
+pub trait DrawFrom {
+    fn draw(&mut self) -> Option<Card>;
+    fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>>;
+}
+
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Card {
     pub rank: Rank,
@@ -68,10 +74,29 @@ impl Display for Card {
     }
 }
 
+/// A deck of playing cards.
+///
+/// Cards can only be removed from a deck until it is empty. If more cards
+/// are needed, a new deck must be created. This is unlike a Pile, to which
+/// cards can also be added.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Deck {
     pub cards: Vec<Card>,
     pub name: String,
+}
+impl DrawFrom for Deck {
+    /// Takes a card from the deck.
+    fn draw(&mut self) -> Option<Card> {
+        self.cards.pop()
+    }
+
+    /// Takes multiple cards from the deck. Returns None if the deck doesn't have enough to fill the request.
+    fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>> {
+        if count > self.cards.len() {
+            return None;
+        }
+        Some(self.cards.split_off(self.cards.len() - count))
+    }
 }
 impl Deck {
     /// Creates a new, standard 52-card deck of playing cards.
@@ -86,20 +111,6 @@ impl Deck {
             name: name.to_owned(),
             cards,
         }
-    }
-
-    /// Takes a card from the deck.
-    pub fn draw(&mut self) -> Option<Card> {
-        self.cards.pop()
-    }
-
-    /// Takes multiple cards from the deck. Returns None if the deck doesn't have enough to fill the request.
-    pub fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>> {
-        if count > self.cards.len() {
-            return None;
-        }
-        Some(self.cards.split_off(self.cards.len() - count))
-        //Some(self.cards.drain(..count).collect())
     }
 
     /// Shuffles the cards in the deck in place.
@@ -158,7 +169,7 @@ impl Hand {
 
     /// Draws a card from the specified Deck.
     /// Returns Err if deck is empty.
-    pub fn draw_card_from(&mut self, deck: &mut Deck) -> Result<(), &'static str> {
+    pub fn draw_card_from(&mut self, deck: &mut impl DrawFrom) -> Result<(), &'static str> {
         let drawn = match deck.draw() {
             Some(card) => card,
             None => return Err("cannot draw a card: deck is empty"),
@@ -169,7 +180,11 @@ impl Hand {
 
     /// Draws a specified number of cards from a Deck.
     /// Returns Err() if there aren't enough cards to fulfill the request.
-    pub fn draw_cards_from(&mut self, deck: &mut Deck, count: usize) -> Result<(), &'static str> {
+    pub fn draw_cards_from(
+        &mut self,
+        deck: &mut impl DrawFrom,
+        count: usize,
+    ) -> Result<(), &'static str> {
         let mut drawn = match deck.draw_cards(count) {
             Some(cards) => cards,
             None => return Err("not enough cards in deck for draw request"),
