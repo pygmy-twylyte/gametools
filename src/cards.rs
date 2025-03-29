@@ -98,14 +98,34 @@ impl Deck {
         if count > self.cards.len() {
             return None;
         }
-
-        Some(self.cards.drain(..count).collect())
+        Some(self.cards.split_off(self.cards.len() - count))
+        //Some(self.cards.drain(..count).collect())
     }
 
     /// Shuffles the cards in the deck in place.
     pub fn shuffle(&mut self) {
         let mut rng = rand::rng();
         self.cards.shuffle(&mut rng);
+    }
+
+    /// Deals a specified number of cards to one or more hands.
+    /// Returns Err() if the deck doesn't contain enough cards.
+    pub fn deal_to_hands(
+        &mut self,
+        hands: &mut Vec<Hand>,
+        count: usize,
+    ) -> Result<(), &'static str> {
+        // return Err immediately if there aren't enough cards left, so we don't
+        // have to partially fill hands before finding the end of the deck
+        if hands.len() * count > self.cards.len() {
+            return Err("not enough cards in deck for deal_to_hands request");
+        }
+
+        for hand in hands {
+            hand.draw_cards_from(self, count)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -213,6 +233,40 @@ mod tests {
 
         let huge_hand = deck.draw_cards(100);
         assert_eq!(huge_hand, None)
+    }
+
+    #[test]
+    fn deck_deal_to_hands_works() -> Result<(), Box<dyn std::error::Error>> {
+        let mut deck = Deck::new("standard 52-card deck");
+
+        // create a pool of empty hands
+        let num_hands = 4;
+        let num_cards = 5;
+        let mut hands = Vec::<Hand>::new();
+        for n in 1..=num_hands {
+            hands.push(Hand::new(&format!("Player {n}")));
+        }
+
+        // deal 'em
+        deck.deal_to_hands(&mut hands, num_cards)?;
+
+        //dbg!(&hands); // uncomment to show all hands after deal
+        assert_eq!(deck.cards.len(), 52 - (num_cards * num_hands));
+        assert_eq!(hands.len(), num_hands);
+
+        // do all hands have the right # of cards?
+        for hand in &hands {
+            assert_eq!(hand.cards.len(), num_cards);
+        }
+
+        // should Err if we request too many
+        let too_many = deck.deal_to_hands(&mut hands, 100);
+        assert!(
+            matches!(too_many, Err(_)),
+            "too-many request should have returned Err from deal_to_hands"
+        );
+
+        Ok(())
     }
 
     #[test]
