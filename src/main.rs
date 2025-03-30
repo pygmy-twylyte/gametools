@@ -1,5 +1,6 @@
-use gametools::cards::*;
-use gametools::dice::*;
+// use gametools::cards::*;
+// use gametools::dice::*;
+use gametools::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // playground / example dev for gametools library

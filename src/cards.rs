@@ -4,6 +4,8 @@ use std::fmt::Display;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+use crate::{GameError, GameResult};
+
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, EnumIter)]
 pub enum Rank {
     Two,
@@ -61,6 +63,7 @@ impl Suit {
 pub trait DrawFrom {
     fn draw(&mut self) -> Option<Card>;
     fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>>;
+    fn name(&self) -> String;   // needed for GameError report when empty
 }
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -74,15 +77,15 @@ impl Display for Card {
     }
 }
 
-/// A deck of playing cards.
+/// A deck of playing cards. A card source.
 ///
 /// Cards can only be removed from a deck until it is empty. If more cards
 /// are needed, a new deck must be created. This is unlike a Pile, to which
 /// cards can also be added.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Deck {
-    pub cards: Vec<Card>,
     pub name: String,
+    pub cards: Vec<Card>,
 }
 impl DrawFrom for Deck {
     /// Takes a card from the deck.
@@ -96,6 +99,10 @@ impl DrawFrom for Deck {
             return None;
         }
         Some(self.cards.split_off(self.cards.len() - count))
+    }
+    
+    fn name(&self) -> String {
+        self.name.clone()
     }
 }
 impl Deck {
@@ -125,11 +132,11 @@ impl Deck {
         &mut self,
         hands: &mut Vec<Hand>,
         count: usize,
-    ) -> Result<(), &'static str> {
+    ) -> GameResult<()> {
         // return Err immediately if there aren't enough cards left, so we don't
         // have to partially fill hands before finding the end of the deck
         if hands.len() * count > self.cards.len() {
-            return Err("not enough cards in deck for deal_to_hands request");
+            return Err(GameError::StackTooSmall(self.name()));
         }
 
         for hand in hands {
@@ -137,6 +144,34 @@ impl Deck {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pile {
+    pub name: String,
+    pub cards: Vec<Card>,
+}
+impl DrawFrom for Pile {
+    fn draw(&mut self) -> Option<Card> {
+        self.cards.pop()
+    }
+
+    fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>> {
+        if count > self.cards.len() {
+            return None;
+        }
+        Some(self.cards.split_off(self.cards.len() - count))
+    }
+    
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+impl Pile {
+    /// Add a card to the top of the pile.
+    pub fn add(&mut self, card: Card) {
+        self.cards.push(card);
     }
 }
 
@@ -167,27 +202,27 @@ impl Hand {
         }
     }
 
-    /// Draws a card from the specified Deck.
+    /// Draws a card from the specified Deck or Pile.
     /// Returns Err if deck is empty.
-    pub fn draw_card_from(&mut self, deck: &mut impl DrawFrom) -> Result<(), &'static str> {
-        let drawn = match deck.draw() {
+    pub fn draw_card_from(&mut self, stack: &mut impl DrawFrom) -> GameResult<()> {
+        let drawn = match stack.draw() {
             Some(card) => card,
-            None => return Err("cannot draw a card: deck is empty"),
+            None => return Err(GameError::StackEmpty(stack.name())),
         };
         self.cards.push(drawn);
         Ok(())
     }
 
-    /// Draws a specified number of cards from a Deck.
+    /// Draws a specified number of cards from a Deck or a Pile
     /// Returns Err() if there aren't enough cards to fulfill the request.
     pub fn draw_cards_from(
         &mut self,
-        deck: &mut impl DrawFrom,
+        stack: &mut impl DrawFrom,
         count: usize,
-    ) -> Result<(), &'static str> {
-        let mut drawn = match deck.draw_cards(count) {
+    ) -> GameResult<()> {
+        let mut drawn = match stack.draw_cards(count) {
             Some(cards) => cards,
-            None => return Err("not enough cards in deck for draw request"),
+            None => return Err(GameError::StackTooSmall(stack.name())),
         };
         self.cards.append(&mut drawn);
         Ok(())
