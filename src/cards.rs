@@ -1,3 +1,9 @@
+//! # Cards
+//! 
+//! This module implements mechanics common to games played with a standard 52 playing-card deck,
+//! such as cards, decks, piles, and hands. Would perhaps one day like to add the capability to 
+//! handle other sorts of cards (Uno, Old Maid, Memory, etc.).
+
 // strum crate allows up to easily iterate through enums -- makes deck creation easy
 use rand::seq::SliceRandom;
 use std::fmt::Display;
@@ -6,6 +12,7 @@ use strum_macros::EnumIter;
 
 use crate::{GameError, GameResult};
 
+/// Represents all possible ranks (face values) for a standard playing card.
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, EnumIter)]
 pub enum Rank {
     Two,
@@ -41,6 +48,8 @@ impl Rank {
         }
     }
 }
+
+/// Represents the four possible suits of a standard playing card.
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, EnumIter)]
 pub enum Suit {
     Clubs,
@@ -59,13 +68,24 @@ impl Suit {
     }
 }
 
-/// Any collection of cards that you can draw 1 or more from
+/// Traits common to any collection from which you can remove a card or cards. 
 pub trait DrawFrom {
     fn draw(&mut self) -> Option<Card>;
     fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>>;
+    fn size(&mut self) -> usize;
     fn name(&self) -> String;   // needed for GameError report when empty
 }
 
+/// A standard playing card.
+/// 
+/// ```rust
+/// use gametools::Card;
+/// use gametools::Rank::*;
+/// use gametools::Suit::*;
+/// 
+/// let qos = Card{ rank: Queen, suit: Spades };
+/// println!("You created a {qos}.");
+/// ```
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Card {
     pub rank: Rank,
@@ -79,7 +99,7 @@ impl Display for Card {
 
 /// A deck of playing cards. A card source.
 ///
-/// Cards can only be removed from a deck until it is empty. If more cards
+/// Cards can be only *removed* from a deck until it is empty. If more cards
 /// are needed, a new deck must be created. This is unlike a Pile, to which
 /// cards can also be added.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -89,11 +109,34 @@ pub struct Deck {
 }
 impl DrawFrom for Deck {
     /// Takes a card from the deck.
+    /// 
+    /// ```rust
+    /// use gametools::{Deck, DrawFrom};
+    /// 
+    /// let mut deck = Deck::new("main deck");
+    /// 
+    /// let drawn = deck.draw().unwrap();    // OK here, new deck always full
+    /// println!("you drew: {drawn}");
+    /// ```
     fn draw(&mut self) -> Option<Card> {
         self.cards.pop()
     }
 
     /// Takes multiple cards from the deck. Returns None if the deck doesn't have enough to fill the request.
+    /// 
+    /// ```rust
+    /// use gametools::{Deck, DrawFrom};
+    /// 
+    /// let mut deck = Deck::new("test_deck");
+    /// 
+    /// let three_cards = deck.draw_cards(3).unwrap();  // OK, new deck has > 3 cards here
+    /// assert_eq!(deck.cards.len(), 52 - 3);
+    /// assert_eq!(three_cards.len(), 3);
+    /// 
+    /// for card in three_cards {
+    ///     println!("{card}");
+    /// }
+    /// ```
     fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>> {
         if count > self.cards.len() {
             return None;
@@ -101,12 +144,34 @@ impl DrawFrom for Deck {
         Some(self.cards.split_off(self.cards.len() - count))
     }
     
+    /// Returns a string containing the deck's name for error reporting and display purposes
     fn name(&self) -> String {
         self.name.clone()
+    }
+    
+    fn size(&mut self) -> usize {
+        self.cards.len()
     }
 }
 impl Deck {
     /// Creates a new, standard 52-card deck of playing cards.
+    /// 
+    /// ```rust
+    /// use gametools::{Deck,Card};
+    /// use gametools::Rank::*;
+    /// use gametools::Suit::*;
+    /// 
+    /// let deck = Deck::new("standard playing cards");
+    /// 
+    /// let size = deck.cards.len();
+    /// assert_eq!(size, 52);
+    /// 
+    /// let count_fives = deck.cards.iter().filter(|&card| card.rank == Five).count();
+    /// assert_eq!(count_fives, 4);
+    /// 
+    /// let count_qos = deck.cards.iter().filter(|&card| *card == Card{ rank: Queen, suit: Spades }).count();
+    /// assert_eq!(count_qos, 1);
+    
     pub fn new(name: &str) -> Self {
         let mut cards = Vec::<Card>::new();
         for suit in Suit::iter() {
@@ -121,13 +186,45 @@ impl Deck {
     }
 
     /// Shuffles the cards in the deck in place.
+    /// 
+    /// ```rust
+    /// use gametools::Deck;
+    /// 
+    /// let mut deck = Deck::new("deck_id");
+    /// let original = deck.clone();
+    /// assert_eq!(deck, original);
+    /// deck.shuffle();
+    /// assert_eq!(deck.cards.len(), original.cards.len());
+    /// assert_ne!(deck, original);
+    /// ```
     pub fn shuffle(&mut self) {
         let mut rng = rand::rng();
         self.cards.shuffle(&mut rng);
     }
 
     /// Deals a specified number of cards to one or more hands.
-    /// Returns Err() if the deck doesn't contain enough cards.
+    /// Returns a GameError if the deck doesn't contain enough cards to complete request for *all* hands.
+    /// 
+    /// ```rust
+    /// use gametools::{Deck, Hand, DrawFrom};
+    /// 
+    /// // create game deck
+    /// let mut war_deck = Deck::new("War!");
+    /// war_deck.shuffle();
+    /// 
+    /// // create (empty) hands for the players
+    /// let mut player_1 = Hand::new("Frank");
+    /// let mut player_2 = Hand::new("Dweezil");
+    /// let mut hands = vec![player_1, player_2];
+    /// 
+    /// // deal 26 cards each to Frank and Dweezil
+    /// war_deck.deal_to_hands(&mut hands, 26).unwrap();
+    /// 
+    /// assert_eq!(war_deck.size(), 0);
+    /// assert_eq!(hands[0].size(), 26);
+    /// assert_eq!(hands[1].size(), 26);
+    /// 
+    /// ```
     pub fn deal_to_hands(
         &mut self,
         hands: &mut Vec<Hand>,
@@ -147,6 +244,7 @@ impl Deck {
     }
 }
 
+/// A stack of cards, such as a draw or discard pile. Last one added is first that will be drawn. 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pile {
     pub name: String,
@@ -166,6 +264,10 @@ impl DrawFrom for Pile {
     
     fn name(&self) -> String {
         self.name.clone()
+    }
+    
+    fn size(&mut self) -> usize {
+        self.cards.len()
     }
 }
 impl Pile {
@@ -226,6 +328,10 @@ impl Hand {
         };
         self.cards.append(&mut drawn);
         Ok(())
+    }
+
+    pub fn size(&self) -> usize {
+        self.cards.len()
     }
 }
 

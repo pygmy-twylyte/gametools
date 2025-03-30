@@ -1,5 +1,3 @@
-use rand;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// A single die with a user-defined number of sides
 pub struct Die {

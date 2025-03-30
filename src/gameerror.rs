@@ -1,6 +1,7 @@
 use std::fmt;
 use std::error::Error;
 
+/// Error types for problematic game conditions. 
 #[derive(Debug)]
 pub enum GameError {
     StackEmpty(String),
