@@ -5,19 +5,52 @@ pub struct Die {
 }
 impl Die {
     /// Creates a new die with the specified number of sides, up to 255 (u8).
-    /// Panics if you try to create a Die with no sides.
+    /// 
+    /// ## Panics
+    /// - Panics if you try to create a Die with zero sides.
+    /// 
+    /// ```should_panic
+    /// use gametools::Die;
+    /// let d6 = Die::new(6);
+    /// let d20 = Die::new(20);
+    /// 
+    /// let d0 = Die::new(0);  // panic!
+    /// 
+    /// ```
     pub fn new(sides: u8) -> Die {
         assert!(sides > 0, "a Die with zero sides cannot be created");
         Die { sides }
     }
 
     /// Rolls the die and returns the face-up value.
+    /// 
+    /// ```
+    /// # use gametools::Die;
+    /// let d10 = Die::new(10);
+    /// let value = d10.roll();
+    /// assert!((1..=10).contains(&value));
+    /// ```
     pub fn roll(&self) -> u8 {
         rand::random_range(1..=self.sides)
     }
 
     /// Rolls the die multiple times and returns results as a DicePool.
+    /// 
+    /// ## Panics
+    /// - panics on attempt to roll zero dice to create a pool
+    /// 
+    /// ```should_panic
+    /// use gametools::{Die, DicePool};
+    /// 
+    /// // create a pool of ten d10s
+    /// let d10 = Die::new(10);
+    /// let d10_pool = d10.roll_into_pool(10);
+    /// assert_eq!(d10_pool.size(), 10);
+    /// 
+    /// let no_dice = d10.roll_into_pool(0);    // this will panic!
+    /// ```
     pub fn roll_into_pool(&self, times: usize) -> DicePool {
+        assert!(times != 0, "cannot create a DicePool with zero dice (Die::roll_into_pool(0))");
         DicePool {
             rolls: (0..times).map(|_| self.roll()).collect(),
         }
@@ -28,6 +61,20 @@ impl Die {
     ///
     /// The value returned is maxed at 255 so that exploding dice results can still
     /// be used in a DicePool. Even with a d20, it would take rolling 13 consecutive 20s to hit the cap.
+    /// 
+    /// ```
+    /// use gametools::Die;
+    /// 
+    /// let d6 = Die::new(6);
+    /// 
+    /// // Note: an exploding die can never return the value it "explodes" on, because
+    /// // it will always trigger another roll that will add at least 1 to it. Here we'll
+    /// // explode the d6 on 5 -- in 1000 rolls it will never come up 5.
+    /// for _ in 1..1000 {
+    ///     let result = d6.roll_explode_on(5);
+    ///     assert_ne!(result, 5)
+    /// }
+    /// ```
     pub fn roll_explode_on(&self, trigger: u8) -> u8 {
         let mut total = self.roll();
         if total == trigger {
@@ -36,13 +83,31 @@ impl Die {
         total
     }
 
-    /// Shortcut to the common case where a die "explodes" when the maximum is rolled (6 on a d6, 20 on a d20, etc.)
+    /// Shortcut to the most common case: where a die "explodes" when the maximum is rolled.  
+    /// (6 on a d6, 20 on a d20, etc.)
+    /// ```
+    /// use gametools::Die;
+    /// 
+    /// let d10 = Die::new(10);
+    /// 
+    /// // A die that explodes on a maximum trigger value (e.g. 10 on a 10-sided die) can never
+    /// // roll any multiple of that trigger value (e.g. 10, 20, 30, etc.)
+    /// for _ in 1..10_000 {
+    ///     let result = d10.roll_exploding();
+    ///     assert!(result % 10 != 0); 
+    /// }
+    /// ```
     pub fn roll_exploding(&self) -> u8 {
         self.roll_explode_on(self.sides)
     }
 }
 
-/// A pool of multiple rolls of a single die type (e.g. d6, d20)
+/// A pool of dice of a single die type (e.g. d6, d20).
+/// 
+/// This is considered as a group of n > 0 dice all simultaneously rolled. The collection containing
+/// the individual die states (rolls) is not guaranteed to maintain any particular order. For 
+/// game logic where the order of results counts, it is generally better to get the rolls on demand
+/// through roll() or roll_exploding().
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DicePool {
     rolls: Vec<u8>,

@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     ///////////////////////////////////// cards section /////////////////////////////////////////
 
-    let mut deck = Deck::new("Playing Cards");
+    let mut deck = Deck::standard_52("Playing Cards");
     deck.shuffle();
 
     println!("Draw 3 cards into a vector:");
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // create a fresh deck and shuffle it
-    let mut deck = Deck::new("blackjack!");
+    let mut deck = Deck::standard_52("blackjack!");
     deck.shuffle();
 
     let num_cards = 2;

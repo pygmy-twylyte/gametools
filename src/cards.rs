@@ -72,28 +72,65 @@ impl Suit {
 pub trait DrawFrom {
     fn draw(&mut self) -> Option<Card>;
     fn draw_cards(&mut self, count: usize) -> Option<Vec<Card>>;
-    fn size(&mut self) -> usize;
+    fn size(&self) -> usize;
     fn name(&self) -> String;   // needed for GameError report when empty
 }
 
 /// A standard playing card.
+/// 
+/// New cards for use in gameplay should only be created by constructing a Deck. They will have a uid < u32::MAX
+/// and always start face down. Temporary cards for use in comparisons and searches can be created individually,
+/// but will always have a uid of u32::MAX and start face up.
 /// 
 /// ```rust
 /// use gametools::Card;
 /// use gametools::Rank::*;
 /// use gametools::Suit::*;
 /// 
-/// let qos = Card{ rank: Queen, suit: Spades };
-/// println!("You created a {qos}.");
+/// let search_card = Card::new_temp(Queen, Spades);
+/// assert_eq!(search_card.uid, u32::MAX);
+/// assert!(search_card.face_up, "temporary cards have no need to be hidden from view");
+/// assert_eq!(search_card.rank, Queen);
+/// assert_eq!(search_card.suit, Spades);
+/// 
+/// if search_card.uid == u32::MAX {
+///     println!("You created a temporary {search_card}.");
+/// } else {
+///     println!("Oops! This is a playable {search_card} from a deck!");
+/// }
+/// 
 /// ```
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, Hash)]
 pub struct Card {
     pub rank: Rank,
     pub suit: Suit,
+    pub uid: u32,
+    pub face_up: bool,
 }
 impl Display for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({} of {})", self.rank.as_str(), self.suit.as_str())
+        write!(f, "{} of {}", self.rank.as_str(), self.suit.as_str())
+    }
+}
+impl PartialEq for Card {
+    /// Determines whether this card is the same as another, using only rank and suit
+    /// (ignoring metadata like uid and face_up status)
+    fn eq(&self, other: &Self) -> bool {
+        self.rank == other.rank && self.suit == other.suit 
+    }
+}
+impl Card {
+    /// Creates a new temporary card for search / comparison purposes. The uid
+    /// can be used to distinguish it from a card from a deck that actually belongs in play. 
+    /// 
+    /// ```rust
+    /// use gametools::{Card, Rank, Suit};
+    /// 
+    /// let search_card = Card::new_temp( Rank::Queen, Suit::Spades );
+    /// assert!(search_card.uid == u32::MAX, "oops! cards with uid < u32::MAX are playable")
+    /// ```
+    pub fn new_temp(rank: Rank, suit: Suit) -> Self {
+        Self { rank, suit, uid: u32::MAX, face_up: true }
     }
 }
 
@@ -105,7 +142,7 @@ impl Display for Card {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Deck {
     pub name: String,
-    pub cards: Vec<Card>,
+    cards: Vec<Card>,
 }
 impl DrawFrom for Deck {
     /// Takes a card from the deck.
@@ -113,7 +150,7 @@ impl DrawFrom for Deck {
     /// ```rust
     /// use gametools::{Deck, DrawFrom};
     /// 
-    /// let mut deck = Deck::new("main deck");
+    /// let mut deck = Deck::standard_52("main deck");
     /// 
     /// let drawn = deck.draw().unwrap();    // OK here, new deck always full
     /// println!("you drew: {drawn}");
@@ -127,10 +164,10 @@ impl DrawFrom for Deck {
     /// ```rust
     /// use gametools::{Deck, DrawFrom};
     /// 
-    /// let mut deck = Deck::new("test_deck");
+    /// let mut deck = Deck::standard_52("test_deck");
     /// 
     /// let three_cards = deck.draw_cards(3).unwrap();  // OK, new deck has > 3 cards here
-    /// assert_eq!(deck.cards.len(), 52 - 3);
+    /// assert_eq!(deck.size(), 52 - 3);
     /// assert_eq!(three_cards.len(), 3);
     /// 
     /// for card in three_cards {
@@ -149,7 +186,7 @@ impl DrawFrom for Deck {
         self.name.clone()
     }
     
-    fn size(&mut self) -> usize {
+    fn size(&self) -> usize {
         self.cards.len()
     }
 }
@@ -157,26 +194,30 @@ impl Deck {
     /// Creates a new, standard 52-card deck of playing cards.
     /// 
     /// ```rust
-    /// use gametools::{Deck,Card};
+    /// use gametools::{Deck,Card,DrawFrom};
     /// use gametools::Rank::*;
     /// use gametools::Suit::*;
     /// 
-    /// let deck = Deck::new("standard playing cards");
+    /// let deck = Deck::standard_52("standard playing cards");
     /// 
-    /// let size = deck.cards.len();
+    /// let size = deck.size();
     /// assert_eq!(size, 52);
     /// 
-    /// let count_fives = deck.cards.iter().filter(|&card| card.rank == Five).count();
+    /// let count_fives = deck.iter().filter(|&card| card.rank == Five).count();
     /// assert_eq!(count_fives, 4);
     /// 
-    /// let count_qos = deck.cards.iter().filter(|&card| *card == Card{ rank: Queen, suit: Spades }).count();
+    /// let count_qos = deck.iter()
+    ///                     .filter(|&card| matches!(*card, Card{ rank: Queen, suit: Spades, ..}))
+    ///                     .count();
     /// assert_eq!(count_qos, 1);
-    
-    pub fn new(name: &str) -> Self {
+    /// ```
+    pub fn standard_52(name: &str) -> Self {
         let mut cards = Vec::<Card>::new();
+        let mut uid = 0;
         for suit in Suit::iter() {
             for rank in Rank::iter() {
-                cards.push(Card { rank, suit });
+                cards.push(Card { rank, suit, uid, face_up: false });
+                uid += 1;
             }
         }
         Self {
@@ -185,16 +226,24 @@ impl Deck {
         }
     }
 
-    /// Shuffles the cards in the deck in place.
-    /// 
+    /// Provides an iterator over references to the cards remaining in the deck.
+    pub fn iter(&self) -> impl Iterator<Item = &Card> {
+        self.cards.iter()
+    }
+
+    /// Provides a slice of references to the cards remaining in the deck.
+    pub fn as_slice(&self) -> &[Card] {
+        &self.cards
+    }
+
     /// ```rust
-    /// use gametools::Deck;
+    /// use gametools::{Deck, DrawFrom};
     /// 
-    /// let mut deck = Deck::new("deck_id");
+    /// let mut deck = Deck::standard_52("deck_id");
     /// let original = deck.clone();
     /// assert_eq!(deck, original);
     /// deck.shuffle();
-    /// assert_eq!(deck.cards.len(), original.cards.len());
+    /// assert_eq!(deck.size(), original.size());
     /// assert_ne!(deck, original);
     /// ```
     pub fn shuffle(&mut self) {
@@ -209,7 +258,7 @@ impl Deck {
     /// use gametools::{Deck, Hand, DrawFrom};
     /// 
     /// // create game deck
-    /// let mut war_deck = Deck::new("War!");
+    /// let mut war_deck = Deck::standard_52("War!");
     /// war_deck.shuffle();
     /// 
     /// // create (empty) hands for the players
@@ -266,7 +315,7 @@ impl DrawFrom for Pile {
         self.name.clone()
     }
     
-    fn size(&mut self) -> usize {
+    fn size(&self) -> usize {
         self.cards.len()
     }
 }
@@ -341,7 +390,7 @@ mod tests {
 
     #[test]
     fn create_standard_deck_works() {
-        let deck = Deck::new("Standard/Test Deck");
+        let deck = Deck::standard_52("Standard/Test Deck");
 
         let spade_count = deck
             .cards
@@ -366,8 +415,8 @@ mod tests {
 
     #[test]
     fn deck_draw_works() {
-        let mut deck = Deck::new("test deck");
-        let Card { rank, suit } = deck
+        let mut deck = Deck::standard_52("test deck");
+        let Card { rank, suit, .. } = deck
             .draw()
             .expect("should be able to draw from new full deck");
         let remaining_of_rank = deck.cards.iter().filter(|&c| c.rank == rank).count();
@@ -380,7 +429,7 @@ mod tests {
 
     #[test]
     fn deck_draw_cards_works() {
-        let mut deck = Deck::new("test deck");
+        let mut deck = Deck::standard_52("test deck");
         let hand = deck
             .draw_cards(5)
             .expect("should be able to draw 5 from fresh deck");
@@ -393,7 +442,7 @@ mod tests {
 
     #[test]
     fn deck_deal_to_hands_works() -> Result<(), Box<dyn std::error::Error>> {
-        let mut deck = Deck::new("standard 52-card deck");
+        let mut deck = Deck::standard_52("standard 52-card deck");
 
         // create a pool of empty hands
         let num_hands = 4;
@@ -428,7 +477,7 @@ mod tests {
     #[test]
     fn hand_draw_card_from_works() -> Result<(), Box<dyn std::error::Error>> {
         let mut hand = Hand::new("Player 1");
-        let mut deck = Deck::new("standard test deck");
+        let mut deck = Deck::standard_52("standard test deck");
 
         assert_eq!(hand.cards.len(), 0);
         assert_eq!(deck.cards.len(), 52);
@@ -451,7 +500,7 @@ mod tests {
     #[test]
     fn hand_draw_cards_from_works() -> Result<(), Box<dyn std::error::Error>> {
         let mut hand = Hand::new("frank zappa");
-        let mut deck = Deck::new("the poodle bites");
+        let mut deck = Deck::standard_52("the poodle bites");
 
         hand.draw_cards_from(&mut deck, 5)?;
         assert_eq!(hand.cards.len(), 5);
