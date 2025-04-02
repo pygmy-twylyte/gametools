@@ -385,6 +385,11 @@ impl Display for Hand {
         write!(f, "{}", display_string)
     }
 }
+impl AddCard for Hand {
+    fn add_card(&mut self, card: Card) {
+        self.cards.push(card);
+    }
+}
 
 impl Hand {
     /// Takes a player name or ID and returns a new empty hand.
@@ -428,7 +433,34 @@ impl Hand {
     }
 
     /// Transfer a card from this hand to another collection.
-    pub fn transfer_card(&mut self, temp_card: &Card, other: &mut Pile) -> GameResult<()> {
+    /// 
+    /// The other collection can be a Pile, a Hand or anything that implements AddCard.
+    /// Returns a GameError::CardNotFound if you try to transfer a card that isn't there.
+    /// ```
+    /// # use gametools::*;
+    /// # fn main() -> GameResult<()> {
+    /// let mut deck = Deck::standard_52("test");
+    /// let mut hand = Hand::new("player 1");
+    /// let mut other = Hand::new("player 2");
+    /// 
+    /// // Since we haven't shuffled the deck, this will put the
+    /// // Ace, King, and Queen of Hearts into the hand
+    /// hand.draw_cards_from(&mut deck, 3)?;
+    /// 
+    /// // Transfer the Ace into the other hand
+    /// let search_card = Card::new_temp(Rank::Ace, Suit::Hearts);
+    /// hand.transfer_card(&search_card, &mut other)?;
+    /// 
+    /// assert_eq!(deck.size(), 49);
+    /// assert_eq!(hand.size(), 2);
+    /// assert!(other.contains(&search_card));
+    /// assert!(!hand.contains(&search_card));
+    /// 
+    /// # Ok(())
+    /// # }
+    /// 
+    /// ```
+    pub fn transfer_card(&mut self, temp_card: &Card, other: &mut impl AddCard) -> GameResult<()> {
         match self.cards.iter().position(|&c| c == *temp_card) {
             Some(pos) => {
                 let real_card = self.cards.remove(pos);
@@ -593,7 +625,31 @@ mod tests {
             hand.transfer_card(&search_card, &mut pile).is_err(),
             "should not be able to transfer an absent card"
         );
+        Ok(())
+    }
+    #[test]
+    fn hand_transfer_card_to_hand_works() -> GameResult<()> {
+        let mut deck = Deck::standard_52("test deck");
+        let mut hand = Hand::new("test hand");
+        let mut other = Hand::new("other hand");
 
+        // Since we haven't shuffled the deck, this will put the
+        // Ace, King, and Queen of Hearts into the hand
+        hand.draw_cards_from(&mut deck, 3)
+            .expect("deck just created should have >3 cards!");
+
+        // Transfer a card we know is in the hand to the other hand
+        let search_card = Card::new_temp(Rank::Queen, Suit::Hearts);
+        hand.transfer_card(&search_card, &mut other)?;
+        assert_eq!(other.size(), 1);
+        assert_eq!(hand.size(), 2);
+
+        // Should return Err if we try to transfer a card that isn't there
+        let search_card = Card::new_temp(Rank::Queen, Suit::Spades);
+        assert!(
+            hand.transfer_card(&search_card, &mut other).is_err(),
+            "should not be able to transfer an absent card"
+        );
         Ok(())
     }
 }
