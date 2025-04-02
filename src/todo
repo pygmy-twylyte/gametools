@@ -1,2 +1,4 @@
+- Implement Hand::contains(), which can be useful for...
+- Implement Hand::transfer_card(Card, Pile)
 - AddTo trait implemented for Hand, Pile
 - tests for Pile
