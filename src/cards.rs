@@ -158,7 +158,7 @@ impl TakeCard for Deck {
     /// Takes a card from the deck.
     ///
     /// ```rust
-    /// use gametools::{Deck, DrawFrom};
+    /// use gametools::{Deck, TakeCard};
     ///
     /// let mut deck = Deck::standard_52("main deck");
     ///
@@ -172,7 +172,7 @@ impl TakeCard for Deck {
     /// Takes multiple cards from the deck. Returns None if the deck doesn't have enough to fill the request.
     ///
     /// ```rust
-    /// use gametools::{Deck, DrawFrom};
+    /// use gametools::{Deck, TakeCard};
     ///
     /// let mut deck = Deck::standard_52("test_deck");
     ///
@@ -204,7 +204,7 @@ impl Deck {
     /// Creates a new, standard 52-card deck of playing cards.
     ///
     /// ```rust
-    /// use gametools::{Deck,Card,DrawFrom};
+    /// use gametools::{Deck,Card,TakeCard};
     /// use gametools::Rank::*;
     /// use gametools::Suit::*;
     ///
@@ -253,7 +253,7 @@ impl Deck {
 
     /// Shuffles the deck in place.
     /// ```rust
-    /// use gametools::{Deck, DrawFrom};
+    /// use gametools::{Deck, TakeCard};
     ///
     /// let mut deck = Deck::standard_52("deck_id");
     /// let original = deck.clone();
@@ -271,7 +271,7 @@ impl Deck {
     /// Returns a GameError if the deck doesn't contain enough cards to complete request for *all* hands.
     ///
     /// ```rust
-    /// use gametools::{Deck, Hand, DrawFrom};
+    /// use gametools::{Deck, Hand, TakeCard};
     ///
     /// // create game deck
     /// let mut war_deck = Deck::standard_52("War!");
@@ -335,7 +335,7 @@ impl Pile {
     /// Create a new empty pile of cards.
     ///
     /// ```
-    /// use gametools::{Pile, DrawFrom};
+    /// use gametools::{Pile, TakeCard};
     /// let mut discard_pile = Pile::new("Discard");
     /// assert_eq!(discard_pile.size(), 0);
     /// ```
@@ -349,14 +349,14 @@ impl Pile {
 impl AddCard for Pile {
     /// Add a card to the top of the pile.
     /// ```
-    /// # use gametools::{Pile, Card, Deck, DrawFrom, GameResult};
+    /// # use gametools::{Pile, Card, Deck, TakeCard, AddCard, GameResult};
     /// # fn main() -> GameResult<()> {
     ///     let mut pile = Pile::new("Discard");
     ///     let mut deck = Deck::standard_52("Game Deck");
     ///     deck.shuffle();
     ///
     ///     let card = deck.draw().unwrap();
-    ///     pile.add(card);
+    ///     pile.add_card(card);
     ///
     ///     assert_eq!(pile.size(), 1);
     ///     assert_eq!(deck.size(), 51);

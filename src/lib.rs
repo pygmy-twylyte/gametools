@@ -14,7 +14,7 @@ mod dice;
 pub use dice::{Die, DicePool};
 
 mod cards;
-pub use cards::{Card, Deck, Pile, Hand, TakeCard, Rank, Suit};
+pub use cards::{Card, Deck, Pile, Hand, AddCard, TakeCard, Rank, Suit};
 
 mod gameerror;
 pub use gameerror::GameError;
