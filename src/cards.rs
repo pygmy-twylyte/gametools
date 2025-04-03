@@ -505,7 +505,7 @@ mod tests {
         hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
         assert_eq!(hand.count_suit(Suit::Clubs), 1);
         assert_eq!(hand.count_suit(Suit::Spades), 2);
-        assert_eq!(hand.count_suit(Suit::Hearts), 0);
+        assert_eq!(hand.count_suit(Suit::Hearts),0)
     }
     #[test]
     fn create_standard_deck_works() {
