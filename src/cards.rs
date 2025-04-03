@@ -470,12 +470,43 @@ impl Hand {
         }
         Ok(())
     }
+
+    /// Count the cards in the hand matching a given rank.
+    pub fn count_rank(&self, rank: Rank) -> usize {
+        self.cards.iter().filter(|&c| c.rank == rank).count()
+    }
+
+    /// Count the cards in the hand matching a given suit.
+    pub fn count_suit(&self, suit: Suit) -> usize {
+        self.cards.iter().filter(|&c| c.suit == suit).count()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::cards::*;
 
+    #[test]
+    fn count_rank_works() {
+        let mut hand = Hand::new("p1");
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
+        hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
+        assert_eq!(hand.count_rank(Rank::Queen), 2);
+        assert_eq!(hand.count_rank(Rank::Three), 1);
+        assert_eq!(hand.count_rank(Rank::Jack), 0);
+    }
+
+    #[test]
+    fn count_suit_works() {
+        let mut hand = Hand::new("p1");
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
+        hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
+        assert_eq!(hand.count_suit(Suit::Clubs), 1);
+        assert_eq!(hand.count_suit(Suit::Spades), 2);
+        assert_eq!(hand.count_suit(Suit::Hearts), 0);
+    }
     #[test]
     fn create_standard_deck_works() {
         let deck = Deck::standard_52("Standard/Test Deck");
