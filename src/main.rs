@@ -85,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for hand in &hands {
         println!("{hand}");
     }
-    
+
     // hands can take directly from a deck, or the deck can deal them out
     println!("\nEveryone indiscriminately takes another card! ->");
     for hand in &mut hands {

@@ -5,17 +5,17 @@ pub struct Die {
 }
 impl Die {
     /// Creates a new die with the specified number of sides, up to 255 (u8).
-    /// 
+    ///
     /// ## Panics
     /// - Panics if you try to create a Die with zero sides.
-    /// 
+    ///
     /// ```should_panic
     /// use gametools::Die;
     /// let d6 = Die::new(6);
     /// let d20 = Die::new(20);
-    /// 
+    ///
     /// let d0 = Die::new(0);  // panic!
-    /// 
+    ///
     /// ```
     pub fn new(sides: u8) -> Die {
         assert!(sides > 0, "a Die with zero sides cannot be created");
@@ -23,7 +23,7 @@ impl Die {
     }
 
     /// Rolls the die and returns the face-up value.
-    /// 
+    ///
     /// ```
     /// # use gametools::Die;
     /// let d10 = Die::new(10);
@@ -35,22 +35,25 @@ impl Die {
     }
 
     /// Rolls the die multiple times and returns results as a DicePool.
-    /// 
+    ///
     /// ## Panics
     /// - panics on attempt to roll zero dice to create a pool
-    /// 
+    ///
     /// ```should_panic
     /// use gametools::{Die, DicePool};
-    /// 
+    ///
     /// // create a pool of ten d10s
     /// let d10 = Die::new(10);
     /// let d10_pool = d10.roll_into_pool(10);
     /// assert_eq!(d10_pool.size(), 10);
-    /// 
+    ///
     /// let no_dice = d10.roll_into_pool(0);    // this will panic!
     /// ```
     pub fn roll_into_pool(&self, times: usize) -> DicePool {
-        assert!(times != 0, "cannot create a DicePool with zero dice (Die::roll_into_pool(0))");
+        assert!(
+            times != 0,
+            "cannot create a DicePool with zero dice (Die::roll_into_pool(0))"
+        );
         DicePool {
             rolls: (0..times).map(|_| self.roll()).collect(),
         }
@@ -61,12 +64,12 @@ impl Die {
     ///
     /// The value returned is maxed at 255 so that exploding dice results can still
     /// be used in a DicePool. Even with a d20, it would take rolling 13 consecutive 20s to hit the cap.
-    /// 
+    ///
     /// ```
     /// use gametools::Die;
-    /// 
+    ///
     /// let d6 = Die::new(6);
-    /// 
+    ///
     /// // Note: an exploding die can never return the value it "explodes" on, because
     /// // it will always trigger another roll that will add at least 1 to it. Here we'll
     /// // explode the d6 on 5 -- in 1000 rolls it will never come up 5.
@@ -87,14 +90,14 @@ impl Die {
     /// (6 on a d6, 20 on a d20, etc.)
     /// ```
     /// use gametools::Die;
-    /// 
+    ///
     /// let d10 = Die::new(10);
-    /// 
+    ///
     /// // A die that explodes on a maximum trigger value (e.g. 10 on a 10-sided die) can never
     /// // roll any multiple of that trigger value (e.g. 10, 20, 30, etc.)
     /// for _ in 1..10_000 {
     ///     let result = d10.roll_exploding();
-    ///     assert!(result % 10 != 0); 
+    ///     assert!(result % 10 != 0);
     /// }
     /// ```
     pub fn roll_exploding(&self) -> u8 {
@@ -103,9 +106,9 @@ impl Die {
 }
 
 /// A pool of dice of a single die type (e.g. d6, d20).
-/// 
+///
 /// This is considered as a group of n > 0 dice all simultaneously rolled. The collection containing
-/// the individual die states (rolls) is not guaranteed to maintain any particular order. For 
+/// the individual die states (rolls) is not guaranteed to maintain any particular order. For
 /// game logic where the order of results counts, it is generally better to get the rolls on demand
 /// through roll() or roll_exploding().
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -130,7 +133,6 @@ impl From<Vec<u8>> for DicePool {
         Self { rolls }
     }
 }
-
 
 impl DicePool {
     /// Creates a new, empty DicePool
@@ -260,24 +262,21 @@ impl DicePool {
     }
 
     /// Counts the number of rolls in the pool that meet a certain "success" criteria.
-    pub fn count_success_using<F>(&self, predicate: F) -> usize 
+    pub fn count_success_using<F>(&self, predicate: F) -> usize
     where
         F: Fn(u8) -> bool,
     {
-        self.rolls
-            .iter()
-            .filter(|r| predicate(**r))
-            .count()
+        self.rolls.iter().filter(|r| predicate(**r)).count()
     }
 
-    /// Counts the number of rolls in the pool over a specified threshold 
+    /// Counts the number of rolls in the pool over a specified threshold
     /// "success" value.
-    /// 
+    ///
     /// This is a convenience function that simply calls count_success_using with the
     /// appropriate closure.
     pub fn count_success_over(&self, threshold: u8) -> usize {
         self.count_success_using(|r| r > threshold)
-    } 
+    }
 }
 
 #[cfg(test)]

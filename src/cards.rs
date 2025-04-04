@@ -78,7 +78,10 @@ pub trait TakeCard {
 
 /// Trait common to any collection to which you can add cards.
 pub trait AddCard {
+    /// Adds a single card to the collection.
     fn add_card(&mut self, card: Card);
+    /// Adds multiple cards to the collection.
+    fn add_cards(&mut self, cards: &mut Vec<Card>);
 }
 
 /// A standard playing card.
@@ -366,6 +369,10 @@ impl AddCard for Pile {
     fn add_card(&mut self, card: Card) {
         self.cards.push(card);
     }
+
+    fn add_cards(&mut self, cards: &mut Vec<Card>) {
+        self.cards.append(cards);
+    }
 }
 
 /// A player's hand of cards in a game.
@@ -388,6 +395,10 @@ impl Display for Hand {
 impl AddCard for Hand {
     fn add_card(&mut self, card: Card) {
         self.cards.push(card);
+    }
+
+    fn add_cards(&mut self, cards: &mut Vec<Card>) {
+        self.cards.append(cards);
     }
 }
 
@@ -433,7 +444,7 @@ impl Hand {
     }
 
     /// Transfer a card from this hand to another collection.
-    /// 
+    ///
     /// The other collection can be a Pile, a Hand or anything that implements AddCard.
     /// Returns a GameError::CardNotFound if you try to transfer a card that isn't there.
     /// ```
@@ -442,23 +453,23 @@ impl Hand {
     /// let mut deck = Deck::standard_52("test");
     /// let mut hand = Hand::new("player 1");
     /// let mut other = Hand::new("player 2");
-    /// 
+    ///
     /// // Since we haven't shuffled the deck, this will put the
     /// // Ace, King, and Queen of Hearts into the hand
     /// hand.draw_cards_from(&mut deck, 3)?;
-    /// 
+    ///
     /// // Transfer the Ace into the other hand
     /// let search_card = Card::new_temp(Rank::Ace, Suit::Hearts);
     /// hand.transfer_card(&search_card, &mut other)?;
-    /// 
+    ///
     /// assert_eq!(deck.size(), 49);
     /// assert_eq!(hand.size(), 2);
     /// assert!(other.contains(&search_card));
     /// assert!(!hand.contains(&search_card));
-    /// 
+    ///
     /// # Ok(())
     /// # }
-    /// 
+    ///
     /// ```
     pub fn transfer_card(&mut self, temp_card: &Card, other: &mut impl AddCard) -> GameResult<()> {
         match self.cards.iter().position(|&c| c == *temp_card) {
@@ -487,6 +498,44 @@ mod tests {
     use crate::cards::*;
 
     #[test]
+    fn hand_add_card_works() {
+        let mut hand = Hand::new("p1");
+        hand.add_card(Card::new_temp(Rank::Ace, Suit::Clubs));
+        assert_eq!(hand.size(), 1);
+    }
+
+    #[test]
+    fn hand_add_cards_works() {
+        let mut hand = Hand::new("p1");
+        let mut some_cards = vec![
+            Card::new_temp(Rank::King, Suit::Diamonds),
+            Card::new_temp(Rank::Ten, Suit::Hearts),
+            Card::new_temp(Rank::Queen, Suit::Spades),
+        ];
+        hand.add_cards(&mut some_cards);
+        assert_eq!(hand.size(), 3);
+    }
+
+    #[test]
+    fn pile_add_card_works() {
+        let mut pile = Pile::new("p1");
+        pile.add_card(Card::new_temp(Rank::Ace, Suit::Clubs));
+        assert_eq!(pile.size(), 1);
+    }
+
+    #[test]
+    fn pile_add_cards_works() {
+        let mut pile = Pile::new("p1");
+        let mut some_cards = vec![
+            Card::new_temp(Rank::King, Suit::Diamonds),
+            Card::new_temp(Rank::Ten, Suit::Hearts),
+            Card::new_temp(Rank::Queen, Suit::Spades),
+        ];
+        pile.add_cards(&mut some_cards);
+        assert_eq!(pile.size(), 3);
+    }
+
+    #[test]
     fn count_rank_works() {
         let mut hand = Hand::new("p1");
         hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
@@ -505,7 +554,7 @@ mod tests {
         hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
         assert_eq!(hand.count_suit(Suit::Clubs), 1);
         assert_eq!(hand.count_suit(Suit::Spades), 2);
-        assert_eq!(hand.count_suit(Suit::Hearts),0)
+        assert_eq!(hand.count_suit(Suit::Hearts), 0)
     }
     #[test]
     fn create_standard_deck_works() {
