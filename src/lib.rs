@@ -13,7 +13,10 @@ mod dice;
 pub use dice::{DicePool, Die};
 
 mod cards;
-pub use cards::{AddCard, Card, Deck, Hand, Pile, Rank, Suit, TakeCard};
+pub use cards::{AddCard, Card, Deck, CardHand, Pile, Rank, Suit, TakeCard};
+
+mod dominos;
+pub use dominos::{Domino, BonePile, MAX_PIPS, Train, DominoHand};
 
 mod gameerror;
 pub use gameerror::GameError;

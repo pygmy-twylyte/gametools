@@ -7,6 +7,7 @@ pub enum GameError {
     StackEmpty(String),
     StackTooSmall(String),
     CardNotFound,
+    InsufficientTiles,
 }
 impl fmt::Display for GameError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -17,6 +18,9 @@ impl fmt::Display for GameError {
             }
             GameError::CardNotFound => {
                 write!(f, "the card sought was not found in this collection")
+            }
+            GameError::InsufficientTiles => {
+                write!(f, "insufficient tiles left in the bone pile")
             }
         }
     }

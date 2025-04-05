@@ -108,7 +108,7 @@ pub trait AddCard {
 /// }
 ///
 /// ```
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq)]
 pub struct Card {
     pub rank: Rank,
     pub suit: Suit,
@@ -274,15 +274,15 @@ impl Deck {
     /// Returns a GameError if the deck doesn't contain enough cards to complete request for *all* hands.
     ///
     /// ```rust
-    /// use gametools::{Deck, Hand, TakeCard};
+    /// use gametools::{Deck, CardHand, TakeCard};
     ///
     /// // create game deck
     /// let mut war_deck = Deck::standard_52("War!");
     /// war_deck.shuffle();
     ///
     /// // create (empty) hands for the players
-    /// let mut player_1 = Hand::new("Frank");
-    /// let mut player_2 = Hand::new("Dweezil");
+    /// let mut player_1 = CardHand::new("Frank");
+    /// let mut player_2 = CardHand::new("Dweezil");
     /// let mut hands = vec![player_1, player_2];
     ///
     /// // deal 26 cards each to Frank and Dweezil
@@ -293,7 +293,7 @@ impl Deck {
     /// assert_eq!(hands[1].size(), 26);
     ///
     /// ```
-    pub fn deal_to_hands(&mut self, hands: &mut Vec<Hand>, count: usize) -> GameResult<()> {
+    pub fn deal_to_hands(&mut self, hands: &mut Vec<CardHand>, count: usize) -> GameResult<()> {
         // return Err immediately if there aren't enough cards left, so we don't
         // have to partially fill hands before finding the end of the deck
         if hands.len() * count > self.cards.len() {
@@ -377,12 +377,12 @@ impl AddCard for Pile {
 
 /// A player's hand of cards in a game.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Hand {
+pub struct CardHand {
     pub player: String,
     pub cards: Vec<Card>,
 }
 
-impl Display for Hand {
+impl Display for CardHand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut display_string = format!("{}:[", self.player);
         for card in &self.cards {
@@ -392,7 +392,7 @@ impl Display for Hand {
         write!(f, "{}", display_string)
     }
 }
-impl AddCard for Hand {
+impl AddCard for CardHand {
     fn add_card(&mut self, card: Card) {
         self.cards.push(card);
     }
@@ -402,7 +402,7 @@ impl AddCard for Hand {
     }
 }
 
-impl Hand {
+impl CardHand {
     /// Takes a player name or ID and returns a new empty hand.
     pub fn new(player: &str) -> Self {
         Self {
@@ -451,8 +451,8 @@ impl Hand {
     /// # use gametools::*;
     /// # fn main() -> GameResult<()> {
     /// let mut deck = Deck::standard_52("test");
-    /// let mut hand = Hand::new("player 1");
-    /// let mut other = Hand::new("player 2");
+    /// let mut hand = CardHand::new("player 1");
+    /// let mut other = CardHand::new("player 2");
     ///
     /// // Since we haven't shuffled the deck, this will put the
     /// // Ace, King, and Queen of Hearts into the hand
@@ -499,14 +499,14 @@ mod tests {
 
     #[test]
     fn hand_add_card_works() {
-        let mut hand = Hand::new("p1");
+        let mut hand = CardHand::new("p1");
         hand.add_card(Card::new_temp(Rank::Ace, Suit::Clubs));
         assert_eq!(hand.size(), 1);
     }
 
     #[test]
     fn hand_add_cards_works() {
-        let mut hand = Hand::new("p1");
+        let mut hand = CardHand::new("p1");
         let mut some_cards = vec![
             Card::new_temp(Rank::King, Suit::Diamonds),
             Card::new_temp(Rank::Ten, Suit::Hearts),
@@ -537,7 +537,7 @@ mod tests {
 
     #[test]
     fn count_rank_works() {
-        let mut hand = Hand::new("p1");
+        let mut hand = CardHand::new("p1");
         hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
         hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
         hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
@@ -548,7 +548,7 @@ mod tests {
 
     #[test]
     fn count_suit_works() {
-        let mut hand = Hand::new("p1");
+        let mut hand = CardHand::new("p1");
         hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
         hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
         hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
@@ -615,9 +615,9 @@ mod tests {
         // create a pool of empty hands
         let num_hands = 4;
         let num_cards = 5;
-        let mut hands = Vec::<Hand>::new();
+        let mut hands = Vec::<CardHand>::new();
         for n in 1..=num_hands {
-            hands.push(Hand::new(&format!("Player {n}")));
+            hands.push(CardHand::new(&format!("Player {n}")));
         }
 
         // deal 'em
@@ -644,7 +644,7 @@ mod tests {
 
     #[test]
     fn hand_draw_card_from_works() -> Result<(), Box<dyn std::error::Error>> {
-        let mut hand = Hand::new("Player 1");
+        let mut hand = CardHand::new("Player 1");
         let mut deck = Deck::standard_52("standard test deck");
 
         assert_eq!(hand.cards.len(), 0);
@@ -667,7 +667,7 @@ mod tests {
 
     #[test]
     fn hand_draw_cards_from_works() -> Result<(), Box<dyn std::error::Error>> {
-        let mut hand = Hand::new("frank zappa");
+        let mut hand = CardHand::new("frank zappa");
         let mut deck = Deck::standard_52("the poodle bites");
 
         hand.draw_cards_from(&mut deck, 5)?;
@@ -686,7 +686,7 @@ mod tests {
     fn hand_transfer_card_to_pile_works() -> GameResult<()> {
         let mut deck = Deck::standard_52("test deck");
         let mut pile = Pile::new("test pile");
-        let mut hand = Hand::new("test hand");
+        let mut hand = CardHand::new("test hand");
 
         // Since we haven't shuffled the deck, this will put the
         // Ace, King, and Queen of Hearts into the hand
@@ -710,8 +710,8 @@ mod tests {
     #[test]
     fn hand_transfer_card_to_hand_works() -> GameResult<()> {
         let mut deck = Deck::standard_52("test deck");
-        let mut hand = Hand::new("test hand");
-        let mut other = Hand::new("other hand");
+        let mut hand = CardHand::new("test hand");
+        let mut other = CardHand::new("other hand");
 
         // Since we haven't shuffled the deck, this will put the
         // Ace, King, and Queen of Hearts into the hand
