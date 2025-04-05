@@ -63,7 +63,7 @@ impl BonePile {
         let max = std::cmp::min(most_pips, MAX_PIPS);
         let mut did = 0;
         for left in 0..=max {
-            for right in 0..=max {
+            for right in left..=max {
                 tiles.push(Domino::new(left, right, did));
                 did += 1;
             }
@@ -119,6 +119,7 @@ impl fmt::Display for Train {
     }
 }
 impl Train {
+    /// Create a new train.
     pub fn new(player: &str, open: bool, start: u8) -> Self {
         Self {
             player: player.to_owned(),
@@ -128,13 +129,13 @@ impl Train {
             tiles: Vec::<Domino>::new(),
         }
     }
-    /// Play a tile on the train.
+    /// Attempt to play a tile on the train.
     ///
     /// Returns Err(GameError) if it isn't a valid play or if the train
-    /// is closed to the calling player.
+    /// is closed (and doesn't belong to the calling player.)
     pub fn play(&mut self, tile: Domino, player: &str) -> GameResult<()> {
         if !self.open && self.player != player {
-            return Err(GameError::TrainClosed)
+            return Err(GameError::TrainClosed);
         }
         let new_tile = match tile {
             _ if tile.left == self.tail => tile,
@@ -165,16 +166,12 @@ impl fmt::Display for DominoHand {
 impl DominoHand {
     /// Create a new empty hand.
     pub fn new(player: &str) -> Self {
-        // don't initialize the hand with tiles here, because the possibility of insufficient
-        // tiles in the pile would mean that new() could fail, and we don't want to have to
-        // return a GameResult<> from the constructor. That's somewhat unexpected behavior, so
-        // we'll have a separate one-step constructor for optional use.
         Self {
             player: player.to_owned(),
             tiles: Vec::<Domino>::new(),
         }
     }
-    /// Create and draw tiles for a new hand.
+    /// Create a new hand and draw tiles for it.
     ///
     /// This returns either Ok(DominoHand), or Err(GameError::InsufficientTiles).
     pub fn new_with_draw(player: &str, count: usize, pile: &mut BonePile) -> GameResult<Self> {
@@ -188,12 +185,17 @@ impl DominoHand {
         }
     }
 
-    /// Get a list of domino id's in the hand for the longest possible train starting with a given number.
+    /// Build the longest possible sequence of dominos from this hand, starting with the
+    /// specified number.
+    ///
+    /// This is considered an NP-hard problem, The function uses a graph-based, depth first
+    /// search with pruning and backtracking to find the optimal solution. For a typical starting
+    /// hand of 15 tiles, execution takes around 200 ms on a modern processor... but it increases
+    /// exponentially. A few runs of 25 tiles took anywhere from 11000 to 180000 ms and I didn't
+    /// wait long enough for 30 tiles to finish.
     pub fn find_longest_from(&self, head: u8) -> Vec<usize> {
-        // * build a graph - pips are nodes, and dominos that connect them are edges
-        // * we model this with a HashMap (key = # of pips, val = list of dominos that can connect to it)
-        // the types below make the code below a little easier to read / understand... for me at least :)
-
+        // * build a graph - #pips are nodes, and dominos that connect them are edges
+        // * modeled with a HashMap (key = #pips, val = list of domino ids that can connect to it)
         let mut graph = HashMap::<u8, Vec<(u8, usize)>>::new();
         for tile in &self.tiles {
             graph
@@ -222,15 +224,15 @@ impl DominoHand {
     ) {
         let mut extended = false;
 
-        for &(pips, did) in graph.get(&head).unwrap_or(&vec![]) {
-            if !used.contains(&did) {
-                used.insert(did);
-                working.push(did);
+        for &(pips, domino_id) in graph.get(&head).unwrap_or(&vec![]) {
+            if !used.contains(&domino_id) {
+                used.insert(domino_id);
+                working.push(domino_id);
 
                 Self::depth_first_search(&graph, pips, best, used, working);
 
                 working.pop();
-                used.remove(&did);
+                used.remove(&domino_id);
                 extended = true;
             }
         }
@@ -239,9 +241,9 @@ impl DominoHand {
             *best = working.clone();
         }
     }
-    /// Takes a sequence of domino ids and plays them on a train.
+    /// Takes a sequence of domino ids and attempt to play them on a train.
     ///
-    /// The will return with an error if a tile doesn't match the one before it
+    /// The will return with an error if a tile doesn't match the one before it,
     /// or if this player doesn't have permission to use that train.
     pub fn play_line(&mut self, id_sequence: &Vec<usize>, train: &mut Train) -> GameResult<()> {
         for domino_id in id_sequence {
@@ -302,7 +304,7 @@ mod domino_tests {
         let mut bp = BonePile::new(12); // full 12-set = 169 tiles
         let dh = DominoHand::new_with_draw("Peart", 15, &mut bp)?;
         assert_eq!(dh.tiles.len(), 15);
-        assert_eq!(bp.tiles.len(), 169 - 15);
+        assert_eq!(bp.tiles.len(), 91 - 15);
         Ok(())
     }
 
@@ -310,14 +312,14 @@ mod domino_tests {
     fn bonepile_draw_tile_works() {
         let mut pile = BonePile::new(12);
         let _ = pile.draw_tile();
-        assert_eq!(pile.tiles.len(), 168);
+        assert_eq!(pile.tiles.len(), 90);
     }
 
     #[test]
     fn bonepile_draw_tiles_works() {
         let mut pile = BonePile::new(12);
         let _ = pile.draw_tiles(15);
-        assert_eq!(pile.tiles.len(), 154);
+        assert_eq!(pile.tiles.len(), 91-15);
     }
 
     #[test]
@@ -347,11 +349,8 @@ mod domino_tests {
         let six_pile = BonePile::new(6);
         let twelve_pile = BonePile::new(12);
         let over_max = BonePile::new(50); // should still only go up to MAX_PIPS
-        assert_eq!(six_pile.tiles.len(), 7 * 7);
-        assert_eq!(twelve_pile.tiles.len(), 13 * 13);
-        assert_eq!(
-            over_max.tiles.len(),
-            ((MAX_PIPS + 1) * (MAX_PIPS + 1)) as usize
-        );
+        assert_eq!(six_pile.tiles.len(), 28);
+        assert_eq!(twelve_pile.tiles.len(), 91);
+        assert_eq!(over_max.tiles.len(), 91);
     }
 }
