@@ -14,11 +14,11 @@ pub const MAX_PIPS: u8 = 12;
 pub struct Domino {
     left: u8,
     right: u8,
-    did: usize,
+    id: usize,
 }
 impl Domino {
-    pub fn new(left: u8, right: u8, did: usize) -> Self {
-        Self { left, right, did }
+    pub fn new(left: u8, right: u8, id: usize) -> Self {
+        Self { left, right, id }
     }
     pub fn left(&self) -> u8 {
         self.left
@@ -27,14 +27,14 @@ impl Domino {
         self.right
     }
     pub fn as_tuple(&self) -> (u8, u8, usize) {
-        (self.left, self.right, self.did)
+        (self.left, self.right, self.id)
     }
     /// Returns a copy of this domino with left and right reversed, but same domino id#.
     pub fn flipped(&self) -> Self {
         Self {
             left: self.right,
             right: self.left,
-            did: self.did,
+            id: self.id,
         }
     }
     /// Returns the number of points this tile is worth. 0-0 is worth 50.
@@ -115,7 +115,7 @@ impl fmt::Display for Train {
         for tile in &self.tiles {
             output.push_str(&tile.to_string())
         }
-        write!(f,"{}", output)
+        write!(f, "{}", output)
     }
 }
 impl Train {
@@ -128,14 +128,22 @@ impl Train {
             tiles: Vec::<Domino>::new(),
         }
     }
-    pub fn play(&mut self, tile: Domino) {
-        // flip the domino before placement if needed
-        let new_tile = match self.tail == tile.left {
-            true => tile,
-            false => tile.flipped(),
+    /// Play a tile on the train.
+    ///
+    /// Returns Err(GameError) if it isn't a valid play or if the train
+    /// is closed to the calling player.
+    pub fn play(&mut self, tile: Domino, player: &str) -> GameResult<()> {
+        if !self.open && self.player != player {
+            return Err(GameError::TrainClosed)
+        }
+        let new_tile = match tile {
+            _ if tile.left == self.tail => tile,
+            _ if tile.right == self.tail => tile.flipped(),
+            _ => return Err(GameError::TileUnconnected),
         };
         self.tail = new_tile.right;
         self.tiles.push(new_tile);
+        Ok(())
     }
 }
 
@@ -191,11 +199,11 @@ impl DominoHand {
             graph
                 .entry(tile.left)
                 .or_default()
-                .push((tile.right, tile.did));
+                .push((tile.right, tile.id));
             graph
                 .entry(tile.right)
                 .or_default()
-                .push((tile.left, tile.did));
+                .push((tile.left, tile.id));
         }
 
         // initialize and start depth-first search
@@ -231,23 +239,56 @@ impl DominoHand {
             *best = working.clone();
         }
     }
-    /// Takes results from find_longest_from() and plays that line on a train
-    pub fn play_line(&mut self, line_dids: &Vec<usize>, train: &mut Train) {
-        for domino_id in line_dids {
+    /// Takes a sequence of domino ids and plays them on a train.
+    ///
+    /// The will return with an error if a tile doesn't match the one before it
+    /// or if this player doesn't have permission to use that train.
+    pub fn play_line(&mut self, id_sequence: &Vec<usize>, train: &mut Train) -> GameResult<()> {
+        for domino_id in id_sequence {
             let pos = self
                 .tiles
                 .iter()
-                .position(|&t| t.did == *domino_id)
+                .position(|&t| t.id == *domino_id)
                 .expect("specified domino id not found in play_line");
             let tile = self.tiles.swap_remove(pos);
-            train.play(tile);
+            train.play(tile, &self.player)?;
         }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod domino_tests {
     use crate::*;
+
+    #[test]
+    fn test_find_longest_from_returns_expected_ids() {
+        use crate::{Domino, DominoHand};
+
+        // Define a hand manually with known longest path
+        let hand = vec![
+            Domino::new(1, 2, 0),
+            Domino::new(2, 3, 1),
+            Domino::new(3, 4, 2),
+            Domino::new(4, 1, 3), // This closes a loop
+            Domino::new(0, 1, 4), // This adds an extension off 1
+        ];
+
+        let mut dom_hand = DominoHand::new("TestPlayer");
+        dom_hand.tiles = hand;
+
+        // Starting from pip 1
+        let result = dom_hand.find_longest_from(1);
+
+        // All 5 tiles are connectable in a valid path
+        assert_eq!(result.len(), 5);
+
+        // Since multiple valid orderings are possible, just check tile IDs
+        let expected: Vec<usize> = vec![0, 1, 2, 3, 4];
+        for id in expected {
+            assert!(result.contains(&id));
+        }
+    }
 
     #[test]
     fn dominohand_new_works() {

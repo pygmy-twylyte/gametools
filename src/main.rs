@@ -17,8 +17,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Find the longest starting line that can be played on start_from with this hand
     let best_line_ids = hand.find_longest_from(start_from);
     // Play that best line on the player's train
-    let mut p1_train = Train::new("david", false, start_from);
-    hand.play_line(&best_line_ids, &mut p1_train);
+    let mut p1_train = Train::new("me", false, start_from);
+    hand.play_line(&best_line_ids, &mut p1_train)?;
     println!("{hand}");
     println!("{p1_train}");
 
