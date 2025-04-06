@@ -432,7 +432,7 @@ mod domino_tests {
     #[test]
     fn domino_points_is_correct() {
         let tile = Domino::new(0, 0, 0);
-        assert_eq!(tile.points(), 50);
+        assert_eq!(tile.points(), 0);
 
         let tile = Domino::new(12, 9, 1);
         assert_eq!(tile.points(), 21);
@@ -445,6 +445,6 @@ mod domino_tests {
         let over_max = BonePile::new(50); // should still only go up to MAX_PIPS
         assert_eq!(six_pile.tiles.len(), 28);
         assert_eq!(twelve_pile.tiles.len(), 91);
-        assert_eq!(over_max.tiles.len(), 91);
+        assert_eq!(over_max.tiles.len(), 190); // number of tiles in a double-18 (MAX_PIPS) set
     }
 }

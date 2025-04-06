@@ -45,9 +45,9 @@
 //! use gametools::Die;
 //! let invalid = Die::new(0);  // panics
 //! ```
-//! 
+//!
 //! Attempting to roll zero dice into a dicepool will also panic:
-//! 
+//!
 //! ```should_panic
 //! use gametools::Die;
 //! let d6 = Die::new(5);
