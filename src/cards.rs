@@ -481,6 +481,11 @@ impl CardHand {
         self.cards.contains(temp_card)
     }
 
+    /// Returns true if a card of specified Rank and Suit is in the hand.
+    pub fn contains_by_rs(&self, rank: Rank, suit: Suit) -> bool {
+        self.cards.contains(&Card::new_temp(rank, suit))
+    }
+
     /// Transfer a card from this hand to another collection.
     ///
     /// The other collection can be a Pile, a Hand or anything that implements AddCard.
@@ -532,9 +537,28 @@ impl CardHand {
 }
 
 #[cfg(test)]
-mod tests {
+mod card_tests {
     use crate::cards::*;
 
+    #[test]
+    fn hand_contains_works() {
+        let mut hand = CardHand::new("test");
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
+
+        assert!(hand.contains(&Card::new_temp(Rank::Queen,Suit::Spades)));
+        assert!(!hand.contains(&Card::new_temp(Rank::Ten, Suit::Clubs)));
+    }
+
+    #[test]
+    fn hand_contains_rs_works() {
+        let mut hand = CardHand::new("test");
+        let temp_card = Card::new_temp(Rank::Ace, Suit::Diamonds);
+        hand.add_card(temp_card);
+
+        assert!(hand.contains_by_rs(Rank::Ace, Suit::Diamonds));
+        assert!(!hand.contains_by_rs(Rank::Jack, Suit::Clubs));
+    }
+    
     #[test]
     fn hand_add_card_works() {
         let mut hand = CardHand::new("p1");
