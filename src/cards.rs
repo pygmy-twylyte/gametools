@@ -1,10 +1,10 @@
-//! # Cards
+//! # Cards Module
 //!
 //! This module implements mechanics common to games played with a standard 52 playing-card deck,
 //! such as cards, decks, piles, and hands. Would perhaps one day like to add the capability to
 //! handle other sorts of cards (Uno, Old Maid, Memory, etc.).
 //! 
-//! # Example Usage
+//! # Example
 //! ```
 //! use gametools::{Deck, CardHand, Pile, AddCard, TakeCard};
 //! use gametools::{Suit, Rank, Card};

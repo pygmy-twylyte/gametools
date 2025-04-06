@@ -1,3 +1,59 @@
+//! # Dice Module
+//!
+//! This module provides basic support for simulating rolls of standard polyhedral dice,
+//! like d6, d10, d20, or any die with a custom number of sides (up to 255).
+//!
+//! The primary type is [`Die`], which lets you create and roll individual dice.
+//! For rolling multiple dice at once and working with the results, see [`DicePool`].
+//!
+//! # Examples
+//!
+//! ## Roll a single die
+//! ```
+//! use gametools::Die;
+//!
+//! let d6 = Die::new(6);
+//! let value = d6.roll();
+//! assert!((1..=6).contains(&value));
+//! ```
+//!
+//! ## Create and manipulate a dice pool
+//! ```
+//! use gametools::{Die, DicePool};
+//!
+//! let d10 = Die::new(10);
+//!
+//! // Roll 5d10 and create a DicePool
+//! let pool = d10.roll_into_pool(5);
+//!
+//! // Most of the dicepool API is chainable...
+//! let total = pool
+//!     .reroll_if(&d10,|roll| roll == 1)   // re-rolls all 1's
+//!     .buff(2)                            // increases all rolls by 2
+//!     // .nerf(2)                         // (alternative: reduce all by 2)
+//!     .take_highest(4)                    // take the highest 4, discarding 1
+//!     .sum();                             // calculate the total
+//!
+//! assert!(total >= 12 && total <= 48); // 5(d10+2), drop lowest = 4(d10+2)
+//! ```
+//!
+//! # Panics
+//!
+//! Creating a die with zero sides will panic:
+//!
+//! ```should_panic
+//! use gametools::Die;
+//! let invalid = Die::new(0);  // panics
+//! ```
+//! 
+//! Attempting to roll zero dice into a dicepool will also panic:
+//! 
+//! ```should_panic
+//! use gametools::Die;
+//! let d6 = Die::new(5);
+//! let pool = d6.roll_into_pool(0);    // panic!
+//! ```
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// A single die with a user-defined number of sides
 pub struct Die {

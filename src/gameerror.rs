@@ -1,3 +1,11 @@
+//! # Game Error Module
+//!
+//! This module defines the [`GameError`] enum, which represents common error conditions
+//! that may arise during gameplay logic—such as trying to draw from an empty stack,
+//! attempting to play a tile that doesn’t match, or encountering missing components.
+//!
+//! These errors implement [`std::error::Error`] and [`std::fmt::Display`], allowing them
+//! to integrate cleanly with Rust's error handling patterns.
 use std::error::Error;
 use std::fmt;
 

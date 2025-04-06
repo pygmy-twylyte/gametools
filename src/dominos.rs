@@ -1,8 +1,8 @@
-//! # Dominos
+//! # Dominos Module
 //!
 //! This module implements devices useful for working with / creating a game of Dominos.
 //!
-//! ## Example
+//! # Example
 //! ```
 //! use gametools::{BonePile, DominoHand, Train, GameResult};
 //! # fn main() -> GameResult<()> {
