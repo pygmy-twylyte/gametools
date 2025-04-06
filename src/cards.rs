@@ -155,7 +155,7 @@ pub struct Card {
 }
 impl Display for Card {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} of {}", self.rank.as_str(), self.suit.as_str())
+        write!(f, "[{} of {}]", self.rank.as_str(), self.suit.as_str())
     }
 }
 impl PartialEq for Card {
