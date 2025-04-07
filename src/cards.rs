@@ -68,6 +68,7 @@ pub enum Rank {
     Ace,
 }
 impl Rank {
+    /// Returns static string representation of each variant.
     pub fn as_str(&self) -> &'static str {
         match &self {
             Rank::Two => "Two",
@@ -541,6 +542,37 @@ mod card_tests {
     use crate::cards::*;
 
     #[test]
+    fn rank_as_str_works() {
+        assert_eq!(Rank::Two.as_str(), "Two");
+        assert_eq!(Rank::Three.as_str(), "Three");
+        assert_eq!(Rank::Four.as_str(), "Four");
+        assert_eq!(Rank::Five.as_str(), "Five");
+        assert_eq!(Rank::Six.as_str(), "Six");
+        assert_eq!(Rank::Seven.as_str(), "Seven");
+        assert_eq!(Rank::Eight.as_str(), "Eight");
+        assert_eq!(Rank::Nine.as_str(), "Nine");
+        assert_eq!(Rank::Ten.as_str(), "Ten");
+        assert_eq!(Rank::Jack.as_str(), "Jack");
+        assert_eq!(Rank::Queen.as_str(), "Queen");
+        assert_eq!(Rank::King.as_str(), "King");
+        assert_eq!(Rank::Ace.as_str(), "Ace");
+    }
+
+    #[test]
+    fn suit_as_str_works() {
+        assert_eq!(Suit::Clubs.as_str(), "Clubs");
+        assert_eq!(Suit::Diamonds.as_str(), "Diamonds");
+        assert_eq!(Suit::Hearts.as_str(), "Hearts");
+        assert_eq!(Suit::Spades.as_str(), "Spades");
+    }
+
+    #[test]
+    fn card_display_is_correct() {
+        let qos = Card::new_temp(Rank::Queen,Suit::Spades);
+        assert_eq!(qos.to_string(), "[Queen of Spades]".to_string());
+    }
+
+    #[test]
     fn deck_iter_works() {
         let deck = Deck::standard_52("test");
         assert_eq!(deck.iter().count(), 52);
@@ -704,6 +736,32 @@ mod card_tests {
             Card::new_temp(Rank::Queen, Suit::Spades),
         ];
         assert_eq!(take_two, expected);
+
+        // attempt to draw too many should return None
+        assert!(pile.draw_cards(1000).is_none());
+    }
+
+    #[test]
+    fn pile_name_works() {
+        let pile = Pile::new("test");
+        assert_eq!(pile.name(), "test");
+    }
+
+    #[test]
+    fn pile_size_is_correct() {
+        let mut pile = Pile::new("test");
+        assert_eq!(pile.size(),  0);
+        pile.add_card(Card::new_temp(Rank::Ace, Suit::Hearts));
+        assert_eq!(pile.size(), 1);
+    }
+
+    #[test]
+    fn hand_display_is_correct() {
+        let mut hand = CardHand::new("test");
+        assert_eq!(hand.to_string(), "test:[]");
+        let qos = Card::new_temp(Rank::Queen, Suit::Spades);
+        hand.add_card(qos);
+        assert_eq!(hand.to_string(), "test:[[Queen of Spades]]");
     }
 
     #[test]
