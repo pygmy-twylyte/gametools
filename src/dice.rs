@@ -248,24 +248,12 @@ impl DicePool {
     /// Returns an tuple in an Option::Some((min, max)) of the rolls in the pool, or None if the pool is empty
     /// or no minimum or maximum can be determined.
     pub fn range(&self) -> Option<(u8, u8)> {
-        if self.rolls.is_empty() {
-            return None;
-        }
-        let max = match self.rolls.iter().max() {
-            Some(roll) => roll,
-            None => {
-                return None;
-            }
-        };
-        let min = match self.rolls.iter().min() {
-            Some(roll) => roll,
-            None => {
-                return None;
-            }
-        };
-
+        // ? operator on iter().max() takes care of the empty pool case for us
+        let max = self.rolls.iter().max()?;
+        let min = self.rolls.iter().min()?;      
         Some((*min, *max))
     }
+
     /// Counts the number of times a particular value was rolled in the pool
     pub fn count_roll(&self, value: u8) -> usize {
         self.rolls.iter().filter(|&r| *r == value).count()
@@ -308,8 +296,8 @@ impl DicePool {
     where
         F: Fn(u8) -> bool,
     {
-        let rerolled: Vec<u8> = self
-            .rolls
+        let rolls = &self.rolls;
+        let rerolled: Vec<u8> = rolls
             .iter()
             .map(|&r| if predicate(r) { die.roll() } else { r })
             .collect();
@@ -374,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn die_roll_n_returns_correct_dicepool() {
+    fn die_roll_into_pool_returns_correct_dicepool() {
         let d6 = Die::new(6);
         let d6_pool = d6.roll_into_pool(20);
         let rolls = d6_pool.results();
@@ -387,6 +375,13 @@ mod tests {
                 roll
             );
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn roll_zero_dice_into_pool_panics() {
+        let d4 = Die::new(4);
+        let _ = d4.roll_into_pool(0);   // panic!
     }
 
     #[test]
@@ -447,6 +442,12 @@ mod tests {
         let dp = DicePool::new();
         let rolls = dp.results();
         assert!(rolls.is_empty(), "new dicepool did not have empty results!");
+    }
+
+    #[test]
+    fn create_empty_dicepool_via_default() {
+        let pool = DicePool::default();
+        assert_eq!(pool, DicePool::new());
     }
 
     #[test]
@@ -519,7 +520,7 @@ mod tests {
     }
 
     #[test]
-    fn dicepool_range_works() {
+    fn dicepool_range_is_correct() {
         let mut dp = DicePool::new();
         assert_eq!(dp.range(), None);
 
@@ -529,6 +530,12 @@ mod tests {
         }
         assert_eq!(dp.range(), Some((12, 125)));
     }
+
+    #[test]
+    fn dicepool_range_returns_none_if_empty() {
+        let pool = DicePool::new();
+        assert!(pool.range().is_none());
+    } 
 
     #[test]
     fn dicepool_count_roll_works() {
