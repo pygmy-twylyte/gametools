@@ -541,85 +541,32 @@ mod card_tests {
     use crate::cards::*;
 
     #[test]
-    fn hand_contains_works() {
-        let mut hand = CardHand::new("test");
-        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
-
-        assert!(hand.contains(&Card::new_temp(Rank::Queen,Suit::Spades)));
-        assert!(!hand.contains(&Card::new_temp(Rank::Ten, Suit::Clubs)));
+    fn deck_iter_works() {
+        let deck = Deck::standard_52("test");
+        assert_eq!(deck.iter().count(), 52);
     }
 
     #[test]
-    fn hand_contains_rs_works() {
-        let mut hand = CardHand::new("test");
-        let temp_card = Card::new_temp(Rank::Ace, Suit::Diamonds);
-        hand.add_card(temp_card);
-
-        assert!(hand.contains_by_rs(Rank::Ace, Suit::Diamonds));
-        assert!(!hand.contains_by_rs(Rank::Jack, Suit::Clubs));
-    }
-    
-    #[test]
-    fn hand_add_card_works() {
-        let mut hand = CardHand::new("p1");
-        hand.add_card(Card::new_temp(Rank::Ace, Suit::Clubs));
-        assert_eq!(hand.size(), 1);
+    fn deck_as_slice_works() {
+        let deck = Deck::standard_52("test");
+        for card in deck.as_slice() {
+            assert!(card.uid < u32::MAX);
+        }
+        assert_eq!(deck.as_slice().iter().count(), 52);
     }
 
     #[test]
-    fn hand_add_cards_works() {
-        let mut hand = CardHand::new("p1");
-        let mut some_cards = vec![
-            Card::new_temp(Rank::King, Suit::Diamonds),
-            Card::new_temp(Rank::Ten, Suit::Hearts),
-            Card::new_temp(Rank::Queen, Suit::Spades),
-        ];
-        hand.add_cards(&mut some_cards);
-        assert_eq!(hand.size(), 3);
+    fn deck_shuffle_works() {
+        let original = Deck::standard_52("test");
+        let mut copy = original.clone();
+        assert_eq!(original, copy);
+        copy.shuffle();
+        assert_eq!(original.size(), copy.size());
+        assert_ne!(original, copy);
     }
 
     #[test]
-    fn pile_add_card_works() {
-        let mut pile = Pile::new("p1");
-        pile.add_card(Card::new_temp(Rank::Ace, Suit::Clubs));
-        assert_eq!(pile.size(), 1);
-    }
-
-    #[test]
-    fn pile_add_cards_works() {
-        let mut pile = Pile::new("p1");
-        let mut some_cards = vec![
-            Card::new_temp(Rank::King, Suit::Diamonds),
-            Card::new_temp(Rank::Ten, Suit::Hearts),
-            Card::new_temp(Rank::Queen, Suit::Spades),
-        ];
-        pile.add_cards(&mut some_cards);
-        assert_eq!(pile.size(), 3);
-    }
-
-    #[test]
-    fn count_rank_works() {
-        let mut hand = CardHand::new("p1");
-        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
-        hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
-        hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
-        assert_eq!(hand.count_rank(Rank::Queen), 2);
-        assert_eq!(hand.count_rank(Rank::Three), 1);
-        assert_eq!(hand.count_rank(Rank::Jack), 0);
-    }
-
-    #[test]
-    fn count_suit_works() {
-        let mut hand = CardHand::new("p1");
-        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
-        hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
-        hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
-        assert_eq!(hand.count_suit(Suit::Clubs), 1);
-        assert_eq!(hand.count_suit(Suit::Spades), 2);
-        assert_eq!(hand.count_suit(Suit::Hearts), 0)
-    }
-    #[test]
-    fn create_standard_deck_works() {
+    fn deck_standard_52_works() {
         let deck = Deck::standard_52("Standard/Test Deck");
 
         let spade_count = deck
@@ -702,6 +649,61 @@ mod card_tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn pile_add_card_works() {
+        let mut pile = Pile::new("p1");
+        pile.add_card(Card::new_temp(Rank::Ace, Suit::Clubs));
+        assert_eq!(pile.size(), 1);
+    }
+
+    #[test]
+    fn pile_add_cards_works() {
+        let mut pile = Pile::new("p1");
+        let mut some_cards = vec![
+            Card::new_temp(Rank::King, Suit::Diamonds),
+            Card::new_temp(Rank::Ten, Suit::Hearts),
+            Card::new_temp(Rank::Queen, Suit::Spades),
+        ];
+        pile.add_cards(&mut some_cards);
+        assert_eq!(pile.size(), 3);
+    }
+
+    #[test]
+    fn pile_draw_works() {
+        let mut pile = Pile::new("discard");
+        let mut some_cards = vec![
+            Card::new_temp(Rank::King, Suit::Diamonds),
+            Card::new_temp(Rank::Ten, Suit::Hearts),
+            Card::new_temp(Rank::Queen, Suit::Spades),
+        ];
+        pile.add_cards(&mut some_cards);
+
+        // top card should be the last one added
+        let top_card = pile.draw().unwrap();
+        assert_eq!(top_card, Card::new_temp(Rank::Queen, Suit::Spades));
+
+        // draw from an empty pile should return None
+        let mut empty_pile = Pile::new("test");
+        assert!(empty_pile.draw().is_none());
+    }
+
+    #[test]
+    fn pile_draw_cards_works() {
+        let mut pile = Pile::new("discard");
+        let mut some_cards = vec![
+            Card::new_temp(Rank::King, Suit::Diamonds),
+            Card::new_temp(Rank::Ten, Suit::Hearts),
+            Card::new_temp(Rank::Queen, Suit::Spades),
+        ];
+        pile.add_cards(&mut some_cards);
+        let take_two = pile.draw_cards(2).unwrap();
+        let expected = vec![
+            Card::new_temp(Rank::Ten, Suit::Hearts),
+            Card::new_temp(Rank::Queen, Suit::Spades),
+        ];
+        assert_eq!(take_two, expected);
     }
 
     #[test]
@@ -793,5 +795,63 @@ mod card_tests {
             "should not be able to transfer an absent card"
         );
         Ok(())
+    }
+    #[test]
+    fn hand_count_rank_works() {
+        let mut hand = CardHand::new("p1");
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
+        hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
+        assert_eq!(hand.count_rank(Rank::Queen), 2);
+        assert_eq!(hand.count_rank(Rank::Three), 1);
+        assert_eq!(hand.count_rank(Rank::Jack), 0);
+    }
+
+    #[test]
+    fn hand_count_suit_works() {
+        let mut hand = CardHand::new("p1");
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Clubs));
+        hand.add_card(Card::new_temp(Rank::Three, Suit::Spades));
+        assert_eq!(hand.count_suit(Suit::Clubs), 1);
+        assert_eq!(hand.count_suit(Suit::Spades), 2);
+        assert_eq!(hand.count_suit(Suit::Hearts), 0)
+    }
+    #[test]
+    fn hand_contains_works() {
+        let mut hand = CardHand::new("test");
+        hand.add_card(Card::new_temp(Rank::Queen, Suit::Spades));
+
+        assert!(hand.contains(&Card::new_temp(Rank::Queen, Suit::Spades)));
+        assert!(!hand.contains(&Card::new_temp(Rank::Ten, Suit::Clubs)));
+    }
+
+    #[test]
+    fn hand_contains_rs_works() {
+        let mut hand = CardHand::new("test");
+        let temp_card = Card::new_temp(Rank::Ace, Suit::Diamonds);
+        hand.add_card(temp_card);
+
+        assert!(hand.contains_by_rs(Rank::Ace, Suit::Diamonds));
+        assert!(!hand.contains_by_rs(Rank::Jack, Suit::Clubs));
+    }
+
+    #[test]
+    fn hand_add_card_works() {
+        let mut hand = CardHand::new("p1");
+        hand.add_card(Card::new_temp(Rank::Ace, Suit::Clubs));
+        assert_eq!(hand.size(), 1);
+    }
+
+    #[test]
+    fn hand_add_cards_works() {
+        let mut hand = CardHand::new("p1");
+        let mut some_cards = vec![
+            Card::new_temp(Rank::King, Suit::Diamonds),
+            Card::new_temp(Rank::Ten, Suit::Hearts),
+            Card::new_temp(Rank::Queen, Suit::Spades),
+        ];
+        hand.add_cards(&mut some_cards);
+        assert_eq!(hand.size(), 3);
     }
 }
