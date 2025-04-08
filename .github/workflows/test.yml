@@ -1,24 +1,19 @@
-name: Rust CI
+name: rust ci
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
-  test:
+  rust-ci:
+    name: rust ci
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
+      - name: Run tests
+        run: cargo test
 
-    - name: Run tests
-      run: cargo test --all
+      - name: Extra report step (optional)
+        run: echo "Reporting done"
+

@@ -332,6 +332,8 @@ impl DominoHand {
     }
     /// Takes a sequence of domino ids and attempt to play them on a train.
     ///
+    /// _PANIC_ : if you pass a domino_id that doesn't exist in this hand
+    ///
     /// The will return with an error if a tile doesn't match the one before it,
     /// or if this player doesn't have permission to use that train.
     pub fn play_line(&mut self, id_sequence: &Vec<usize>, train: &mut Train) -> GameResult<()> {
@@ -394,6 +396,8 @@ mod domino_tests {
         let dh = DominoHand::new_with_draw("Peart", 15, &mut bp)?;
         assert_eq!(dh.tiles.len(), 15);
         assert_eq!(bp.tiles.len(), 91 - 15);
+
+        assert!(DominoHand::new_with_draw("who", 1000, &mut bp).is_err());
         Ok(())
     }
 
@@ -424,9 +428,34 @@ mod domino_tests {
     }
 
     #[test]
+    fn domino_display_is_correct() {
+        let tile = Domino::new(0, 0, 0);
+        let another_tile = Domino::new(5, 5, 5);
+        assert_eq!(tile.to_string(), "[0:0]");
+        assert_eq!(another_tile.to_string(), "[5:5]");
+    }
+
+    #[test]
     fn flip_domino_works() {
         let tile = Domino::new(1, 2, 101);
-        assert_eq!(tile.flipped(), Domino::new(2, 1, 101));
+        let flipped = tile.flipped();
+        assert_eq!(flipped.id(), tile.id());
+        assert_eq!(flipped.right(), tile.left());
+        assert_eq!(flipped.left(), tile.right());
+    }
+
+    #[test]
+    fn domino_as_tuple_is_correct() {
+        let tile = Domino::new(1, 2, 3);
+        assert_eq!(tile.as_tuple(), (1, 2, 3));
+    }
+
+    #[test]
+    fn train_new_works() {
+        let train = Train::new("zappa", false, 12);
+        assert_eq!(train.player, "zappa");
+        assert_eq!(train.open, false);
+        assert_eq!(train.head, 12);
     }
 
     #[test]
@@ -439,6 +468,16 @@ mod domino_tests {
     }
 
     #[test]
+    fn domino_points_with_zero_worth_is_correct() {
+        let double_zero = Domino::new(0, 0, 0);
+        let double_nine = Domino::new(9, 9, 1);
+        assert_eq!(double_zero.points_with_zero_worth(0), 0);
+        assert_eq!(double_nine.points_with_zero_worth(0), 18);
+        assert_eq!(double_zero.points_with_zero_worth(50), 50);
+        assert_eq!(double_nine.points_with_zero_worth(50), 18);
+    }
+
+    #[test]
     fn create_bonepile_works() {
         let six_pile = BonePile::new(6);
         let twelve_pile = BonePile::new(12);
@@ -446,5 +485,81 @@ mod domino_tests {
         assert_eq!(six_pile.tiles.len(), 28);
         assert_eq!(twelve_pile.tiles.len(), 91);
         assert_eq!(over_max.tiles.len(), 190); // number of tiles in a double-18 (MAX_PIPS) set
+    }
+
+    #[test]
+    fn train_display_is_correct() {
+        let private = Train::new("moon", false, 12);
+        let mut public = Train::new("open", true, 12);
+        let tile_12_1 = Domino::new(12, 1, 0);
+        public.play(tile_12_1, "moon").unwrap();
+
+        assert_eq!(private.to_string(), "[X]-moon-(12)");
+        assert_eq!(public.to_string(), "[O]-open-(12)[12:1]");
+    }
+
+    #[test]
+    fn train_play_works() {
+        let mut public = Train::new("open", true, 12);
+        let mut private = Train::new("bonzo", false, 12);
+        let d12_1 = Domino::new(12, 1, 0);
+        let d2_12 = Domino::new(2, 12, 1); // this one will have to flip
+        let d5_6 = Domino::new(5, 6, 2); // this one won't fit at all
+
+        assert!(private.play(d12_1, "percy").is_err()); // closed private train, wrong player
+        assert!(private.play(d12_1, "bonzo").is_ok()); // closed private train, player owns it
+        assert!(private.tail == 1);
+        assert!(private.tiles.len() == 1);
+
+        assert!(public.play(d2_12, "anyone").is_ok());
+        assert!(public.tail == 2); // this tile had to flip (2_12 -> 12_2) to play on the train
+        assert!(public.tiles.len() == 1);
+
+        assert!(public.play(d5_6, "anyone").is_err()); // wrong #s to play on tail of this train
+    }
+
+    #[test]
+    fn hand_display_works() {
+        let mut hand = DominoHand::new("me");
+        hand.tiles.push(Domino {
+            left: 1,
+            right: 1,
+            id: 1,
+        });
+        assert_eq!(hand.to_string(), "me->[1:1]");
+    }
+
+    #[test]
+    #[should_panic]
+    fn hand_play_line_panics_on_bad_id() {
+        // create a hand with 3 sequential dominos and an open/community train
+        let mut hand = DominoHand::new("test");
+        hand.tiles = vec![
+            Domino::new(1, 2, 0),
+            Domino::new(2, 3, 1),
+            Domino::new(3, 4, 2),
+        ];
+        let mut train = Train::new("open", true, 1);
+
+        let bad_sequence = vec![9, 8, 9, 8]; // these domino ids aren't in the hand
+        let _result = hand.play_line(&bad_sequence, &mut train); // should panic!
+    }
+
+    #[test]
+    fn hand_play_line_works() {
+        // create a hand with 3 sequential dominos and an open/community train
+        let mut hand = DominoHand::new("test");
+        hand.tiles = vec![
+            Domino::new(1, 2, 0),
+            Domino::new(2, 3, 1),
+            Domino::new(3, 4, 2),
+        ];
+        let mut train = Train::new("open", true, 1);
+
+        let valid_sequence = vec![0, 1, 2]; // these domino ids should play in sequence
+        let _result = hand.play_line(&valid_sequence, &mut train); 
+        assert!(hand.tiles.is_empty());
+        assert_eq!(train.tiles.len(), 3);
+        assert_eq!(train.tail, 4);  // last tile should be [3:4]
     }
 }
