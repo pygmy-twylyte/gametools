@@ -5,19 +5,15 @@ on:
     branches: [master]
 
 jobs:
-  test:
-    name: test
+  rust-ci:
+    name: rust ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Run tests
         run: cargo test
 
-  report:
-    name: report
-    runs-on: ubuntu-latest
-    if: always()  # makes sure this job runs no matter what
-    steps:
-      - name: Ping GitHub
-        run: echo "All done"
+      - name: Extra report step (optional)
+        run: echo "Reporting done"
 
