@@ -10,7 +10,7 @@ use std::error::Error;
 use std::fmt;
 
 /// Error types for problematic game conditions.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum GameError {
     StackEmpty(String),
     StackTooSmall(String),
@@ -42,3 +42,47 @@ impl fmt::Display for GameError {
     }
 }
 impl Error for GameError {}
+
+#[cfg(test)]
+mod tests {
+    use super::GameError;
+    use std::error::Error;
+
+    #[test]
+    fn test_game_error_display_and_trait() {
+        let cases: Vec<(GameError, &str)> = vec![
+            (
+                GameError::StackEmpty("Main".to_string()),
+                "cannot draw from empty stack 'Main'"
+            ),
+            (
+                GameError::StackTooSmall("Reserve".to_string()),
+                "too few cards remain in 'Reserve' to satisfy need"
+            ),
+            (
+                GameError::CardNotFound,
+                "the card sought was not found in this collection"
+            ),
+            (
+                GameError::InsufficientTiles,
+                "insufficient tiles left in the bone pile"
+            ),
+            (
+                GameError::TileUnconnected,
+                "that tile does not match the tail of the train"
+            ),
+            (
+                GameError::TrainClosed,
+                "attempted to play on a closed train"
+            ),
+        ];
+
+        for (err, expected_msg) in cases {
+            assert_eq!(err.to_string(), expected_msg);
+
+            // Confirm it behaves as std::error::Error
+            let as_error: &dyn Error = &err;
+            assert_eq!(as_error.to_string(), expected_msg);
+        }
+    }
+}
