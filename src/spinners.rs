@@ -109,9 +109,24 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .collect();
         Spinner::new(covered)
     }
+
+    /// Covers (inactivates) all wedges on the spinner.
+    pub fn cover_all(&self) -> Spinner<T> {
+        let all_covered = self
+            .wedges
+            .iter()
+            .map(|w| {
+                let mut new_wedge = w.clone();
+                new_wedge.active = false;
+                new_wedge
+            })
+            .collect();
+        Spinner::new(all_covered)
+    }
+
     /// Returns a new spinner after uncovering any wedges that match a target value.
     pub fn uncover(&self, target_val: T) -> Spinner<T> {
-        // create and return a new spinner with active = false on target wedges
+        // create and return a new spinner with active = true on target wedges
         let uncovered = self
             .wedges
             .iter()
@@ -120,6 +135,20 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
                 if w.value == target_val {
                     new_wedge.active = true;
                 }
+                new_wedge
+            })
+            .collect();
+        Spinner::new(uncovered)
+    }
+
+    /// Uncover / (re)activate all wedges on the spinner.
+    pub fn uncover_all(&self) -> Spinner<T> {
+        let uncovered = self
+            .wedges
+            .iter()
+            .map(|w| {
+                let mut new_wedge = w.clone();
+                new_wedge.active = true;
                 new_wedge
             })
             .collect();
@@ -257,6 +286,25 @@ mod spinner_tests {
             if let Some(val) = new_spinner.spin() {
                 assert_eq!(val, "Red");
             }
+        }
+    }
+
+    #[test]
+    fn uncover_all_and_cover_all_work_correctly() {
+        let spinner = Spinner::new(vec![
+            Wedge::new_default("Win"),
+            Wedge::new_default("Lose"),
+            Wedge::new_default("Draw"),
+        ]);
+
+        let all_covered = spinner.cover_all();
+        for _ in 1..100 {
+            assert!(all_covered.spin().is_none());
+        }
+
+        let all_uncovered = all_covered.uncover_all();
+        for _ in 1..100 {
+            assert!(all_uncovered.spin().is_some());
         }
     }
 }
