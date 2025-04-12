@@ -109,6 +109,22 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .collect();
         Spinner::new(covered)
     }
+    /// Returns a new spinner after uncovering any wedges that match a target value.
+    pub fn uncover(&self, target_val: T) -> Spinner<T> {
+        // create and return a new spinner with active = false on target wedges
+        let uncovered = self
+            .wedges
+            .iter()
+            .map(|w| {
+                let mut new_wedge = w.clone();
+                if w.value == target_val {
+                    new_wedge.active = true;
+                }
+                new_wedge
+            })
+            .collect();
+        Spinner::new(uncovered)
+    }
 }
 
 #[cfg(test)]
@@ -223,6 +239,23 @@ mod spinner_tests {
             if let Some(val) = new_spinner.spin() {
                 assert_ne!(val, "Red");
                 assert!(["Blue", "Green"].contains(&val));
+            }
+        }
+    }
+
+    #[test]
+    fn spinner_uncover_activates_only_the_right_wedges() {
+        // start with all covered
+        let spinner = Spinner::new(vec![
+            Wedge::new("Red", 2, false),
+            Wedge::new("Blue", 2, false),
+            Wedge::new("Green", 2, false),
+        ]);
+        let new_spinner = spinner.uncover("Red");
+        // should now only be able to return Some("Red") or None
+        for _ in 1..100 {
+            if let Some(val) = new_spinner.spin() {
+                assert_eq!(val, "Red");
             }
         }
     }
