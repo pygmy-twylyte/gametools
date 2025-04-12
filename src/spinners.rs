@@ -35,7 +35,7 @@ where
     weights: Vec<usize>,
 }
 
-impl<T: Clone> Spinner<T> {
+impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// Create a new spinner with a vector of wedges.
     pub fn new(wedges: Vec<Wedge<T>>) -> Self {
         let weights = wedges.iter().map(|w| w.width).collect();
@@ -45,7 +45,7 @@ impl<T: Clone> Spinner<T> {
     /// Spins the spinner, returning Some(value) of the wedge it lands on.
     /// Returns `None` if there are no wedges, or if the wedge selected is inactive / covered.
     /// The probability of landing on a particular wedge is determine by its width.
-    /// 
+    ///
     /// ## Example
     /// ```
     /// use gametools::spinners::{Spinner, Wedge};
@@ -65,7 +65,40 @@ impl<T: Clone> Spinner<T> {
         if !chosen_wedge.active {
             return None;
         }
-        Some(self.wedges[distribution.sample(&mut rng)].clone().value)
+        Some(chosen_wedge.value)
+    }
+
+    /// Returns a new spinner with a target value covered (blocked).
+    /// Returns a clone of the original spinner if there is no wedge matching the target value.
+    /// 
+    /// ## Example
+    /// ```
+    /// use gametools::spinners::{Wedge, Spinner};
+    /// let original = Spinner::new(vec![
+    ///     Wedge::new("Red", 1, true),
+    ///     Wedge::new("Green", 1, true),
+    ///     Wedge::new("Blue", 1, true),
+    /// ]);
+    /// let red_blocked = original.cover("Red");
+    /// // red_blocked.spin() now returns None if the spinner lands on Red
+    /// if let Some(color) = red_blocked.spin() {
+    ///     assert!((color == "Green") | (color == "Blue"));
+    /// }
+    /// ```
+    pub fn cover(&self, target_val: T) -> Spinner<T> {
+        // create and return a new spinner with active = false on target wedges
+        let covered = self
+            .wedges
+            .iter()
+            .map(|w| {
+                let mut new_wedge = w.clone();
+                if w.value == target_val {
+                    new_wedge.active = false;
+                }
+                new_wedge
+            })
+            .collect();
+        Spinner::new(covered)
     }
 }
 
@@ -157,6 +190,23 @@ mod spinner_tests {
         ]);
         for _ in 1..100 {
             assert!(spinner.spin().is_none());
+        }
+    }
+
+    #[test]
+    fn spinner_cover_inactivates_only_the_right_wedges() {
+        let spinner = Spinner::new(vec![
+            Wedge::new("Red", 2, true),
+            Wedge::new("Blue", 2, true),
+            Wedge::new("Green", 2, true),
+            Wedge::new("Red", 2, true),
+        ]);
+        let new_spinner = spinner.cover("Red");
+        for _ in 1..100 {
+            if let Some(val) = new_spinner.spin() {
+                assert_ne!(val, "Red");
+                assert!(["Blue", "Green"].contains(&val));
+            }
         }
     }
 }
