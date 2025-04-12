@@ -24,6 +24,15 @@ impl<T: Clone> Wedge<T> {
             active,
         }
     }
+
+    /// Creates a new wedge with commonly used defaults (width = 1, active = true).
+    pub fn new_default(value: T) -> Self {
+        Self {
+            value,
+            width: 1,
+            active: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -70,7 +79,7 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
 
     /// Returns a new spinner with a target value covered (blocked).
     /// Returns a clone of the original spinner if there is no wedge matching the target value.
-    /// 
+    ///
     /// ## Example
     /// ```
     /// use gametools::spinners::{Wedge, Spinner};
@@ -106,11 +115,19 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
 mod spinner_tests {
     use crate::spinners::*;
     #[test]
-    fn can_create_wedges_with_varied_types() {
+    fn can_create_wedges_with_varied_value_types() {
         let text_wedge = Wedge::new("Winner".to_string(), 1, true);
         assert_eq!(text_wedge.value, "Winner");
         let numeric = Wedge::new(10, 1, true);
         assert_eq!(numeric.value, 10);
+    }
+
+    #[test]
+    fn wedge_new_default_returns_expected_values() {
+        let bad_one = Wedge::new_default("Bankrupt!");
+        assert_eq!(bad_one.width, 1);
+        assert_eq!(bad_one.active, true);
+        assert_eq!(bad_one.value, "Bankrupt!");
     }
 
     #[test]
