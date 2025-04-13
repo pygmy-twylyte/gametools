@@ -2,7 +2,76 @@
 //!
 //! Implements a game Spinner, comprised of Wedges which can be uniform or of different
 //! relative widths, and can be blocked / covered according to game conditions. Wedges
-//! may contain numeric values, strings, enums, or other user-defined types.
+//! may contain numeric values, strings, enums, or other user-defined types (so long as
+//! they implement Clone and PartialEq). Spinner methods largely return new Spinners
+//! with the requested changes, rather than modifying the original spinner. This is
+//! to allow for functional (chainable) programming patterns, and to avoid mutable state.
+//!
+//! ## Example
+//! ```
+//! # use gametools::spinners::{Wedge, Spinner, wedges_from_values};
+//! let wedges = wedges_from_values(vec!["Rock", "Paper", "Scissors"]);
+//! let rps = Spinner::new(wedges);
+//! if let Some(spin) = rps.spin() {
+//!     println!("You shoot: {spin}!");
+//! }
+//! // too easy, let's play like Sheldon Cooper instead!
+//! let sheldonized_rps = rps
+//!     .add_wedge(Wedge::new("Lizard"))
+//!     .add_wedge(Wedge::new("Spock"));
+//!
+//! if let Some(spin) = sheldonized_rps.spin() {
+//!     println!("You shoot: {spin}!");
+//! }
+//!
+//! ```
+//! ## Example
+//! ```
+//! use gametools::spinners::{Spinner, Wedge};
+//! let spinner = Spinner::new(vec![
+//!     Wedge::new_weighted("Heads", 75),
+//!     Wedge::new_weighted("Tails", 25),
+//! ]);
+//! let toss = spinner.spin().unwrap();  // will be "Heads" 75% of the time
+//! ```
+//!
+//! ## Example
+//! ```
+//! use gametools::spinners::{Spinner, Wedge};
+//! let spinner = Spinner::new(vec![
+//!     Wedge::new("Red"),
+//!     Wedge::new("Blue"),
+//!     Wedge::new("Green"),
+//!     Wedge::new("Red"),
+//! ]);
+//!
+//! // create a new spinner with "Red" wedges covered
+//! // (blocks spinner from returning this value when landing on it, returns None instead)
+//! let new_spinner = spinner.cover("Red");
+//! for _ in 1..100 {
+//!     if let Some(val) = new_spinner.spin() {
+//!         assert_ne!(val, "Red");
+//!         assert!(["Blue", "Green"].contains(&val));
+//!     }
+//! }
+//! ```
+//!
+//! ## Example
+//! ```
+//! use gametools::spinners::{Spinner, Wedge};
+//! let spinner = Spinner::new(vec![
+//!    Wedge::new_weighted("Red", 2).cover(),   // start with all covered
+//!    Wedge::new_weighted("Blue", 2).cover(),
+//!    Wedge::new_weighted("Green", 2).cover(),
+//! ]);
+//! let new_spinner = spinner.uncover("Red");
+//! // should now only be able to return Some("Red") or None
+//! for _ in 1..100 {
+//!     if let Some(val) = new_spinner.spin() {
+//!         assert_eq!(val, "Red");
+//!     }
+//! }
+//! ```
 use rand::distr::weighted::WeightedIndex;
 use rand::prelude::*;
 
@@ -272,7 +341,7 @@ mod spinner_tests {
         assert_eq!(wedges[1], Wedge::new_weighted("B", 2));
         assert_eq!(wedges[2], Wedge::new_weighted("C", 3));
     }
-    
+
     #[test]
     fn can_create_wedges_with_varied_value_types() {
         let text_wedge = Wedge::new_weighted("Winner".to_string(), 1);
