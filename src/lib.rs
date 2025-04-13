@@ -21,6 +21,9 @@ pub use cards::{AddCard, Card, CardHand, Deck, Pile, Rank, Suit, TakeCard};
 pub mod dominos;
 pub use dominos::{BonePile, Domino, DominoHand, MAX_PIPS, Train};
 
+pub mod spinners;
+pub use spinners::{Wedge, Spinner, wedges_from_tuples, wedges_from_values};
+
 pub mod gameerror;
 pub use gameerror::GameError;
 
