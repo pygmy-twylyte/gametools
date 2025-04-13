@@ -254,6 +254,25 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
 #[cfg(test)]
 mod spinner_tests {
     use crate::spinners::*;
+
+    #[test]
+    fn wedges_from_values_creates_expected_wedges() {
+        let wedges = wedges_from_values(vec!["A", "B", "C"]);
+        assert_eq!(wedges.len(), 3);
+        assert_eq!(wedges[0], Wedge::new("A"));
+        assert_eq!(wedges[1], Wedge::new("B"));
+        assert_eq!(wedges[2], Wedge::new("C"));
+    }
+
+    #[test]
+    fn wedges_from_tuples_creates_expected_wedges() {
+        let wedges = wedges_from_tuples(vec![("A", 1), ("B", 2), ("C", 3)]);
+        assert_eq!(wedges.len(), 3);
+        assert_eq!(wedges[0], Wedge::new_weighted("A", 1));
+        assert_eq!(wedges[1], Wedge::new_weighted("B", 2));
+        assert_eq!(wedges[2], Wedge::new_weighted("C", 3));
+    }
+    
     #[test]
     fn can_create_wedges_with_varied_value_types() {
         let text_wedge = Wedge::new_weighted("Winner".to_string(), 1);
