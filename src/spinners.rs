@@ -178,6 +178,32 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
         added.push(new_wedge);
         Spinner::new(added)
     }
+
+    /// Remove any wedges matching a particular value from the spinner.
+    /// 
+    /// ```
+    /// # use gametools::spinners::{Wedge, Spinner};
+    /// let spinner = Spinner::new(vec![
+    ///     Wedge::new_default("Lose"),
+    ///     Wedge::new_default("Win"),
+    ///     Wedge::new_default("Lose"),
+    /// ]);
+    /// 
+    /// let never_lose_again = spinner.remove_wedges("Lose");
+    /// 
+    /// if let Some(spin) = never_lose_again.spin() {
+    ///     assert_ne!(spin, "Lose");
+    /// }
+    /// ```
+    pub fn remove_wedges(&self, value: T) -> Spinner<T> {
+        let shrunken = self
+            .wedges
+            .clone()
+            .into_iter()
+            .filter(|w| w.value != value)
+            .collect();
+        Spinner::new(shrunken)
+    }
 }
 
 #[cfg(test)]
@@ -351,5 +377,23 @@ mod spinner_tests {
             spun_a_3,
             "new value not returned from spinner in 1000 spins"
         )
+    }
+
+    #[test]
+    fn can_remove_wedges_matching_value_from_spinner() {
+        let spinner = Spinner::new(vec![
+            Wedge::new_default(0),
+            Wedge::new_default(1),
+            Wedge::new_default(1),
+        ]);
+        let one_removed = spinner.remove_wedges(1);
+        for _ in 1..100 {
+            match one_removed.spin() {
+                Some(spin) => assert_eq!(spin, 0),
+                None => panic!(
+                    "spin should not return None if at least one active wedge is on the spinner"
+                ),
+            }
+        }
     }
 }
