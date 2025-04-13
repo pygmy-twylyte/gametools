@@ -154,6 +154,30 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .collect();
         Spinner::new(uncovered)
     }
+
+    /// Add a wedge to an existing spinner.
+    ///
+    /// ```
+    /// # use gametools::spinners::{Wedge, Spinner};
+    /// let rps = Spinner::new(vec![
+    ///     Wedge::new_default("Rock"),
+    ///     Wedge::new_default("Paper"),
+    ///     Wedge::new_default("Scissors"),
+    /// ]);
+    /// let sheldonized_rps = rps
+    ///     .add_wedge(Wedge::new_default("Lizard"))
+    ///     .add_wedge(Wedge::new_default("Spock"));
+    ///
+    /// if let Some(spin) = sheldonized_rps.spin() {
+    ///     println!("You shoot: {spin}!");
+    /// }
+    ///
+    /// ```
+    pub fn add_wedge(&self, new_wedge: Wedge<T>) -> Spinner<T> {
+        let mut added = self.wedges.clone();
+        added.push(new_wedge);
+        Spinner::new(added)
+    }
 }
 
 #[cfg(test)]
@@ -306,5 +330,26 @@ mod spinner_tests {
         for _ in 1..100 {
             assert!(all_uncovered.spin().is_some());
         }
+    }
+
+    #[test]
+    fn can_add_wedge_to_existing_spinner() {
+        let spinner = Spinner::new(vec![Wedge::new_default(1), Wedge::new_default(2)]);
+        for _ in 1..100 {
+            if let Some(spin) = spinner.spin() {
+                assert!([1, 2].contains(&spin));
+            }
+        }
+        let spinner = spinner.add_wedge(Wedge::new_default(3));
+        let mut spun_a_3 = false;
+        for _ in 1..1000 {
+            if let Some(3) = spinner.spin() {
+                spun_a_3 = true;
+            }
+        }
+        assert!(
+            spun_a_3,
+            "new value not returned from spinner in 1000 spins"
+        )
     }
 }
