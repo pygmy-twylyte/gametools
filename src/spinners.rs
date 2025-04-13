@@ -214,6 +214,22 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .collect();
         Spinner::new(shrunken)
     }
+
+    /// Replaces a wedge value with another. Affects all wedges with that value.
+    pub fn replace_value(&self, match_val: T, new_val: T) -> Spinner<T> {
+        let updated = self
+            .wedges
+            .clone()
+            .into_iter()
+            .map(|w| {
+                match w.value == match_val {
+                    true => Wedge::new(new_val.clone(), w.width, w.active),
+                    false => w,
+                }
+            })
+            .collect();
+        Spinner::new(updated)
+    }
 }
 
 #[cfg(test)]
@@ -422,5 +438,18 @@ mod spinner_tests {
             assert!((1..=2).contains(&wedge.value));
         }
         assert_eq!(spinner.iter().count(), 2);
+    }
+
+    #[test]
+    fn can_replace_values_on_spinner_wedges() {
+        let rush_albums = Spinner::new(vec![
+            Wedge::new_default("2112"),
+            Wedge::new_default("Signals"),
+            Wedge::new_default("Sheik Yerbouti"),   // oops, that's Zappa
+        ]);
+        let rush_albums = rush_albums.replace_value("Sheik Yerbouti", "Power Windows");
+        for _ in 1..100 {
+            assert!(["2112", "Signals", "Power Windows"].contains(&rush_albums.spin().unwrap()))
+        }
     }
 }
