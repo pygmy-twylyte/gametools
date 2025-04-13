@@ -18,6 +18,7 @@ pub enum GameError {
     InsufficientTiles,
     TileUnconnected,
     TrainClosed,
+    SpinnerEmpty,
 }
 impl fmt::Display for GameError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -37,6 +38,9 @@ impl fmt::Display for GameError {
             }
             GameError::TrainClosed => {
                 write!(f, "attempted to play on a closed train")
+            }
+            GameError::SpinnerEmpty => {
+                write!(f, "spin() returned None: empty spinner or landed on covered wedge")
             }
         }
     }
@@ -75,6 +79,10 @@ mod tests {
                 GameError::TrainClosed,
                 "attempted to play on a closed train"
             ),
+            (
+                GameError::SpinnerEmpty,
+                "spin() returned None: empty spinner or landed on covered wedge"
+            )
         ];
 
         for (err, expected_msg) in cases {
