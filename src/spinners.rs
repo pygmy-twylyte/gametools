@@ -17,19 +17,37 @@ where
 }
 impl<T: Clone> Wedge<T> {
     /// Create a new wedge to place on the spinner.
-    pub fn new(value: T, width: usize, active: bool) -> Self {
+    pub fn new_weighted(value: T, width: usize) -> Self {
         Self {
             value,
             width,
-            active,
+            active: true,
         }
     }
 
     /// Creates a new wedge with commonly used defaults (width = 1, active = true).
-    pub fn new_default(value: T) -> Self {
+    pub fn new(value: T) -> Self {
         Self {
             value,
             width: 1,
+            active: true,
+        }
+    }
+
+    /// Cover this wedge (blocks spinner from returning this value when landing on it.)
+    pub fn cover(&self) -> Self {
+        Self {
+            value: self.value.clone(),
+            width: self.width,
+            active: false,
+        }
+    }
+
+    /// Uncover this wedge (removes any block so value is returned if spinner lands on it.)
+    pub fn uncover(&self) -> Self {
+        Self {
+            value: self.value.clone(),
+            width: self.width,
             active: true,
         }
     }
@@ -69,8 +87,8 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// ```
     /// use gametools::spinners::{Spinner, Wedge};
     /// let loaded_coin = Spinner::new(vec![
-    ///     Wedge::new("Heads", 75, true),
-    ///     Wedge::new("Tails", 25, true),
+    ///     Wedge::new_weighted("Heads", 75),
+    ///     Wedge::new_weighted("Tails", 25),
     /// ]);
     /// let toss = loaded_coin.spin().unwrap();  // will be "Heads" 75% of the time
     /// ```
@@ -94,9 +112,9 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// ```
     /// use gametools::spinners::{Wedge, Spinner};
     /// let original = Spinner::new(vec![
-    ///     Wedge::new("Red", 1, true),
-    ///     Wedge::new("Green", 1, true),
-    ///     Wedge::new("Blue", 1, true),
+    ///     Wedge::new("Red"),
+    ///     Wedge::new("Green"),
+    ///     Wedge::new("Blue"),
     /// ]);
     /// let red_blocked = original.cover("Red");
     /// // red_blocked.spin() now returns None if the spinner lands on Red
@@ -110,11 +128,10 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .wedges
             .iter()
             .map(|w| {
-                let mut new_wedge = w.clone();
-                if w.value == target_val {
-                    new_wedge.active = false;
+                match w.value == target_val {
+                    true => w.cover(),
+                    false => w.clone(),
                 }
-                new_wedge
             })
             .collect();
         Spinner::new(covered)
@@ -126,9 +143,7 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .wedges
             .iter()
             .map(|w| {
-                let mut new_wedge = w.clone();
-                new_wedge.active = false;
-                new_wedge
+                w.cover()
             })
             .collect();
         Spinner::new(all_covered)
@@ -141,11 +156,10 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .wedges
             .iter()
             .map(|w| {
-                let mut new_wedge = w.clone();
-                if w.value == target_val {
-                    new_wedge.active = true;
+                match w.value == target_val {
+                    true => w.uncover(),
+                    false => w.clone(),
                 }
-                new_wedge
             })
             .collect();
         Spinner::new(uncovered)
@@ -157,9 +171,7 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .wedges
             .iter()
             .map(|w| {
-                let mut new_wedge = w.clone();
-                new_wedge.active = true;
-                new_wedge
+                w.uncover()
             })
             .collect();
         Spinner::new(uncovered)
@@ -170,13 +182,13 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// ```
     /// # use gametools::spinners::{Wedge, Spinner};
     /// let rps = Spinner::new(vec![
-    ///     Wedge::new_default("Rock"),
-    ///     Wedge::new_default("Paper"),
-    ///     Wedge::new_default("Scissors"),
+    ///     Wedge::new("Rock"),
+    ///     Wedge::new("Paper"),
+    ///     Wedge::new("Scissors"),
     /// ]);
     /// let sheldonized_rps = rps
-    ///     .add_wedge(Wedge::new_default("Lizard"))
-    ///     .add_wedge(Wedge::new_default("Spock"));
+    ///     .add_wedge(Wedge::new("Lizard"))
+    ///     .add_wedge(Wedge::new("Spock"));
     ///
     /// if let Some(spin) = sheldonized_rps.spin() {
     ///     println!("You shoot: {spin}!");
@@ -194,9 +206,9 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// ```
     /// # use gametools::spinners::{Wedge, Spinner};
     /// let spinner = Spinner::new(vec![
-    ///     Wedge::new_default("Lose"),
-    ///     Wedge::new_default("Win"),
-    ///     Wedge::new_default("Lose"),
+    ///     Wedge::new("Lose"),
+    ///     Wedge::new("Win"),
+    ///     Wedge::new("Lose"),
     /// ]);
     /// 
     /// let never_lose_again = spinner.remove_wedges("Lose");
@@ -223,7 +235,7 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
             .into_iter()
             .map(|w| {
                 match w.value == match_val {
-                    true => Wedge::new(new_val.clone(), w.width, w.active),
+                    true => Wedge::new_weighted(new_val.clone(), w.width),
                     false => w,
                 }
             })
@@ -237,15 +249,15 @@ mod spinner_tests {
     use crate::spinners::*;
     #[test]
     fn can_create_wedges_with_varied_value_types() {
-        let text_wedge = Wedge::new("Winner".to_string(), 1, true);
+        let text_wedge = Wedge::new_weighted("Winner".to_string(), 1);
         assert_eq!(text_wedge.value, "Winner");
-        let numeric = Wedge::new(10, 1, true);
+        let numeric = Wedge::new_weighted(10, 1);
         assert_eq!(numeric.value, 10);
     }
 
     #[test]
     fn wedge_new_default_returns_expected_values() {
-        let bad_one = Wedge::new_default("Bankrupt!");
+        let bad_one = Wedge::new("Bankrupt!");
         assert_eq!(bad_one.width, 1);
         assert_eq!(bad_one.active, true);
         assert_eq!(bad_one.value, "Bankrupt!");
@@ -254,17 +266,17 @@ mod spinner_tests {
     #[test]
     fn can_create_spinners_with_varied_wedge_types() {
         let num_wedges = vec![
-            Wedge::new(100, 1, true),
-            Wedge::new(200, 1, true),
-            Wedge::new(500, 1, true),
+            Wedge::new_weighted(100, 1),
+            Wedge::new_weighted(200, 1),
+            Wedge::new_weighted(500, 1),
         ];
         let numeric_spinner = Spinner::new(num_wedges);
         assert_eq!(numeric_spinner.wedges.len(), 3);
 
         let text_wedges = vec![
-            Wedge::new("Lose a Turn".to_string(), 2, true),
-            Wedge::new("Ahead 4".to_string(), 4, true),
-            Wedge::new("Back 2".to_string(), 4, true),
+            Wedge::new_weighted("Lose a Turn".to_string(), 2),
+            Wedge::new_weighted("Ahead 4".to_string(), 4),
+            Wedge::new_weighted("Back 2".to_string(), 4),
         ];
         let text_spinner = Spinner::new(text_wedges);
         assert_eq!(text_spinner.wedges.len(), 3);
@@ -281,8 +293,8 @@ mod spinner_tests {
     #[test]
     fn spin_always_returns_some_if_wedges_in_place() {
         let spinner = Spinner::new(vec![
-            Wedge::new("Heads", 1, true),
-            Wedge::new("Tails", 1, true),
+            Wedge::new_weighted("Heads", 1),
+            Wedge::new_weighted("Tails", 1),
         ]);
         for _ in 1..100 {
             assert!(spinner.spin().is_some());
@@ -292,9 +304,9 @@ mod spinner_tests {
     #[test]
     fn spin_returns_only_expected_values() {
         let spinner = Spinner::new(vec![
-            Wedge::new(1, 1, true),
-            Wedge::new(2, 1, true),
-            Wedge::new(3, 1, true),
+            Wedge::new_weighted(1, 1),
+            Wedge::new_weighted(2, 1),
+            Wedge::new_weighted(3, 1),
         ]);
         for _ in 1..1000 {
             assert!((1..=3).contains(&spinner.spin().unwrap()));
@@ -305,8 +317,8 @@ mod spinner_tests {
     fn spin_respects_wedge_weights() {
         // not a precise test of distribution -- just checks if in the ballpark
         let spinner = Spinner::new(vec![
-            Wedge::new("Heads", 10, true),
-            Wedge::new("Tails", 1, true),
+            Wedge::new_weighted("Heads", 10),
+            Wedge::new_weighted("Tails", 1),
         ]);
         let mut head_count = 0;
         let mut tail_count = 0;
@@ -323,8 +335,8 @@ mod spinner_tests {
     #[test]
     fn spin_returns_none_if_selected_wedge_inactive() {
         let spinner = Spinner::new(vec![
-            Wedge::new("Inactive", 1, false),
-            Wedge::new("Also Inactive", 1, false),
+            Wedge::new("Inactive").cover(),
+            Wedge::new("Also Inactive").cover(),
         ]);
         for _ in 1..100 {
             assert!(spinner.spin().is_none());
@@ -334,10 +346,10 @@ mod spinner_tests {
     #[test]
     fn spinner_cover_inactivates_only_the_right_wedges() {
         let spinner = Spinner::new(vec![
-            Wedge::new("Red", 2, true),
-            Wedge::new("Blue", 2, true),
-            Wedge::new("Green", 2, true),
-            Wedge::new("Red", 2, true),
+            Wedge::new_weighted("Red", 2),
+            Wedge::new_weighted("Blue", 2),
+            Wedge::new_weighted("Green", 2),
+            Wedge::new_weighted("Red", 2),
         ]);
         let new_spinner = spinner.cover("Red");
         for _ in 1..100 {
@@ -352,9 +364,9 @@ mod spinner_tests {
     fn spinner_uncover_activates_only_the_right_wedges() {
         // start with all covered
         let spinner = Spinner::new(vec![
-            Wedge::new("Red", 2, false),
-            Wedge::new("Blue", 2, false),
-            Wedge::new("Green", 2, false),
+            Wedge::new_weighted("Red", 2).cover(),
+            Wedge::new_weighted("Blue", 2).cover(),
+            Wedge::new_weighted("Green", 2).cover(),
         ]);
         let new_spinner = spinner.uncover("Red");
         // should now only be able to return Some("Red") or None
@@ -368,9 +380,9 @@ mod spinner_tests {
     #[test]
     fn uncover_all_and_cover_all_work_correctly() {
         let spinner = Spinner::new(vec![
-            Wedge::new_default("Win"),
-            Wedge::new_default("Lose"),
-            Wedge::new_default("Draw"),
+            Wedge::new("Win"),
+            Wedge::new("Lose"),
+            Wedge::new("Draw"),
         ]);
 
         let all_covered = spinner.cover_all();
@@ -386,13 +398,13 @@ mod spinner_tests {
 
     #[test]
     fn can_add_wedge_to_existing_spinner() {
-        let spinner = Spinner::new(vec![Wedge::new_default(1), Wedge::new_default(2)]);
+        let spinner = Spinner::new(vec![Wedge::new(1), Wedge::new(2)]);
         for _ in 1..100 {
             if let Some(spin) = spinner.spin() {
                 assert!([1, 2].contains(&spin));
             }
         }
-        let spinner = spinner.add_wedge(Wedge::new_default(3));
+        let spinner = spinner.add_wedge(Wedge::new(3));
         let mut spun_a_3 = false;
         for _ in 1..1000 {
             if let Some(3) = spinner.spin() {
@@ -408,9 +420,9 @@ mod spinner_tests {
     #[test]
     fn can_remove_wedges_matching_value_from_spinner() {
         let spinner = Spinner::new(vec![
-            Wedge::new_default(0),
-            Wedge::new_default(1),
-            Wedge::new_default(1),
+            Wedge::new(0),
+            Wedge::new(1),
+            Wedge::new(1),
         ]);
         let one_removed = spinner.remove_wedges(1);
         for _ in 1..100 {
@@ -425,7 +437,7 @@ mod spinner_tests {
 
     #[test]
     fn can_obtain_copy_of_wedges_from_spinner() {
-        let spinner = Spinner::new(vec![Wedge::new_default(1), Wedge::new_default(2)]);
+        let spinner = Spinner::new(vec![Wedge::new(1), Wedge::new(2)]);
         let wedges = spinner.wedges();
         let values: Vec<i32> = wedges.iter().map(|w| w.value).collect();
         assert_eq!(values, vec![1,2]);
@@ -433,7 +445,7 @@ mod spinner_tests {
 
     #[test]
     fn can_use_iterator_over_spinner_wedges() {
-        let spinner = Spinner::new(vec![Wedge::new_default(1), Wedge::new_default(2)]);
+        let spinner = Spinner::new(vec![Wedge::new(1), Wedge::new(2)]);
         for wedge in spinner.iter() {
             assert!((1..=2).contains(&wedge.value));
         }
@@ -443,9 +455,9 @@ mod spinner_tests {
     #[test]
     fn can_replace_values_on_spinner_wedges() {
         let rush_albums = Spinner::new(vec![
-            Wedge::new_default("2112"),
-            Wedge::new_default("Signals"),
-            Wedge::new_default("Sheik Yerbouti"),   // oops, that's Zappa
+            Wedge::new("2112"),
+            Wedge::new("Signals"),
+            Wedge::new("Sheik Yerbouti"),   // oops, that's Zappa
         ]);
         let rush_albums = rush_albums.replace_value("Sheik Yerbouti", "Power Windows");
         for _ in 1..100 {
