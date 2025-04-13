@@ -51,6 +51,16 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
         Self { wedges, weights }
     }
 
+    /// Obtain a vector of the wedges currently on the spinner.
+    pub fn wedges(&self) -> Vec<Wedge<T>> {
+        self.wedges.clone()
+    }
+
+    /// Obtain an iterator over the wedges currently on the spinner.
+    pub fn iter(&self) -> impl Iterator<Item=&Wedge<T>> {
+        self.wedges.iter()
+    }
+
     /// Spins the spinner, returning Some(value) of the wedge it lands on.
     /// Returns `None` if there are no wedges, or if the wedge selected is inactive / covered.
     /// The probability of landing on a particular wedge is determine by its width.
@@ -395,5 +405,22 @@ mod spinner_tests {
                 ),
             }
         }
+    }
+
+    #[test]
+    fn can_obtain_copy_of_wedges_from_spinner() {
+        let spinner = Spinner::new(vec![Wedge::new_default(1), Wedge::new_default(2)]);
+        let wedges = spinner.wedges();
+        let values: Vec<i32> = wedges.iter().map(|w| w.value).collect();
+        assert_eq!(values, vec![1,2]);
+    }
+
+    #[test]
+    fn can_use_iterator_over_spinner_wedges() {
+        let spinner = Spinner::new(vec![Wedge::new_default(1), Wedge::new_default(2)]);
+        for wedge in spinner.iter() {
+            assert!((1..=2).contains(&wedge.value));
+        }
+        assert_eq!(spinner.iter().count(), 2);
     }
 }
