@@ -1,13 +1,13 @@
 [package]
 name = "gametools"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["pygmy-twylyte <davidjvbrown.md@gmail.com>"]
 edition = "2021"
-description = "Game-related tools for dice, dominos, cards, and more."
+description = "Game-related tools: spinners, dice, dominos, and cards."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/pygmy-twylyte/gametools"
 readme = "README.md"
-keywords = ["games", "dice", "dominos", "cards"]
+keywords = ["games", "dice", "dominos", "cards", "spinners"]
 categories = ["game-engines", "data-structures"]
 
 
@@ -17,4 +17,4 @@ strum = "0.27.1"
 strum_macros = "0.27.1"
 
 [package.metadata.tarpaulin]
-exclude-files = ["src/main.rs"]
+exclude-files = ["src/bin/scratch.rs"]
