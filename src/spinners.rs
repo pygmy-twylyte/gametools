@@ -100,6 +100,15 @@ pub fn wedges_from_tuples<T: Clone>(tuples: Vec<(T, usize)>) -> Vec<Wedge<T>> {
         .collect()
 }
 
+/// A single wedge on a spinner.
+///
+/// Each wedge contains a value (of type `T`), a `width` which affects
+/// the likelihood of being selected, and an `active` flag indicating
+/// whether the wedge is currently "covered" or not.
+///
+/// Covered (inactive) wedges remain present but cannot be landed on
+/// during a spin. This allows dynamic gameplay scenarios where certain
+/// outcomes can be temporarily disabled.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Wedge<T>
 where
@@ -147,6 +156,20 @@ impl<T: Clone> Wedge<T> {
     }
 }
 
+/// A randomized spinner composed of wedges.
+///
+/// A `Spinner<T>` can contain multiple wedges (each with a value, width,
+/// and activity state). It supports both uniform and weighted spinning,
+/// and includes methods to block or unblock specific wedge values,
+/// dynamically add or remove wedges, and simulate spins.
+///
+/// Spinners are immutable by default: methods return a new `Spinner`
+/// with the modified wedge list. This enables functional, chainable
+/// programming and avoids side effects.
+///
+/// Generic over `T`, which must implement `Clone + PartialEq`.
+/// This allows for a wide variety of types to be used as wedge values,
+/// including strings, enums, numbers, and user-defined types.
 #[derive(Debug, Clone)]
 pub struct Spinner<T>
 where
@@ -156,7 +179,7 @@ where
     weights: Vec<usize>,
 }
 
-impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
+impl<T: Clone + PartialEq> Spinner<T> {
     /// Create a new spinner with a vector of wedges.
     pub fn new(wedges: Vec<Wedge<T>>) -> Self {
         let weights = wedges.iter().map(|w| w.width).collect();
@@ -218,8 +241,8 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// ```
     pub fn cover(&self, target_val: T) -> Spinner<T> {
         // create and return a new spinner with active = false on target wedges
-        let covered = self
-            .wedges
+        let wedges = &self.wedges;
+        let covered = wedges
             .iter()
             .map(|w| match w.value == target_val {
                 true => w.cover(),
@@ -238,8 +261,8 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// Returns a new spinner after uncovering any wedges that match a target value.
     pub fn uncover(&self, target_val: T) -> Spinner<T> {
         // create and return a new spinner with active = true on target wedges
-        let uncovered = self
-            .wedges
+        let wedges = &self.wedges;
+        let uncovered = wedges
             .iter()
             .map(|w| match w.value == target_val {
                 true => w.uncover(),
@@ -296,8 +319,8 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
     /// }
     /// ```
     pub fn remove_wedges(&self, value: T) -> Spinner<T> {
-        let shrunken = self
-            .wedges
+        let wedges = &self.wedges;
+        let shrunken = wedges
             .clone()
             .into_iter()
             .filter(|w| w.value != value)
@@ -307,8 +330,8 @@ impl<T: Clone + PartialEq + std::fmt::Debug> Spinner<T> {
 
     /// Replaces a wedge value with another. Affects all wedges with that value.
     pub fn replace_value(&self, match_val: T, new_val: T) -> Spinner<T> {
-        let updated = self
-            .wedges
+        let wedges = &self.wedges;
+        let updated = wedges
             .clone()
             .into_iter()
             .map(|w| match w.value == match_val {
