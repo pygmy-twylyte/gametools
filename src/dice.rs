@@ -338,10 +338,10 @@ impl DicePool {
     /// Counts the number of rolls in the pool over a specified threshold
     /// value.
     ///
-    /// This is a convenience function that simply calls count_success_using with the
+    /// This is a convenience function that simply calls count_if() with the
     /// appropriate closure.
     pub fn count_over(&self, threshold: u8) -> usize {
-        self.count_if(|r| r > threshold)
+        self.count_if(|roll| roll > threshold)
     }
 }
 
