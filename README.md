@@ -41,7 +41,7 @@ if let Some(result) = spinner.spin() {
 }
 ```
 
-## Philosophy
+## The Idea
 
 This crate avoids hardcoding game rules. Instead, it provides flexible, composable abstractions to make building games easier — whether you're making a tabletop simulator, card game engine, or randomizer tool.
 

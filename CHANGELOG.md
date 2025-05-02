@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.3.0] - 2025-05-01
 
+### Added
+- DicePool::binned_rolls() to create a hash of roll value counts, aiding in scoring for various games.
+
+### Changed
+- DicePool::count_success_using() renamed to count_if() for consistency, brevity, and clarity.
+- DicePool::count_success_over() renamed to count_over() for consistency, brevity, and clarity.
+
+---
 ## [0.2.0] - 2025-04-13
 
 ### Added

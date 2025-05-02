@@ -54,6 +54,8 @@
 //! let pool = d6.roll_into_pool(0);    // panic!
 //! ```
 
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// A single die with a user-defined number of sides
 pub struct Die {
@@ -142,7 +144,7 @@ impl Die {
         total
     }
 
-    /// Shortcut to the most common case: where a die "explodes" when the maximum is rolled.  
+    /// Shortcut to the most common case: where a die "explodes" when the maximum is rolled.
     /// (6 on a d6, 20 on a d20, etc.)
     /// ```
     /// use gametools::Die;
@@ -250,13 +252,33 @@ impl DicePool {
     pub fn range(&self) -> Option<(u8, u8)> {
         // ? operator on iter().max() takes care of the empty pool case for us
         let max = self.rolls.iter().max()?;
-        let min = self.rolls.iter().min()?;      
+        let min = self.rolls.iter().min()?;
         Some((*min, *max))
     }
 
     /// Counts the number of times a particular value was rolled in the pool
     pub fn count_roll(&self, value: u8) -> usize {
         self.rolls.iter().filter(|&r| *r == value).count()
+    }
+
+    /// Returns a hashmap of "binned" values from the dicepool, where bins[value] = # of times that value was rolled.
+    /// ```
+    /// use gametools::DicePool;
+    ///
+    /// let some_rolls: &[u8] = &[2, 1, 1, 2];
+    /// let pool: DicePool = some_rolls.into();
+    /// let bins = pool.binned_rolls();
+    ///
+    /// assert_eq!(bins[&2], 2);
+    /// assert_eq!(bins[&1], 2);
+    /// assert!(bins.get(&5).is_none());
+    /// ```
+    pub fn binned_rolls(&self) -> HashMap<u8, usize> {
+        let mut bins = HashMap::new();
+        for roll in &self.rolls {
+            _ = bins.insert(*roll, self.count_roll(*roll));
+        }
+        bins
     }
 
     /// Returns a new pool with only the highest-scoring 'n' rolls, discarding the rest.
@@ -305,8 +327,8 @@ impl DicePool {
         DicePool::from(rerolled)
     }
 
-    /// Counts the number of rolls in the pool that meet a certain "success" criteria.
-    pub fn count_success_using<F>(&self, predicate: F) -> usize
+    /// Counts the number of rolls in the pool that meet the specified criteria.
+    pub fn count_if<F>(&self, predicate: F) -> usize
     where
         F: Fn(u8) -> bool,
     {
@@ -314,12 +336,12 @@ impl DicePool {
     }
 
     /// Counts the number of rolls in the pool over a specified threshold
-    /// "success" value.
+    /// value.
     ///
-    /// This is a convenience function that simply calls count_success_using with the
+    /// This is a convenience function that simply calls count_if() with the
     /// appropriate closure.
-    pub fn count_success_over(&self, threshold: u8) -> usize {
-        self.count_success_using(|r| r > threshold)
+    pub fn count_over(&self, threshold: u8) -> usize {
+        self.count_if(|roll| roll > threshold)
     }
 }
 
@@ -381,7 +403,7 @@ mod tests {
     #[should_panic]
     fn roll_zero_dice_into_pool_panics() {
         let d4 = Die::new(4);
-        let _ = d4.roll_into_pool(0);   // panic!
+        let _ = d4.roll_into_pool(0); // panic!
     }
 
     #[test]
@@ -471,6 +493,19 @@ mod tests {
     }
 
     #[test]
+    fn binned_rolls_returns_correct_hashmap() {
+        let some_rolls: &[u8] = &[2, 1, 1, 2, 9, 0, 1, 2, 5];
+        let dp: DicePool = some_rolls.into();
+        let bins = dp.binned_rolls();
+        assert_eq!(bins[&2], 3);
+        assert_eq!(bins[&1], 3);
+        assert_eq!(bins[&9], 1);
+        assert_eq!(bins[&0], 1);
+        assert_eq!(bins[&5], 1);
+        assert!(bins.get(&3).is_none());
+    }
+
+    #[test]
     fn add_roll_to_dicepool() {
         let mut dp = DicePool::new();
         dp.add_roll(1);
@@ -535,7 +570,7 @@ mod tests {
     fn dicepool_range_returns_none_if_empty() {
         let pool = DicePool::new();
         assert!(pool.range().is_none());
-    } 
+    }
 
     #[test]
     fn dicepool_count_roll_works() {
@@ -591,9 +626,9 @@ mod tests {
         let some_rolls = vec![7, 7, 7, 8, 8, 8, 9, 9, 9];
         let pool = DicePool::from(some_rolls);
 
-        let rolls_over_8 = pool.count_success_using(|r| r > 8);
-        let even_rolls = pool.count_success_using(|r| r % 2 == 0);
-        let rolled_7_or_9 = pool.count_success_using(|r| r == 7 || r == 9);
+        let rolls_over_8 = pool.count_if(|r| r > 8);
+        let even_rolls = pool.count_if(|r| r % 2 == 0);
+        let rolled_7_or_9 = pool.count_if(|r| r == 7 || r == 9);
 
         assert_eq!(rolls_over_8, 3);
         assert_eq!(even_rolls, 3);
@@ -605,11 +640,11 @@ mod tests {
         let some_rolls = vec![7, 7, 7, 8, 8, 8, 9, 9, 9];
         let pool = DicePool::from(some_rolls);
         let success_threshold = 7;
-        let successes = pool.count_success_over(success_threshold);
+        let successes = pool.count_over(success_threshold);
         assert_eq!(successes, 6);
 
         let success_threshold = 10;
-        let successes = pool.count_success_over(success_threshold);
+        let successes = pool.count_over(success_threshold);
         assert_eq!(successes, 0);
     }
 }

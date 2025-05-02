@@ -28,11 +28,11 @@
 //! ## Example
 //! ```
 //! use gametools::spinners::{Spinner, Wedge};
-//! let spinner = Spinner::new(vec![
+//! let weighted_coin = Spinner::new(vec![
 //!     Wedge::new_weighted("Heads", 75),
 //!     Wedge::new_weighted("Tails", 25),
 //! ]);
-//! let toss = spinner.spin().unwrap();  // will be "Heads" 75% of the time
+//! let toss = weighted_coin.spin().unwrap();  // will be "Heads" 75% of the time
 //! ```
 //!
 //! ## Example
