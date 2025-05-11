@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.3.1] - 2025-05-11
+
+### Added
+- YahtzAI -- an example that uses the dice module to create a Yahtzee AI which checks the expected outcome of all possible rerolls to optimize scoring
+- DicePool::reroll_by_idx() to reroll some dice within the pool, specified by index rather than value (unlike DicePool::reroll_if())
+
+---
 ## [0.3.0] - 2025-05-01
 
 ### Added

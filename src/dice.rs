@@ -343,6 +343,22 @@ impl DicePool {
     pub fn count_over(&self, threshold: u8) -> usize {
         self.count_if(|roll| roll > threshold)
     }
+
+    /// Takes a list of indices for dice to re-roll and returns a new DicePool with
+    /// new (but not necessarily different!) values for the indicated dice.
+    pub fn reroll_by_idx(&self, die: &Die, indices: &[usize]) -> DicePool {
+        let new_rolls: Vec<_> = self
+            .results()
+            .iter()
+            .enumerate()
+            .map(|(idx, orig_roll)| match indices.contains(&idx) {
+                true => die.roll(),
+                false => *orig_roll,
+            })
+            .collect();
+
+        new_rolls.into()
+    }
 }
 
 #[cfg(test)]
@@ -646,5 +662,16 @@ mod tests {
         let success_threshold = 10;
         let successes = pool.count_over(success_threshold);
         assert_eq!(successes, 0);
+    }
+
+    #[test]
+    fn reroll_by_idx_rerolls_correct_dice() {
+        let some_rolls = vec![2, 2, 2, 1, 1, 1, 3, 3, 3];
+        let pool = DicePool::from(some_rolls);
+        let one_sider = Die::new(1);
+        let pool = pool.reroll_by_idx(&one_sider, &[0, 1, 2]);
+        assert_eq!(pool.results(), [1, 1, 1, 1, 1, 1, 3, 3, 3]);
+        let pool = pool.reroll_by_idx(&one_sider, &[6, 7, 8]);
+        assert!(pool.results().iter().all(|x| *x == 1));
     }
 }
