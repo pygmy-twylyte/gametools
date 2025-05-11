@@ -1,6 +1,6 @@
-mod dicepool_ext;
 mod yahtzee;
 mod yahtzee_agent;
+
 use yahtzee::GameState;
 use yahtzee_agent::YahtzeeAgent;
 

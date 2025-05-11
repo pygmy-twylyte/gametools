@@ -1,7 +1,6 @@
 //! ** Yahtzee module **
-//! Manages dice, implements the scoring functions and rules,
-//! and manages state for a game of Yahtzee.
-use crate::dicepool_ext::DicePoolExt;
+//! Uses gametools::DicePool to manage dice, implement the scoring functions and rules,
+//! and manage state for a game of Yahtzee.
 use gametools::{DicePool, Die};
 use std::collections::HashMap;
 
@@ -68,7 +67,8 @@ impl GameState {
         if self.rolls_left == 0 {
             return Err("no re-rolls remain this turn");
         }
-        self.dice = self.dice.reroll_by_idx(indices);
+        let d6 = Die::new(6);
+        self.dice = self.dice.reroll_by_idx(&d6, indices);
         self.rolls_left -= 1;
         Ok(())
     }
