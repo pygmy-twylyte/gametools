@@ -82,6 +82,16 @@ impl Die {
         Die { sides }
     }
 
+    /// Non-panic version of new(). Returns a GameError instead of panicking if
+    /// an attempt is made to create a zero-sided die.
+    pub fn try_new(sides: u8) -> Result<Die, GameError> {
+        if sides == 0 {
+            Err(GameError::DieWithZeroSides)
+        } else {
+            Ok(Die { sides })
+        }
+    }
+
     /// Rolls the die and returns the face-up value.
     ///
     /// ```
@@ -382,10 +392,21 @@ mod tests {
     use crate::dice::*;
 
     #[test]
-    fn create_die() {
+    fn die_new_works() {
         let d = Die::new(6);
-
         assert_eq!(d, Die { sides: 6 });
+    }
+
+    #[test]
+    fn die_try_new_works() {
+        if let Ok(die) = Die::try_new(6) {
+            assert_eq!(die, Die { sides: 6 });
+        }
+    }
+
+    #[test]
+    fn die_try_new_returns_err_on_zero() {
+        assert_eq!(Die::try_new(0), Err(GameError::DieWithZeroSides));
     }
 
     #[test]

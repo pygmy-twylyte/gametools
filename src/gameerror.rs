@@ -20,6 +20,7 @@ pub enum GameError {
     TrainClosed,
     SpinnerEmpty,
     DicePoolWithNoDice,
+    DieWithZeroSides,
 }
 impl fmt::Display for GameError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -48,6 +49,9 @@ impl fmt::Display for GameError {
             }
             GameError::DicePoolWithNoDice => {
                 write!(f, "attempted to roll zero dice into a DicePool")
+            }
+            GameError::DieWithZeroSides => {
+                write!(f, "attempted to create a die with zero sides")
             }
         }
     }
