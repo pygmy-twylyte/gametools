@@ -98,6 +98,10 @@ mod tests {
                 GameError::DicePoolWithNoDice,
                 "attempted to roll zero dice into a DicePool",
             ),
+            (
+                GameError::DieWithZeroSides,
+                "attempted to create a die with zero sides",
+            ),
         ];
 
         for (err, expected_msg) in cases {
