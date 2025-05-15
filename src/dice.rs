@@ -56,6 +56,8 @@
 
 use std::collections::HashMap;
 
+use crate::GameError;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// A single die with a user-defined number of sides
 pub struct Die {
@@ -78,6 +80,16 @@ impl Die {
     pub fn new(sides: u8) -> Die {
         assert!(sides > 0, "a Die with zero sides cannot be created");
         Die { sides }
+    }
+
+    /// Non-panic version of new(). Returns a GameError instead of panicking if
+    /// an attempt is made to create a zero-sided die.
+    pub fn try_new(sides: u8) -> Result<Die, GameError> {
+        if sides == 0 {
+            Err(GameError::DieWithZeroSides)
+        } else {
+            Ok(Die { sides })
+        }
     }
 
     /// Rolls the die and returns the face-up value.
@@ -117,7 +129,21 @@ impl Die {
         }
     }
 
-    /// Rolls the die one and explodes (rolls again automatically and recurrently)
+    /// Rolls the die a number of times and returns a DicePool.
+    /// This is a "try" version of roll_into_pool() suggested by @jerryshell. It functions
+    /// the same way as that function, but returns an error instead of panicking if called
+    /// with times = 0.
+    pub fn try_roll_into_pool(&self, times: usize) -> Result<DicePool, GameError> {
+        if times == 0 {
+            Err(GameError::DicePoolWithNoDice)
+        } else {
+            Ok(DicePool {
+                rolls: (0..times).map(|_| self.roll()).collect(),
+            })
+        }
+    }
+
+    /// Rolls the die once and explodes (rolls again automatically and recurrently)
     /// if the specified trigger number is rolled.
     ///
     /// The value returned is maxed at 255 so that exploding dice results can still
@@ -366,10 +392,21 @@ mod tests {
     use crate::dice::*;
 
     #[test]
-    fn create_die() {
+    fn die_new_works() {
         let d = Die::new(6);
-
         assert_eq!(d, Die { sides: 6 });
+    }
+
+    #[test]
+    fn die_try_new_works() {
+        if let Ok(die) = Die::try_new(6) {
+            assert_eq!(die, Die { sides: 6 });
+        }
+    }
+
+    #[test]
+    fn die_try_new_returns_err_on_zero() {
+        assert_eq!(Die::try_new(0), Err(GameError::DieWithZeroSides));
     }
 
     #[test]
@@ -420,6 +457,29 @@ mod tests {
     fn roll_zero_dice_into_pool_panics() {
         let d4 = Die::new(4);
         let _ = d4.roll_into_pool(0); // panic!
+    }
+
+    #[test]
+    fn die_try_roll_into_pool_returns_correct_dicepool() {
+        let d6 = Die::new(6);
+        if let Ok(d6_pool) = d6.try_roll_into_pool(20) {
+            let rolls = d6_pool.results();
+            // checks right number of rolls and that all are in expected range
+            assert_eq!(rolls.len(), 20);
+            for roll in rolls {
+                assert!(
+                    (1..=6).contains(roll),
+                    "DicePool contained invalid d6 roll ({})",
+                    roll
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn die_try_roll_into_pool_returns_gameerror_on_zero() {
+        let d4 = Die::new(4);
+        assert_eq!(d4.try_roll_into_pool(0), Err(GameError::DicePoolWithNoDice));
     }
 
     #[test]

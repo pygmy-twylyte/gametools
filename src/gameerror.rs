@@ -19,6 +19,8 @@ pub enum GameError {
     TileUnconnected,
     TrainClosed,
     SpinnerEmpty,
+    DicePoolWithNoDice,
+    DieWithZeroSides,
 }
 impl fmt::Display for GameError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -40,7 +42,16 @@ impl fmt::Display for GameError {
                 write!(f, "attempted to play on a closed train")
             }
             GameError::SpinnerEmpty => {
-                write!(f, "spin() returned None: empty spinner or landed on covered wedge")
+                write!(
+                    f,
+                    "spin() returned None: empty spinner or landed on covered wedge"
+                )
+            }
+            GameError::DicePoolWithNoDice => {
+                write!(f, "attempted to roll zero dice into a DicePool")
+            }
+            GameError::DieWithZeroSides => {
+                write!(f, "attempted to create a die with zero sides")
             }
         }
     }
@@ -57,32 +68,40 @@ mod tests {
         let cases: Vec<(GameError, &str)> = vec![
             (
                 GameError::StackEmpty("Main".to_string()),
-                "cannot draw from empty stack 'Main'"
+                "cannot draw from empty stack 'Main'",
             ),
             (
                 GameError::StackTooSmall("Reserve".to_string()),
-                "too few cards remain in 'Reserve' to satisfy need"
+                "too few cards remain in 'Reserve' to satisfy need",
             ),
             (
                 GameError::CardNotFound,
-                "the card sought was not found in this collection"
+                "the card sought was not found in this collection",
             ),
             (
                 GameError::InsufficientTiles,
-                "insufficient tiles left in the bone pile"
+                "insufficient tiles left in the bone pile",
             ),
             (
                 GameError::TileUnconnected,
-                "that tile does not match the tail of the train"
+                "that tile does not match the tail of the train",
             ),
             (
                 GameError::TrainClosed,
-                "attempted to play on a closed train"
+                "attempted to play on a closed train",
             ),
             (
                 GameError::SpinnerEmpty,
-                "spin() returned None: empty spinner or landed on covered wedge"
-            )
+                "spin() returned None: empty spinner or landed on covered wedge",
+            ),
+            (
+                GameError::DicePoolWithNoDice,
+                "attempted to roll zero dice into a DicePool",
+            ),
+            (
+                GameError::DieWithZeroSides,
+                "attempted to create a die with zero sides",
+            ),
         ];
 
         for (err, expected_msg) in cases {

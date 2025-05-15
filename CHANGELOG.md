@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [0.3.2] - TBD
+
+### Added
+- Die::try_new() and Die::try_roll_into_pool(). Non-panic versions of new() and roll_into_poll().
+- GameErrors corresponding to failures of the above try_ functions.
+
+---
 ## [0.3.1] - 2025-05-11
 
 ### Added
