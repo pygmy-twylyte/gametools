@@ -1,0 +1,10 @@
+{
+  "crates": [
+    {
+      "root_module": "src/lib.rs",
+      "edition": "2021",
+      "deps": [],
+      "cfg": ["feature=\"serde\""]
+    }
+  ]
+}
