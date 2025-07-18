@@ -1,6 +1,15 @@
-use gametools::GameResult;
-use gametools::GameError;
+#![allow(dead_code)]
+#![cfg(feature = "serde")]
 use gametools::spinners::{Spinner, Wedge};
+use gametools::GameError;
+use gametools::GameResult;
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct Dummy {
+    value: u32,
+}
 
 fn main() -> GameResult<()> {
     /*
@@ -14,8 +23,8 @@ fn main() -> GameResult<()> {
         Wedge::new(15),
         Wedge::new(20),
     ]);
-    let spin = numeric_spinner.spin().ok_or( GameError::SpinnerEmpty)?;
+    let spin = numeric_spinner.spin().ok_or(GameError::SpinnerEmpty)?;
     println!("You win ${spin}!");
-    
+
     Ok(())
 }
