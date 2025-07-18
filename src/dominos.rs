@@ -31,6 +31,7 @@
 //! }
 //! ```
 use rand::prelude::SliceRandom;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -41,6 +42,8 @@ pub const MAX_PIPS: u8 = 18;
 
 /// A single domino tile.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct Domino {
     left: u8,
     right: u8,
@@ -125,6 +128,8 @@ impl fmt::Display for Domino {
 
 /// Pile of all of the dominos used for a game.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct BonePile {
     tiles: Vec<Domino>,
 }
@@ -173,6 +178,8 @@ impl BonePile {
 /// other players are currently allowed to extend it. 'Head' is the starting value for the
 /// round -- the initial value upon which the train must be built.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct Train {
     player: String,
     open: bool,
@@ -238,6 +245,8 @@ impl Train {
 
 /// A player's hand of dominos.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct DominoHand {
     player: String,
     tiles: Vec<Domino>,
@@ -557,9 +566,9 @@ mod domino_tests {
         let mut train = Train::new("open", true, 1);
 
         let valid_sequence = vec![0, 1, 2]; // these domino ids should play in sequence
-        let _result = hand.play_line(&valid_sequence, &mut train); 
+        let _result = hand.play_line(&valid_sequence, &mut train);
         assert!(hand.tiles.is_empty());
         assert_eq!(train.tiles.len(), 3);
-        assert_eq!(train.tail, 4);  // last tile should be [3:4]
+        assert_eq!(train.tail, 4); // last tile should be [3:4]
     }
 }

@@ -74,6 +74,7 @@
 //! ```
 use rand::distr::weighted::WeightedIndex;
 use rand::prelude::*;
+use serde::{Deserialize, Serialize};
 
 /// Creates a Vec of equally weighted (width = 1) Wedges from a Vec of values.
 /// ```
@@ -109,6 +110,8 @@ pub fn wedges_from_tuples<T: Clone>(tuples: Vec<(T, usize)>) -> Vec<Wedge<T>> {
 /// Covered (inactive) wedges remain present but cannot be landed on
 /// during a spin. This allows dynamic gameplay scenarios where certain
 /// outcomes can be temporarily disabled.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Wedge<T>
 where
@@ -170,6 +173,8 @@ impl<T: Clone> Wedge<T> {
 /// Generic over `T`, which must implement `Clone + PartialEq`.
 /// This allows for a wide variety of types to be used as wedge values,
 /// including strings, enums, numbers, and user-defined types.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "camelCase"))]
 #[derive(Debug, Clone)]
 pub struct Spinner<T>
 where

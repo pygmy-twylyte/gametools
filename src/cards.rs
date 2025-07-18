@@ -44,6 +44,7 @@
 
 // strum crate allows up to easily iterate through enums -- makes deck creation easy
 use rand::seq::SliceRandom;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
@@ -52,6 +53,8 @@ use crate::{GameError, GameResult};
 
 /// Represents all possible ranks (face values) for a standard playing card.
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, EnumIter)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "camelCase"))]
 pub enum Rank {
     Two,
     Three,
@@ -90,6 +93,8 @@ impl Rank {
 
 /// Represents the four possible suits of a standard playing card.
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, EnumIter)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "camelCase"))]
 pub enum Suit {
     Clubs,
     Diamonds,
@@ -148,6 +153,8 @@ pub trait AddCard {
 ///
 /// ```
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct Card {
     pub rank: Rank,
     pub suit: Suit,
@@ -192,6 +199,8 @@ impl Card {
 /// are needed, a new deck must be created. This is unlike a Pile, to which
 /// cards can also be added.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "camelCase"))]
 pub struct Deck {
     pub name: String,
     cards: Vec<Card>,
@@ -349,6 +358,8 @@ impl Deck {
 
 /// A stack of cards, such as a draw or discard pile. Last one added is first that will be drawn.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct Pile {
     pub name: String,
     pub cards: Vec<Card>,
@@ -416,6 +427,8 @@ impl AddCard for Pile {
 
 /// A player's hand of cards in a game.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct CardHand {
     pub player: String,
     pub cards: Vec<Card>,
@@ -568,7 +581,7 @@ mod card_tests {
 
     #[test]
     fn card_display_is_correct() {
-        let qos = Card::new_temp(Rank::Queen,Suit::Spades);
+        let qos = Card::new_temp(Rank::Queen, Suit::Spades);
         assert_eq!(qos.to_string(), "[Queen of Spades]".to_string());
     }
 
@@ -750,7 +763,7 @@ mod card_tests {
     #[test]
     fn pile_size_is_correct() {
         let mut pile = Pile::new("test");
-        assert_eq!(pile.size(),  0);
+        assert_eq!(pile.size(), 0);
         pile.add_card(Card::new_temp(Rank::Ace, Suit::Hearts));
         assert_eq!(pile.size(), 1);
     }

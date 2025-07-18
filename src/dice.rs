@@ -56,6 +56,8 @@
 
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::GameError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -196,6 +198,8 @@ impl Die {
 /// game logic where the order of results counts, it is generally better to get the rolls on demand
 /// through roll() or roll_exploding().
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 pub struct DicePool {
     rolls: Vec<u8>,
 }
