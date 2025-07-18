@@ -13,6 +13,7 @@ categories = ["game-engines", "data-structures"]
 
 [dependencies]
 rand = "0.9.0"
+serde = { version = "1.0.219", features = ["derive"] }
 strum = "0.27.1"
 strum_macros = "0.27.1"
 
