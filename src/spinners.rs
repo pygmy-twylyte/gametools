@@ -74,6 +74,8 @@
 //! ```
 use rand::distr::weighted::WeightedIndex;
 use rand::prelude::*;
+
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Creates a Vec of equally weighted (width = 1) Wedges from a Vec of values.

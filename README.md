@@ -56,6 +56,8 @@ See additional usage examples in the module docs:
 - [Cards module](https://docs.rs/gametools/latest/gametools/cards/index.html): shuffling, drawing, hands
 - [Dominos module](https://docs.rs/gametools/latest/gametools/dominos/index.html): longest-train solver
 
+The examples/yahtzee folder contains an example of a Yahtzee-playing agent created using the Dice module.
+
 ## License
 
 Licensed under MIT. Contributions welcome!

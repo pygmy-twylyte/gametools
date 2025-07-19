@@ -44,6 +44,7 @@
 
 // strum crate allows up to easily iterate through enums -- makes deck creation easy
 use rand::seq::SliceRandom;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use strum::IntoEnumIterator;
