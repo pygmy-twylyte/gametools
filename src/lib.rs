@@ -17,7 +17,9 @@ pub mod dice;
 pub use dice::{DicePool, Die};
 
 pub mod cards;
-pub use cards::{AddCard, Card, CardHand, Deck, Pile, Rank, Suit, TakeCard};
+pub use cards::{
+    AddCard, Card, CardCollection, CardFaces, CardHand, Deck, Hand, Pile, Rank, Suit, TakeCard,
+};
 
 pub mod dominos;
 pub use dominos::{BonePile, Domino, DominoHand, Train, MAX_PIPS};

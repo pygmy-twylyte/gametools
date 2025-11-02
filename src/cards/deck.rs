@@ -9,7 +9,11 @@
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, Hand, TakeCard};
 use rand::prelude::*;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Deck<T: CardFaces> {
     pub name: String,
     pub cards: Vec<Card<T>>,

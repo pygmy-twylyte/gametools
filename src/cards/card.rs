@@ -6,8 +6,12 @@
 
 use uuid::Uuid;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A generic card of any kind, as long as it has faces.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Card<T: CardFaces> {
     pub faces: T,
     pub uuid: Uuid,

@@ -2,10 +2,13 @@
 //!
 //! A `Hand` of `Card<T>`
 //!
-
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, TakeCard};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Hand<T: CardFaces> {
     pub player: String,
     pub cards: Vec<Card<T>>,

@@ -17,7 +17,7 @@ pub mod std_playing_cards;
 
 pub use card::{Card, CardFaces};
 pub use deck::Deck;
-pub use hand::Hand;
+pub use hand::{Hand, Hand as CardHand};
 pub use pile::Pile;
 pub use std_playing_cards::{Rank, StandardCard, Suit};
 

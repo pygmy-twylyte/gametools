@@ -4,6 +4,11 @@
 //! to or removed from it.
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, TakeCard};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Pile<T: CardFaces> {
     pub name: String,
     pub cards: Vec<Card<T>>,

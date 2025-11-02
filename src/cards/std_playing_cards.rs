@@ -5,10 +5,12 @@
 use crate::cards::{Card, CardFaces, Hand};
 use std::collections::BTreeMap;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A standard playing card that you'd find in a typical deck of 52 (54 with Jokers).
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "type", rename_all = "camelCase"))]
 pub struct StandardCard {
     pub suit: Suit,
     pub rank: Rank,
@@ -43,6 +45,7 @@ impl CardFaces for StandardCard {
 
 /// Ranks for "normal" cards (Jokers treated separately).
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Rank {
     Two = 2,
     Three,
@@ -125,8 +128,9 @@ impl Rank {
     }
 }
 
-/// Suits for "normal" playing cards (Jokers excluded.)
+/// Suits for "normal" playing cards
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Suit {
     Clubs,
     Hearts,
