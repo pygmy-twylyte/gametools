@@ -1,16 +1,16 @@
 //! # Standard Playing Cards
 //!
-//! Helpers for working with the canonical 52-card deck (plus optional jokers).
-//! The [`StandardCard`] type implements [`CardFaces`](crate::cards::CardFaces) so it can be
-//! wrapped in a [`Card`](crate::cards::Card) and used with [`Deck`](crate::cards::Deck),
-//! [`Hand`](crate::cards::Hand), or [`Pile`](crate::cards::Pile).
+//! Helpers for working with the canonical 52-card deck (plus optional Jokers).
+//! The [`StandardCard`] type implements [`CardFaces`] so it can be
+//! wrapped in a [`Card`] and used with [`Deck`](crate::cards::Deck),
+//! [`Hand`], or [`Pile`](crate::cards::Pile).
 //!
 //! ```
 //! use gametools::{Card, CardCollection, Deck};
 //! use gametools::cards::std_playing_cards::{full_deck, Rank, StandardCard, Suit};
 //!
 //! // Create a full deck and wrap each face in a Card.
-//! let cards = full_deck()
+//! let cards = full_deck()     // or full_deck_with_jokers() for added 2 Jokers / wildcards
 //!     .into_iter()
 //!     .map(Card::new_card)
 //!     .collect::<Vec<_>>();
@@ -18,7 +18,7 @@
 //! let mut deck = Deck::new("standard", cards);
 //! assert_eq!(deck.size(), 52);
 //!
-//! // Peek at the display formatting for a single card.
+//! // Create an individual card by rank and suit.
 //! let ace_spades = StandardCard::new_card(Rank::Ace, Suit::Spades);
 //! assert_eq!(ace_spades.rank, Rank::Ace);
 //! assert_eq!(ace_spades.suit, Suit::Spades);

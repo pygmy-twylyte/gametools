@@ -1,7 +1,7 @@
 //! # Decks
 //!
 //! A [`Deck`] starts full and only loses cards through draw-like operations. It is the
-//! canonical source of cards for most games, pairing neatly with [`Hand`](crate::cards::hand::Hand)
+//! canonical source of cards for most games, pairing neatly with [`Hand`]
 //! or [`Pile`](crate::cards::pile::Pile) to model game flow.
 //!
 //! # Examples
