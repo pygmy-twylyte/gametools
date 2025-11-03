@@ -9,12 +9,17 @@ use uuid::Uuid;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::Deck;
+
+use super::deck::DeckId;
+
 /// A generic card of any kind, as long as it has faces.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Card<T: CardFaces> {
     pub faces: T,
     pub uuid: Uuid,
+    pub deck_id: Option<DeckId>,
     pub face_up: bool,
 }
 
@@ -26,15 +31,32 @@ pub trait CardFaces {
 }
 
 impl<T: CardFaces> Card<T> {
+    /// Create a new card from a struct that is CardFaces.
+    ///
+    /// By default, there are orphan or dummy cards that don't belong to a Deck. A DeckId
+    /// is assigned to them if they are passed through Deck::new() or Deck::new_from_faces().
     pub fn new_card(faces: T) -> Card<T> {
         Card {
             faces,
             uuid: Uuid::new_v4(),
+            deck_id: None,
             face_up: true,
         }
     }
+    /// Flip the card over.
+    ///
+    /// This changes which side of the card is visible. Display is implemented so that printing
+    /// {card} shows the face from whichever side is up.
     pub fn flip(&mut self) {
         self.face_up = !self.face_up;
+    }
+    /// Determine whether this card belongs to a specific `Deck`.
+    pub fn is_from_deck(&self, deck: Deck<T>) -> bool {
+        self.deck_id == Some(deck.deck_id)
+    }
+
+    pub fn assign_to_deck(&mut self, deck_id: DeckId) {
+        self.deck_id = Some(deck_id);
     }
 }
 

@@ -8,31 +8,52 @@
 
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, Hand, TakeCard};
 use rand::prelude::*;
+use uuid::Uuid;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DeckId(Uuid);
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Deck<T: CardFaces> {
     pub name: String,
+    pub deck_id: DeckId,
     pub cards: Vec<Card<T>>,
 }
 impl<T: CardFaces + Clone> Deck<T> {
-    pub fn new(name: &str, cards: Vec<Card<T>>) -> Self {
+    pub fn new(name: &str, cards: &mut Vec<Card<T>>) -> Self {
+        let deck_id = DeckId(Uuid::new_v4());
+        cards.iter_mut().for_each(|c| c.assign_to_deck(deck_id));
         Self {
             name: name.to_string(),
-            cards,
+            deck_id,
+            cards: cards.to_vec(),
         }
     }
 
     pub fn new_from_faces(name: &str, faces: &Vec<T>) -> Self {
-        let cards = faces.iter().map(|f| Card::new_card(f.clone())).collect();
-        Self::new(name, cards)
+        let mut cards = faces
+            .iter()
+            .map(|f| Card::new_card(f.clone()))
+            .collect::<Vec<_>>();
+        Self::new(name, &mut cards)
     }
 
     pub fn shuffle(&mut self) {
         self.cards.shuffle(&mut rand::rng());
+    }
+
+    /// Determine whether the supplied `Card` belongs to this `Deck`.
+    pub fn owns_card(&self, card: &Card<T>) -> bool {
+        if let Some(card_deck_id) = &card.deck_id {
+            self.deck_id == *card_deck_id
+        } else {
+            false
+        }
     }
 
     pub fn deal(&mut self, players: &[&str], count: usize) -> Vec<Hand<T>> {
