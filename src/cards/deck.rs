@@ -25,22 +25,22 @@ pub struct Deck<T: CardFaces> {
     pub cards: Vec<Card<T>>,
 }
 impl<T: CardFaces + Clone> Deck<T> {
-    pub fn new(name: &str, cards: &mut Vec<Card<T>>) -> Self {
+    pub fn new(name: &str, mut cards: Vec<Card<T>>) -> Self {
         let deck_id = DeckId(Uuid::new_v4());
         cards.iter_mut().for_each(|c| c.assign_to_deck(deck_id));
         Self {
             name: name.to_string(),
             deck_id,
-            cards: cards.to_vec(),
+            cards,
         }
     }
 
     pub fn new_from_faces(name: &str, faces: &Vec<T>) -> Self {
-        let mut cards = faces
+        let cards = faces
             .iter()
             .map(|f| Card::new_card(f.clone()))
             .collect::<Vec<_>>();
-        Self::new(name, &mut cards)
+        Self::new(name, cards)
     }
 
     pub fn shuffle(&mut self) {
@@ -148,6 +148,21 @@ mod tests {
         assert_eq!(ids, vec![1, 2]);
         // ensure original faces untouched
         assert_eq!(faces[0].id, 1);
+        assert!(deck
+            .cards
+            .iter()
+            .all(|card| card.deck_id == Some(deck.deck_id)));
+    }
+
+    #[test]
+    fn new_assigns_deck_id_to_all_cards() {
+        let deck = Deck::new("test", vec![make_card(1), make_card(2)]);
+
+        assert!(deck
+            .cards
+            .iter()
+            .all(|card| card.deck_id == Some(deck.deck_id)));
+        assert!(deck.cards.iter().all(|card| card.deck_id.is_some()));
     }
 
     #[test]
@@ -209,5 +224,16 @@ mod tests {
         let lengths: Vec<usize> = hands.iter().map(|hand| hand.cards.len()).collect();
         assert_eq!(lengths, vec![2, 1]);
         assert!(deck.cards.is_empty());
+    }
+
+    #[test]
+    fn owns_card_identifies_membership() {
+        let deck = Deck::new("test", vec![make_card(1), make_card(2)]);
+        let deck_card = deck.cards[0].clone();
+        let mut other_deck = Deck::new("other", vec![make_card(3)]);
+        let other_card = other_deck.take_card().expect("card expected");
+
+        assert!(deck.owns_card(&deck_card));
+        assert!(!deck.owns_card(&other_card));
     }
 }
