@@ -5,16 +5,43 @@
 
 # gametools
 
-**gametools** is a lightweight Rust library for simulating game components like dice rolls, card decks, dominos, and spinners. It's designed to be modular, testable, and usable in both game engines and CLI tools. The goal is to provide reusable game apparatus — not game logic — so you can build your rules on top of well-tested building blocks.
+**gametools** is a lightweight Rust library for simulating game components like dice rolls, extensible card decks, dominos, and spinners. It's designed to be modular, testable, and usable in both game engines and CLI tools. The goal is to provide reusable game apparatus — not game logic — so you can build your rules on top of well-tested building blocks.
 
 ## Features
 
 - 🎲 Numeric dice up to 255 sides, plus dice pools with chainable operations
-- 🃏 Standard playing cards: decks, hands, piles, shuffling, drawing
+- 🃏 Extensible cards toolkit: compose custom face types, deck/hand/pile flows, plus a ready-made standard 52-card set
 - 🁫 Dominos with support for longest-path train solving
 - 🌀 Spinners with support for weighted wedges and optional blocking
 - 💥 Human-readable game errors for common failure conditions
 - 🧪 Well-documented and tested with 90%+ code coverage
+
+## Example: Cards
+
+```rust
+use gametools::{AddCard, Card, CardCollection, CardFaces, Deck, Hand, TakeCard};
+
+#[derive(Clone)]
+struct Rune(char);
+
+impl CardFaces for Rune {
+    fn display_front(&self) -> String { format!("Rune {}", self.0) }
+    fn display_back(&self) -> Option<String> { Some(String::from("Stone Tablet")) }
+    fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+}
+
+let runes = "FUTHARK".chars()
+    .map(|glyph| Card::new_card(Rune(glyph)))
+    .collect::<Vec<_>>();
+
+let mut deck = Deck::new("runes", runes);
+deck.shuffle();
+
+let mut hand = Hand::<Rune>::new("sage");
+hand.add_cards(deck.take_cards(3));
+assert_eq!(hand.size(), 3);
+```
 
 ## Example: Dice
 
@@ -53,7 +80,7 @@ Full API docs with usage examples are available via [docs.rs](https://docs.rs/ga
 
 See additional usage examples in the module docs:
 
-- [Cards module](https://docs.rs/gametools/latest/gametools/cards/index.html): shuffling, drawing, hands
+- [Cards module](https://docs.rs/gametools/latest/gametools/cards/index.html): custom faces, deck/hand/pile traits, shuffling, drawing
 - [Dominos module](https://docs.rs/gametools/latest/gametools/dominos/index.html): longest-train solver
 
 The examples/yahtzee folder contains an example of a Yahtzee-playing agent created using the Dice module.

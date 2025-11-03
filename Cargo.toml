@@ -1,9 +1,9 @@
 [package]
 name = "gametools"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["pygmy-twylyte <davidjvbrown.md@gmail.com>"]
 edition = "2021"
-description = "Game-related tools: spinners, dice, dominos, and cards."
+description = "Game component toolkit for dice, dominos, spinners, and fully extensible card decks."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/pygmy-twylyte/gametools"
 readme = "README.md"

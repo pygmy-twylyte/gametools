@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
+## [0.5.0] - 2025-11-02
+
+### Added
+- `CardFaces` trait plus enriched `Card<T>` metadata (UUIDs, deck ownership) for building arbitrary card games.
+- Shared `CardCollection`, `AddCard`, and `TakeCard` traits so helpers can work with decks, hands, and piles interchangeably.
+- New deck helpers including `Deck::new_from_faces`, `Deck::deal`, and trait-powered `take_cards` flows for smoother game orchestration.
+
+### Changed
+- Replaced the playing cards module with a fully modular cards toolkit; standard 52-card support now lives under `cards::std_playing_cards`.
+- `Deck`, `Hand`, and `Pile` now operate on generic `Card<T>` values, enabling custom face types across the whole crate.
+- Refreshed documentation and examples to highlight the new cards architecture and usage patterns.
+
+---
 ## [0.4.0] - 2025-07-18
 
 ### Added
