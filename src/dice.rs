@@ -292,7 +292,7 @@ impl DicePool {
         self.rolls.iter().filter(|&r| *r == value).count()
     }
 
-    /// Returns a hashmap of "binned" values from the dicepool, where bins[value] = # of times that value was rolled.
+    /// Returns a hashmap of "binned" values from the dicepool, where bins\[value\] = # of times that value was rolled.
     /// ```
     /// use gametools::DicePool;
     ///
