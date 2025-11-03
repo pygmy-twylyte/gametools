@@ -1,8 +1,32 @@
+//! # Card Primitives
 //!
-//! card module
+//! Types and traits for representing the smallest unit in the cards ecosystem: an
+//! individual card with arbitrary faces. A [`Card`] simply wraps your custom face type
+//! and records metadata such as a UUID, deck membership, and whether the card is face up.
 //!
-//! Implements a card generic over T, where T: `CardFaces`. The `CardFaces` trait
-//! defines how each side of the card appears and how they compare to each other.
+//! To plug into the rest of the module you only need to implement [`CardFaces`].
+//! That trait describes how to render the front and back of the card and how cards
+//! compare or match with one another.
+//!
+//! # Examples
+//!
+//! ```
+//! use gametools::{Card, CardFaces};
+//!
+//! #[derive(Clone)]
+//! struct EmojiCard(&'static str);
+//!
+//! impl CardFaces for EmojiCard {
+//!     fn display_front(&self) -> String { self.0.to_string() }
+//!     fn display_back(&self) -> Option<String> { Some(String::from("🎴")) }
+//!     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+//!     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(other.0) }
+//! }
+//!
+//! let card = Card::new_card(EmojiCard("🂡"));
+//! assert!(card.face_up);
+//! assert!(card.deck_id.is_none());
+//! ```
 
 use uuid::Uuid;
 
@@ -14,15 +38,24 @@ use crate::Deck;
 use super::deck::DeckId;
 
 /// A generic card of any kind, as long as it has faces.
+///
+/// The [`faces`](Self::faces) field stores application-specific information while the
+/// remaining fields are convenience metadata maintained by the library.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Card<T: CardFaces> {
+    /// The user-defined information that appears on the card.
     pub faces: T,
+    /// A globally unique identifier assigned on creation.
     pub uuid: Uuid,
+    /// The deck that currently owns this card, if any.
     pub deck_id: Option<DeckId>,
+    /// Whether the front face of the card is currently visible.
     pub face_up: bool,
 }
 
+/// Describes how to work with the front and back of a card, as well as how to compare
+/// or match two cards of the same type.
 pub trait CardFaces {
     fn display_front(&self) -> String;
     fn display_back(&self) -> Option<String>;
@@ -35,6 +68,24 @@ impl<T: CardFaces> Card<T> {
     ///
     /// By default, there are orphan or dummy cards that don't belong to a Deck. A DeckId
     /// is assigned to them if they are passed through Deck::new() or Deck::new_from_faces().
+    ///
+    /// ```
+    /// use gametools::{Card, CardFaces};
+    ///
+    /// #[derive(Clone)]
+    /// struct Number(u8);
+    ///
+    /// impl CardFaces for Number {
+    ///     fn display_front(&self) -> String { format!("N{}", self.0) }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+    /// }
+    ///
+    /// let card = Card::new_card(Number(7));
+    /// assert!(card.face_up);
+    /// assert!(card.deck_id.is_none());
+    /// ```
     pub fn new_card(faces: T) -> Card<T> {
         Card {
             faces,
@@ -47,14 +98,56 @@ impl<T: CardFaces> Card<T> {
     ///
     /// This changes which side of the card is visible. Display is implemented so that printing
     /// {card} shows the face from whichever side is up.
+    ///
+    /// ```
+    /// use gametools::{Card, CardFaces};
+    ///
+    /// #[derive(Clone)]
+    /// struct Stub;
+    ///
+    /// impl CardFaces for Stub {
+    ///     fn display_front(&self) -> String { String::from("front") }
+    ///     fn display_back(&self) -> Option<String> { Some(String::from("back")) }
+    ///     fn matches(&self, _other: &Self) -> bool { true }
+    ///     fn compare(&self, _other: &Self) -> std::cmp::Ordering { std::cmp::Ordering::Equal }
+    /// }
+    ///
+    /// let mut card = Card::new_card(Stub);
+    /// assert!(card.face_up);
+    /// card.flip();
+    /// assert!(!card.face_up);
+    /// ```
     pub fn flip(&mut self) {
         self.face_up = !self.face_up;
     }
     /// Determine whether this card belongs to a specific `Deck`.
+    ///
+    /// ```
+    /// use gametools::{Card, CardFaces, Deck};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face(u8);
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { format!("{}", self.0) }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+    /// }
+    ///
+    /// let mut deck = Deck::new("demo", vec![Card::new_card(Face(1))]);
+    /// let card = deck.cards[0].clone();
+    /// let deck_copy = deck.clone();
+    /// assert!(card.is_from_deck(deck_copy));
+    /// ```
     pub fn is_from_deck(&self, deck: Deck<T>) -> bool {
         self.deck_id == Some(deck.deck_id)
     }
 
+    /// Force a card to belong to the deck identified by `deck_id`.
+    ///
+    /// This is normally handled automatically by [`Deck::new`](crate::cards::deck::Deck::new),
+    /// but individual games may need to reassign cards in custom flows.
     pub fn assign_to_deck(&mut self, deck_id: DeckId) {
         self.deck_id = Some(deck_id);
     }

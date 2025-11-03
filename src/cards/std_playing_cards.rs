@@ -1,22 +1,55 @@
-//! # Standard Playing Card
+//! # Standard Playing Cards
 //!
-//! This defines a standard playing card, with ranks and suits, for use with the cards module.
-//! Also included are method implementations for Hand and Deck specific to standard rank/suit cards.
+//! Helpers for working with the canonical 52-card deck (plus optional jokers).
+//! The [`StandardCard`] type implements [`CardFaces`](crate::cards::CardFaces) so it can be
+//! wrapped in a [`Card`](crate::cards::Card) and used with [`Deck`](crate::cards::Deck),
+//! [`Hand`](crate::cards::Hand), or [`Pile`](crate::cards::Pile).
+//!
+//! ```
+//! use gametools::{Card, CardCollection, Deck};
+//! use gametools::cards::std_playing_cards::{full_deck, Rank, StandardCard, Suit};
+//!
+//! // Create a full deck and wrap each face in a Card.
+//! let cards = full_deck()
+//!     .into_iter()
+//!     .map(Card::new_card)
+//!     .collect::<Vec<_>>();
+//!
+//! let mut deck = Deck::new("standard", cards);
+//! assert_eq!(deck.size(), 52);
+//!
+//! // Peek at the display formatting for a single card.
+//! let ace_spades = StandardCard::new_card(Rank::Ace, Suit::Spades);
+//! assert_eq!(ace_spades.rank, Rank::Ace);
+//! assert_eq!(ace_spades.suit, Suit::Spades);
+//! ```
 use crate::cards::{Card, CardFaces, Hand};
 use std::collections::BTreeMap;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// A standard playing card that you'd find in a typical deck of 52 (54 with Jokers).
+/// A standard playing card from a regular deck (52 cards, or 54 with Jokers).
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct StandardCard {
+    /// The suit (♣, ♦, ♥, ♠, or `Wild` for Jokers).
     pub suit: Suit,
+    /// The rank, including face cards and optional joker.
     pub rank: Rank,
+    /// Numeric value used for comparisons (ace high by default).
     pub value: u8,
 }
 impl StandardCard {
+    /// Create a new standard playing card face.
+    ///
+    /// ```
+    /// use gametools::cards::std_playing_cards::{Rank, StandardCard, Suit};
+    ///
+    /// let card = StandardCard::new_card(Rank::Queen, Suit::Hearts);
+    /// assert_eq!(card.rank, Rank::Queen);
+    /// assert_eq!(card.suit, Suit::Hearts);
+    /// ```
     pub fn new_card(rank: Rank, suit: Suit) -> Self {
         Self {
             rank,
@@ -43,7 +76,7 @@ impl CardFaces for StandardCard {
     }
 }
 
-/// Ranks for "normal" cards (Jokers treated separately).
+/// Card ranks from two through ace, plus an optional joker.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Rank {
@@ -83,7 +116,16 @@ impl std::fmt::Display for Rank {
     }
 }
 impl Rank {
-    /// Returns a list of the standard ranks (no Joker)
+    /// Return the thirteen ranks used in a standard 52-card deck.
+    ///
+    /// ```
+    /// use gametools::cards::std_playing_cards::{Rank, Suit};
+    ///
+    /// let mut ranks = Rank::normal_ranks();
+    /// assert_eq!(ranks.len(), 13);
+    /// assert!(ranks.contains(&Rank::Ace));
+    /// assert!(!ranks.contains(&Rank::Joker));
+    /// ```
     pub fn normal_ranks() -> Vec<Rank> {
         vec![
             Rank::Two,
@@ -101,13 +143,22 @@ impl Rank {
             Rank::Ace,
         ]
     }
-    /// Returns a list of all ranks (Joker included)
+    /// Return the standard ranks plus the optional `Rank::Joker`.
     pub fn all_ranks() -> Vec<Rank> {
         let mut all_ranks = Rank::normal_ranks();
         all_ranks.push(Rank::Joker);
         all_ranks
     }
 
+    /// Convert an integer value into a rank (treating 1 and 14 as aces).
+    ///
+    /// ```
+    /// use gametools::cards::std_playing_cards::Rank;
+    ///
+    /// assert_eq!(Rank::from_value(12), Some(Rank::Queen));
+    /// assert_eq!(Rank::from_value(1), Some(Rank::Ace));
+    /// assert_eq!(Rank::from_value(42), None);
+    /// ```
     pub fn from_value(value: u8) -> Option<Rank> {
         match value {
             1 | 14 => Some(Rank::Ace),
@@ -128,7 +179,7 @@ impl Rank {
     }
 }
 
-/// Suits for "normal" playing cards
+/// The four standard suits plus `Wild` for Jokers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Suit {
@@ -150,11 +201,19 @@ impl std::fmt::Display for Suit {
     }
 }
 impl Suit {
-    /// Returns a list of normal suits (Wild excluded).
+    /// Return the four standard suits.
+    ///
+    /// ```
+    /// use gametools::cards::std_playing_cards::Suit;
+    ///
+    /// let suits = Suit::normal_suits();
+    /// assert_eq!(suits.len(), 4);
+    /// assert!(suits.contains(&Suit::Hearts));
+    /// ```
     pub fn normal_suits() -> Vec<Suit> {
         vec![Suit::Clubs, Suit::Hearts, Suit::Diamonds, Suit::Spades]
     }
-    /// Returns a list of all suits (including Wild).
+    /// Return the four suits plus `Suit::Wild`.
     pub fn all_suits() -> Vec<Suit> {
         let mut all_suits = Suit::normal_suits();
         all_suits.push(Suit::Wild);
@@ -162,7 +221,14 @@ impl Suit {
     }
 }
 
-/// Create all 52 cards for a stanard deck.
+/// Create all 52 cards for a standard deck of playing cards.
+///
+/// ```
+/// use gametools::cards::std_playing_cards::full_deck;
+///
+/// let deck = full_deck();
+/// assert_eq!(deck.len(), 52);
+/// ```
 pub fn full_deck() -> Vec<StandardCard> {
     let mut deck = Vec::new();
     for suit in Suit::normal_suits() {
@@ -173,7 +239,14 @@ pub fn full_deck() -> Vec<StandardCard> {
     deck
 }
 
-/// Create all 52 cards for a standard deck, plus two Jokers.
+/// Create a full 52-card deck plus two jokers.
+///
+/// ```
+/// use gametools::cards::std_playing_cards::full_deck_with_jokers;
+///
+/// let deck = full_deck_with_jokers();
+/// assert_eq!(deck.len(), 54);
+/// ```
 pub fn full_deck_with_jokers() -> Vec<StandardCard> {
     let mut deck = full_deck();
     deck.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
@@ -183,17 +256,52 @@ pub fn full_deck_with_jokers() -> Vec<StandardCard> {
 
 impl Hand<StandardCard> {
     /// Check whether a card matching a rank and suit is in the `Hand`.
+    ///
+    /// ```
+    /// use gametools::{AddCard, Card, Hand};
+    /// use gametools::cards::std_playing_cards::{Rank, StandardCard, Suit};
+    ///
+    /// let mut hand = Hand::<StandardCard>::new("player");
+    /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::Ace, Suit::Spades)));
+    /// assert!(hand.contains(Rank::Ace, Suit::Spades));
+    /// assert!(!hand.contains(Rank::Queen, Suit::Hearts));
+    /// ```
     pub fn contains(&self, rank: Rank, suit: Suit) -> bool {
         let search = StandardCard::new_card(rank, suit);
         self.cards.iter().any(|card| card.faces.matches(&search))
     }
 
     /// Count how many cards in the hand have a specific rank.
+    ///
+    /// ```
+    /// use gametools::{AddCard, Card, Hand};
+    /// use gametools::cards::std_playing_cards::{Rank, StandardCard, Suit};
+    ///
+    /// let mut hand = Hand::<StandardCard>::new("player");
+    /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::Ace, Suit::Spades)));
+    /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::Ace, Suit::Hearts)));
+    /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::King, Suit::Clubs)));
+    /// assert_eq!(hand.count_rank(Rank::Ace), 2);
+    /// ```
     pub fn count_rank(&self, rank: Rank) -> usize {
         self.cards.iter().filter(|c| c.faces.rank == rank).count()
     }
 
     /// Create a map of `Rank` counts for the current `Hand`.
+    ///
+    /// ```
+    /// use gametools::{AddCard, Card, Hand};
+    /// use gametools::cards::std_playing_cards::{Rank, StandardCard, Suit};
+    ///
+    /// let mut hand = Hand::<StandardCard>::new("player");
+    /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::Three, Suit::Spades)));
+    /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::Three, Suit::Clubs)));
+    /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::Ace, Suit::Hearts)));
+    ///
+    /// let ranks = hand.rank_map();
+    /// assert_eq!(ranks.get(&Rank::Three), Some(&2));
+    /// assert_eq!(ranks.get(&Rank::Ace), Some(&1));
+    /// ```
     pub fn rank_map(&self) -> BTreeMap<Rank, usize> {
         let mut rank_map = BTreeMap::new();
         for card in &self.cards {

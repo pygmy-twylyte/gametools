@@ -1,10 +1,31 @@
-//! deck module
+//! # Decks
 //!
-//! Represents a `Deck` of `Card<T>`
-//! `Deck` differs from `Pile` in that a `Deck` begins full and only be drawn from.
-//! `Pile` starts empty and cards can be added to or taken from it.
+//! A [`Deck`] starts full and only loses cards through draw-like operations. It is the
+//! canonical source of cards for most games, pairing neatly with [`Hand`](crate::cards::hand::Hand)
+//! or [`Pile`](crate::cards::pile::Pile) to model game flow.
 //!
-//! Implements: Debug, Clone, PartialEq, CardCollection, TakeCard
+//! # Examples
+//!
+//! ```
+//! use gametools::{Card, CardFaces, CardCollection, Deck, TakeCard};
+//!
+//! #[derive(Clone)]
+//! struct Number(u8);
+//!
+//! impl CardFaces for Number {
+//!     fn display_front(&self) -> String { format!("N{}", self.0) }
+//!     fn display_back(&self) -> Option<String> { None }
+//!     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+//!     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+//! }
+//!
+//! let cards = (1..=3).map(|n| Card::new_card(Number(n))).collect();
+//! let mut deck = Deck::new("numbers", cards);
+//! assert_eq!(deck.size(), 3);
+//! let drawn = deck.take_card().unwrap();
+//! assert_eq!(drawn.faces.0, 3);
+//! assert_eq!(deck.size(), 2);
+//! ```
 
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, Hand, TakeCard};
 use rand::prelude::*;
@@ -15,16 +36,43 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// Uniquely identifies a specific deck instance.
 pub struct DeckId(Uuid);
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// A named collection of cards that are dealt from top to bottom.
 pub struct Deck<T: CardFaces> {
+    /// Friendly name used to describe the deck.
     pub name: String,
+    /// Unique identifier automatically assigned at deck creation.
     pub deck_id: DeckId,
+    /// Cards stored with the most recently added at the end of the vector.
     pub cards: Vec<Card<T>>,
 }
 impl<T: CardFaces + Clone> Deck<T> {
+    /// Build a deck from an owned vector of [`Card`]s.
+    ///
+    /// Each card is tagged with the deck's [`DeckId`], allowing downstream code
+    /// to check ownership.
+    ///
+    /// ```
+    /// use gametools::{Card, CardCollection, CardFaces, Deck};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face(u8);
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { format!("Card {}", self.0) }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+    /// }
+    ///
+    /// let cards = vec![Card::new_card(Face(1)), Card::new_card(Face(2))];
+    /// let deck = Deck::new("demo", cards);
+    /// assert!(deck.cards.iter().all(|card| card.deck_id == Some(deck.deck_id)));
+    /// ```
     pub fn new(name: &str, mut cards: Vec<Card<T>>) -> Self {
         let deck_id = DeckId(Uuid::new_v4());
         cards.iter_mut().for_each(|c| c.assign_to_deck(deck_id));
@@ -35,6 +83,25 @@ impl<T: CardFaces + Clone> Deck<T> {
         }
     }
 
+    /// Create a deck by supplying raw face values that will be wrapped in [`Card`]s.
+    ///
+    /// ```
+    /// use gametools::{CardFaces, Deck};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face(&'static str);
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { self.0.to_string() }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+    /// }
+    ///
+    /// let faces = vec![Face("A"), Face("B")];
+    /// let deck = Deck::new_from_faces("demo", &faces);
+    /// assert_eq!(deck.cards.len(), 2);
+    /// ```
     pub fn new_from_faces(name: &str, faces: &Vec<T>) -> Self {
         let cards = faces
             .iter()
@@ -43,11 +110,52 @@ impl<T: CardFaces + Clone> Deck<T> {
         Self::new(name, cards)
     }
 
+    /// Randomly permute the order of cards in the deck.
+    ///
+    /// ```
+    /// use gametools::{Card, CardCollection, CardFaces, Deck};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face(u8);
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { format!("{}", self.0) }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+    /// }
+    ///
+    /// let cards = (0..5).map(|n| Card::new_card(Face(n))).collect();
+    /// let mut deck = Deck::new("demo", cards);
+    /// deck.shuffle(); // order changes, but size remains the same
+    /// assert_eq!(deck.cards.len(), 5);
+    /// ```
     pub fn shuffle(&mut self) {
         self.cards.shuffle(&mut rand::rng());
     }
 
     /// Determine whether the supplied `Card` belongs to this `Deck`.
+    ///
+    /// ```
+    /// use gametools::{Card, CardCollection, CardFaces, Deck};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face(u8);
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { format!("{}", self.0) }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+    /// }
+    ///
+    /// let deck = Deck::new("demo", vec![Card::new_card(Face(1))]);
+    /// let card = deck.cards[0].clone();
+    /// assert!(deck.owns_card(&card));
+    ///
+    /// let other_deck = Deck::new("other", vec![Card::new_card(Face(2))]);
+    /// assert!(!other_deck.owns_card(&card));
+    /// ```
     pub fn owns_card(&self, card: &Card<T>) -> bool {
         if let Some(card_deck_id) = &card.deck_id {
             self.deck_id == *card_deck_id
@@ -56,6 +164,33 @@ impl<T: CardFaces + Clone> Deck<T> {
         }
     }
 
+    /// Deal `count` cards to each player in `players`, returning the resulting hands.
+    ///
+    /// Cards are dealt round-robin: the first player receives the first card, the
+    /// second player receives the next, and so on.
+    ///
+    /// ```
+    /// use gametools::{Card, CardCollection, CardFaces, Deck};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face(u8);
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { format!("{}", self.0) }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+    ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+    /// }
+    ///
+    /// let cards = (1..=4).map(|n| Card::new_card(Face(n))).collect();
+    /// let mut deck = Deck::new("demo", cards);
+    /// let hands = deck.deal(&["alice", "bob"], 1);
+    ///
+    /// assert_eq!(hands[0].player, "alice");
+    /// assert_eq!(hands[0].cards.len(), 1);
+    /// assert_eq!(hands[1].player, "bob");
+    /// assert_eq!(deck.size(), 2);
+    /// ```
     pub fn deal(&mut self, players: &[&str], count: usize) -> Vec<Hand<T>> {
         // create hands for the players
         let mut hands: Vec<Hand<T>> = players.iter().map(|name| Hand::<T>::new(name)).collect();
@@ -89,10 +224,12 @@ impl<T: CardFaces> CardCollection for Deck<T> {
     }
 }
 impl<T: CardFaces> TakeCard<T> for Deck<T> {
+    /// Draw the next card from the deck. Returns `None` when empty.
     fn take_card(&mut self) -> Option<Card<T>> {
         self.cards.pop()
     }
 
+    /// Remove the first card whose faces match the supplied `search_card`.
     fn take_match(&mut self, search_card: &Card<T>) -> Option<Card<T>> {
         let idx = self
             .cards

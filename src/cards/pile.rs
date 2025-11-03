@@ -1,7 +1,26 @@
-//! # Pile
+//! # Piles
 //!
-//! A pile is a named stack of cards that starts empty and can have cards added
-//! to or removed from it.
+//! A [`Pile`] is an initially empty collection of cards that you can add to and draw from.
+//! Use it for discard piles, staging areas, or any shared pool of cards outside a player's hand.
+//!
+//! ```
+//! use gametools::{AddCard, Card, CardFaces, Pile, TakeCard};
+//!
+//! #[derive(Clone)]
+//! struct Face(u8);
+//!
+//! impl CardFaces for Face {
+//!     fn display_front(&self) -> String { format!("{}", self.0) }
+//!     fn display_back(&self) -> Option<String> { None }
+//!     fn matches(&self, other: &Self) -> bool { self.0 == other.0 }
+//!     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
+//! }
+//!
+//! let mut pile = Pile::<Face>::new_pile("discard");
+//! pile.add_card(Card::new_card(Face(10)));
+//! let top = pile.take_card().unwrap();
+//! assert_eq!(top.faces.0, 10);
+//! ```
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, TakeCard};
 
 #[cfg(feature = "serde")]
@@ -9,8 +28,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// A named stack of cards that starts empty.
 pub struct Pile<T: CardFaces> {
+    /// The descriptive name of the pile (for logging or UI).
     pub name: String,
+    /// Cards currently stored in the pile.
     pub cards: Vec<Card<T>>,
 }
 impl<T: CardFaces> CardCollection for Pile<T> {
@@ -32,6 +54,27 @@ impl<T: CardFaces> CardCollection for Pile<T> {
 }
 
 impl<T: CardFaces> Pile<T> {
+    /// Create an empty pile with the supplied name.
+    ///
+    /// ```
+    /// use gametools::{CardFaces, Pile};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face;
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { String::from("front") }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, _other: &Self) -> bool { true }
+    ///     fn compare(&self, _other: &Self) -> std::cmp::Ordering {
+    ///         std::cmp::Ordering::Equal
+    ///     }
+    /// }
+    ///
+    /// let pile = Pile::<Face>::new_pile("discard");
+    /// assert_eq!(pile.name, "discard");
+    /// assert!(pile.cards.is_empty());
+    /// ```
     pub fn new_pile(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -41,16 +84,19 @@ impl<T: CardFaces> Pile<T> {
 }
 
 impl<T: CardFaces> AddCard<T> for Pile<T> {
+    /// Push a card onto the top of the pile.
     fn add_card(&mut self, card: Card<T>) {
         self.cards.push(card);
     }
 }
 
 impl<T: CardFaces> TakeCard<T> for Pile<T> {
+    /// Remove and return the most recently added card, if any remain.
     fn take_card(&mut self) -> Option<Card<T>> {
         self.cards.pop()
     }
 
+    /// Remove the first card that matches the provided `search_card`.
     fn take_match(&mut self, search_card: &Card<T>) -> Option<Card<T>> {
         let idx = self
             .cards
