@@ -221,6 +221,12 @@ impl Suit {
     }
 }
 
+/*
+ *
+ *  DEFINITION OF COMMON DECK SETUPS WITH STANDARD CARDS TO SIMPLIFY DECK BUILDING
+ *
+ */
+
 /// Create all 52 cards for a standard deck of playing cards.
 ///
 /// ```
@@ -239,21 +245,79 @@ pub fn full_deck() -> Vec<StandardCard> {
     deck
 }
 
+/// Add Jokers to an existing `Deck`
+///
+/// Varying rules for common card games may include anywhere from 0-4 Jokers, so sometimes
+/// the most common configuration of 52 + 2J (as built by `full_deck_2_jokers()`) isn't
+/// convenient. This allows us to add Jokers to the `Deck` at creation easily:
+/// ```
+/// use gametools::cards::std_playing_cards::{full_deck, AddJokerExt};
+///
+/// let deck_with_4_jokers = full_deck().add_jokers(4);
+/// assert_eq!(deck_with_4_jokers.len(), 56);
+/// ```
+pub trait AddJokerExt {
+    fn add_jokers(&self, count: u8) -> Self;
+}
+impl AddJokerExt for Vec<StandardCard> {
+    fn add_jokers(&self, count: u8) -> Self {
+        let mut deck = self.clone();
+        for _ in 0..count {
+            deck.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
+        }
+        deck
+    }
+}
+
 /// Create a full 52-card deck plus two jokers.
 ///
 /// ```
-/// use gametools::cards::std_playing_cards::full_deck_with_jokers;
+/// use gametools::cards::std_playing_cards::full_deck_2_jokers;
 ///
-/// let deck = full_deck_with_jokers();
+/// let deck = full_deck_2_jokers();
 /// assert_eq!(deck.len(), 54);
 /// ```
-pub fn full_deck_with_jokers() -> Vec<StandardCard> {
+pub fn full_deck_2_jokers() -> Vec<StandardCard> {
     let mut deck = full_deck();
     deck.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
     deck.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
     deck
 }
 
+/// Create a Piquet deck (32 cards, ranks 2-6 excluded.)
+pub fn piquet_deck() -> Vec<StandardCard> {
+    let deck = full_deck()
+        .into_iter()
+        .filter(|card| {
+            matches!(
+                card.rank,
+                Rank::Seven
+                    | Rank::Eight
+                    | Rank::Nine
+                    | Rank::Ten
+                    | Rank::Jack
+                    | Rank::Queen
+                    | Rank::King
+                    | Rank::Ace
+            )
+        })
+        .collect();
+    deck
+}
+
+/// Create a Euchre deck (24 cards, ranks 2-8 excluded.
+pub fn euchre_deck() -> Vec<StandardCard> {
+    let deck = full_deck()
+        .into_iter()
+        .filter(|card| {
+            matches!(
+                card.rank,
+                Rank::Nine | Rank::Ten | Rank::Jack | Rank::Queen | Rank::King | Rank::Ace
+            )
+        })
+        .collect();
+    deck
+}
 impl Hand<StandardCard> {
     /// Check whether a card matching a rank and suit is in the `Hand`.
     ///
@@ -470,6 +534,23 @@ mod tests {
     use std::collections::BTreeSet;
 
     #[test]
+    fn piquet_deck_includes_only_expected_cards() {
+        let cards = piquet_deck();
+        assert_eq!(cards.len(), 32);
+        assert!(cards.iter().all(|card| matches!(
+            card.rank,
+            Rank::Seven
+                | Rank::Eight
+                | Rank::Nine
+                | Rank::Ten
+                | Rank::Jack
+                | Rank::Queen
+                | Rank::King
+                | Rank::Ace
+        )));
+    }
+
+    #[test]
     fn standard_card_constructor_sets_rank_suit_and_value() {
         let card = StandardCard::new_card(Rank::Ace, Suit::Spades);
 
@@ -521,7 +602,7 @@ mod tests {
 
     #[test]
     fn full_deck_with_jokers_adds_two_wild_cards() {
-        let deck = full_deck_with_jokers();
+        let deck = full_deck_2_jokers();
 
         assert_eq!(deck.len(), 54);
         let joker_count = deck
