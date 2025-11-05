@@ -245,7 +245,7 @@ pub fn full_deck() -> Vec<StandardCard> {
     deck
 }
 
-/// Add Jokers to an existing `Deck`
+/// Trait to add Joker-adding behavior to a StandardCard vector.
 ///
 /// Varying rules for common card games may include anywhere from 0-4 Jokers, so sometimes
 /// the most common configuration of 52 + 2J (as built by `full_deck_2_jokers()`) isn't
@@ -318,6 +318,7 @@ pub fn euchre_deck() -> Vec<StandardCard> {
         .collect();
     deck
 }
+
 impl Hand<StandardCard> {
     /// Check whether a card matching a rank and suit is in the `Hand`.
     ///
@@ -548,6 +549,27 @@ mod tests {
                 | Rank::King
                 | Rank::Ace
         )));
+    }
+
+    #[test]
+    fn add_jokers_adds_expected_cards() {
+        let joker_deck: Vec<StandardCard> = Vec::new().add_jokers(10);
+        assert_eq!(joker_deck.len(), 10);
+
+        let full_plus_four: Vec<StandardCard> = full_deck().add_jokers(4);
+        assert_eq!(full_plus_four.len(), 52 + 4);
+
+        let wild_count = full_plus_four
+            .iter()
+            .filter(|c| c.suit == Suit::Wild)
+            .count();
+        assert_eq!(wild_count, 4);
+
+        let joker_count = full_plus_four
+            .iter()
+            .filter(|c| c.rank == Rank::Joker)
+            .count();
+        assert_eq!(joker_count, 4);
     }
 
     #[test]
