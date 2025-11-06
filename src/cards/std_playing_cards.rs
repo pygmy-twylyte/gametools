@@ -227,15 +227,15 @@ impl Suit {
  *
  */
 
-/// Create all 52 cards for a standard deck of playing cards.
+/// Create a set of all 52 "normal" card faces for a standard deck of playing cards.
 ///
 /// ```
-/// use gametools::cards::std_playing_cards::full_deck;
+/// use gametools::cards::std_playing_cards::standard_52;
 ///
-/// let deck = full_deck();
+/// let deck = standard_52();
 /// assert_eq!(deck.len(), 52);
 /// ```
-pub fn full_deck() -> Vec<StandardCard> {
+pub fn standard_52() -> Vec<StandardCard> {
     let mut deck = Vec::new();
     for suit in Suit::normal_suits() {
         for rank in Rank::normal_ranks() {
@@ -245,27 +245,43 @@ pub fn full_deck() -> Vec<StandardCard> {
     deck
 }
 
-/// Trait to add Joker-adding behavior to a StandardCard vector.
-///
-/// Varying rules for common card games may include anywhere from 0-4 Jokers, so sometimes
-/// the most common configuration of 52 + 2J (as built by `full_deck_2_jokers()`) isn't
-/// convenient. This allows us to add Jokers to the `Deck` at creation easily:
-/// ```
-/// use gametools::cards::std_playing_cards::{full_deck, AddJokerExt};
-///
-/// let deck_with_4_jokers = full_deck().add_jokers(4);
-/// assert_eq!(deck_with_4_jokers.len(), 56);
-/// ```
-pub trait AddJokerExt {
-    fn add_jokers(&self, count: u8) -> Self;
+/// Trait that extends a `Vec<StandardCard>` to assist in building modified decks.
+pub trait DeckModifier {
+    fn add_jokers(self, count: u8) -> Self;
+    fn remove_ranks(self, ranks: &[Rank]) -> Self;
+    fn remove_suits(self, suits: &[Suit]) -> Self;
+    fn add_cards(self, cards: impl Iterator<Item = StandardCard>) -> Self;
+    fn duplicate(self, times: usize) -> Self;
 }
-impl AddJokerExt for Vec<StandardCard> {
-    fn add_jokers(&self, count: u8) -> Self {
-        let mut deck = self.clone();
+impl DeckModifier for Vec<StandardCard> {
+    fn add_jokers(mut self, count: u8) -> Self {
         for _ in 0..count {
-            deck.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
+            self.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
         }
-        deck
+        self
+    }
+    fn remove_ranks(self, ranks: &[Rank]) -> Self {
+        self.into_iter()
+            .filter(|c| !ranks.contains(&c.rank))
+            .collect()
+    }
+
+    fn remove_suits(self, suits: &[Suit]) -> Self {
+        self.into_iter()
+            .filter(|c| !suits.contains(&c.suit))
+            .collect()
+    }
+
+    fn add_cards(mut self, cards: impl Iterator<Item = StandardCard>) -> Self {
+        self.extend(cards);
+        self
+    }
+
+    fn duplicate(mut self, times: usize) -> Self {
+        for _ in 0..times {
+            self.extend_from_within(..);
+        }
+        self
     }
 }
 
@@ -277,46 +293,26 @@ impl AddJokerExt for Vec<StandardCard> {
 /// let deck = full_deck_2_jokers();
 /// assert_eq!(deck.len(), 54);
 /// ```
-pub fn full_deck_2_jokers() -> Vec<StandardCard> {
-    let mut deck = full_deck();
-    deck.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
-    deck.push(StandardCard::new_card(Rank::Joker, Suit::Wild));
-    deck
+pub fn standard_52_with_jokers() -> Vec<StandardCard> {
+    standard_52().add_jokers(2)
 }
 
 /// Create a Piquet deck (32 cards, ranks 2-6 excluded.)
 pub fn piquet_deck() -> Vec<StandardCard> {
-    let deck = full_deck()
-        .into_iter()
-        .filter(|card| {
-            matches!(
-                card.rank,
-                Rank::Seven
-                    | Rank::Eight
-                    | Rank::Nine
-                    | Rank::Ten
-                    | Rank::Jack
-                    | Rank::Queen
-                    | Rank::King
-                    | Rank::Ace
-            )
-        })
-        .collect();
-    deck
+    standard_52().remove_ranks(&[Rank::Two, Rank::Three, Rank::Four, Rank::Five, Rank::Six])
 }
 
 /// Create a Euchre deck (24 cards, ranks 2-8 excluded.
 pub fn euchre_deck() -> Vec<StandardCard> {
-    let deck = full_deck()
-        .into_iter()
-        .filter(|card| {
-            matches!(
-                card.rank,
-                Rank::Nine | Rank::Ten | Rank::Jack | Rank::Queen | Rank::King | Rank::Ace
-            )
-        })
-        .collect();
-    deck
+    standard_52().remove_ranks(&[
+        Rank::Two,
+        Rank::Three,
+        Rank::Four,
+        Rank::Five,
+        Rank::Six,
+        Rank::Seven,
+        Rank::Eight,
+    ])
 }
 
 impl Hand<StandardCard> {
@@ -552,11 +548,20 @@ mod tests {
     }
 
     #[test]
+    fn remove_ranks_removes_expected_cards() {
+        let std_minus_two_ranks = standard_52().remove_ranks(&[Rank::Two, Rank::Jack]);
+        assert_eq!(std_minus_two_ranks.len(), 44);
+        assert!(!std_minus_two_ranks
+            .iter()
+            .any(|c| matches!(c.rank, Rank::Two | Rank::Jack)));
+    }
+
+    #[test]
     fn add_jokers_adds_expected_cards() {
         let joker_deck: Vec<StandardCard> = Vec::new().add_jokers(10);
         assert_eq!(joker_deck.len(), 10);
 
-        let full_plus_four: Vec<StandardCard> = full_deck().add_jokers(4);
+        let full_plus_four: Vec<StandardCard> = standard_52().add_jokers(4);
         assert_eq!(full_plus_four.len(), 52 + 4);
 
         let wild_count = full_plus_four
@@ -615,7 +620,7 @@ mod tests {
 
     #[test]
     fn full_deck_contains_all_rank_suit_combinations() {
-        let deck = full_deck();
+        let deck = standard_52();
 
         assert_eq!(deck.len(), 52);
         let unique: BTreeSet<(Rank, Suit)> = deck.iter().map(|c| (c.rank, c.suit)).collect();
@@ -624,7 +629,7 @@ mod tests {
 
     #[test]
     fn full_deck_with_jokers_adds_two_wild_cards() {
-        let deck = full_deck_2_jokers();
+        let deck = standard_52_with_jokers();
 
         assert_eq!(deck.len(), 54);
         let joker_count = deck
