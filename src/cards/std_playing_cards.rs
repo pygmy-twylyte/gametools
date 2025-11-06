@@ -7,10 +7,10 @@
 //!
 //! ```
 //! use gametools::{Card, CardCollection, Deck};
-//! use gametools::cards::std_playing_cards::{full_deck, Rank, StandardCard, Suit};
+//! use gametools::cards::std_playing_cards::{standard_52, Rank, StandardCard, Suit};
 //!
 //! // Create a full deck and wrap each face in a Card.
-//! let cards = full_deck()     // or full_deck_with_jokers() for added 2 Jokers / wildcards
+//! let cards = standard_52()     // or standard_52_with_jokers() for added 2 Jokers / wildcards
 //!     .into_iter()
 //!     .map(Card::new_card)
 //!     .collect::<Vec<_>>();
@@ -288,9 +288,9 @@ impl DeckModifier for Vec<StandardCard> {
 /// Create a full 52-card deck plus two jokers.
 ///
 /// ```
-/// use gametools::cards::std_playing_cards::full_deck_2_jokers;
+/// use gametools::cards::std_playing_cards::standard_52_with_jokers;
 ///
-/// let deck = full_deck_2_jokers();
+/// let deck = standard_52_with_jokers();
 /// assert_eq!(deck.len(), 54);
 /// ```
 pub fn standard_52_with_jokers() -> Vec<StandardCard> {
