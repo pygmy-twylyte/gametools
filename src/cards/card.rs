@@ -41,7 +41,7 @@ use super::deck::DeckId;
 ///
 /// The [`faces`](Self::faces) field stores application-specific information while the
 /// remaining fields are convenience metadata maintained by the library.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Card<T: CardFaces> {
     /// The user-defined information that appears on the card.
