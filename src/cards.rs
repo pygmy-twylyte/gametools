@@ -81,6 +81,7 @@ pub mod deck;
 pub mod hand;
 pub mod pile;
 pub mod std_playing_cards;
+pub mod uno_cards;
 
 pub use card::{Card, CardFaces};
 pub use deck::Deck;
