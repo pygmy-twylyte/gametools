@@ -56,6 +56,11 @@ pub struct Card<T: CardFaces> {
 
 /// Describes how to work with the front and back of a card, as well as how to compare
 /// or match two cards of the same type.
+///
+/// Importantly, here "matches" means that the cards are completely interchangeable for
+/// ownership / removal / collection management purposes. Specific games will need to be
+/// able to match only on specific combinatons of aspects of their cards' faces, which
+/// should be implemented as methods on the specific card type.
 pub trait CardFaces {
     fn display_front(&self) -> String;
     fn display_back(&self) -> Option<String>;
