@@ -285,20 +285,22 @@ mod tests {
         assert_eq!(ids, vec![1, 2]);
         // ensure original faces untouched
         assert_eq!(faces[0].id, 1);
-        assert!(deck
-            .cards
-            .iter()
-            .all(|card| card.deck_id == Some(deck.deck_id)));
+        assert!(
+            deck.cards
+                .iter()
+                .all(|card| card.deck_id == Some(deck.deck_id))
+        );
     }
 
     #[test]
     fn new_assigns_deck_id_to_all_cards() {
         let deck = Deck::new("test", vec![make_card(1), make_card(2)]);
 
-        assert!(deck
-            .cards
-            .iter()
-            .all(|card| card.deck_id == Some(deck.deck_id)));
+        assert!(
+            deck.cards
+                .iter()
+                .all(|card| card.deck_id == Some(deck.deck_id))
+        );
         assert!(deck.cards.iter().all(|card| card.deck_id.is_some()));
     }
 
