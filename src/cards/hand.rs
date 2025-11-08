@@ -36,7 +36,7 @@ pub struct Hand<T: CardFaces> {
     /// Player identifier or display name.
     pub player: String,
     /// Cards currently in the player's hand. The last card is considered the "top".
-   pub cards: Vec<Card<T>>,
+    pub cards: Vec<Card<T>>,
 }
 
 impl<T: CardFaces> CardCollection for Hand<T> {
