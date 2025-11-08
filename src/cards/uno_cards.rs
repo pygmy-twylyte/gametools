@@ -1,6 +1,6 @@
 //! Uno Card Module
 
-use crate::cards::CardFaces;
+use crate::{cards::CardFaces, Card};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,37 @@ impl CardFaces for UnoCard {
         .then_with(|| self.color.cmp(&other.color))
     }
 }
+
+impl UnoCard {
+    /// Returns whether this card can be legally played on another card.
+    pub fn plays_on(&self, other: &UnoCard, declared_color: Option<UnoColor>) -> bool {
+        use UnoCardKind::*;
+        if let Some(declared) = declared_color
+        && self.color == declared {
+                return true;
+            }
+
+        if self.color == other.color {
+            return true;
+        }
+        match self.kind {
+            Wild | WildDrawFour => true,
+            Number(x) => {
+                if let Number(other) = other.kind {
+                    x == other
+                } else {
+                    false
+                }
+            }
+            Action(uno_action) => match uno_action {
+                DrawTwo => matches!(other.kind, DrawTwo),
+                Skip => matches!(other.kind, Skip),
+                Reverse => matches!(other.kind, Reverse),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum UnoColor {
     Red,
@@ -165,6 +196,16 @@ pub fn uno_wild_cards() -> Vec<UnoCard> {
         });
     }
     cards
+}
+
+impl super::Hand<UnoCard> {
+    pub fn playable_on(
+        &self,
+        top: &Card<UnoCard>,
+        declared_color: Option<UnoColor>,
+    ) -> Vec<(usize, &Card<UnoCard>)> {
+        todo!();
+    }
 }
 
 #[cfg(test)]
