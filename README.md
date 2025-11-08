@@ -10,7 +10,7 @@
 ## Features
 
 - 🎲 Numeric dice up to 255 sides, plus dice pools with chainable operations
-- 🃏 Extensible cards toolkit: compose custom face types, deck/hand/pile flows, plus a ready-made standard 52-card set
+- 🃏 Extensible cards toolkit: compose custom face types, deck/hand/pile flows, plus ready-made standard 52-card and Uno helpers
 - 🁫 Dominos with support for longest-path train solving
 - 🌀 Spinners with support for weighted wedges and optional blocking
 - 💥 Human-readable game errors for common failure conditions
@@ -82,6 +82,7 @@ See additional usage examples in the module docs:
 
 - [Cards module](https://docs.rs/gametools/latest/gametools/cards/index.html): custom faces, deck/hand/pile traits, shuffling, drawing
 - [Dominos module](https://docs.rs/gametools/latest/gametools/dominos/index.html): longest-train solver
+- `examples/cards`: a mashup that ties the standard playing cards and Uno modules together for a mini showdown
 
 The examples/yahtzee folder contains an example of a Yahtzee-playing agent created using the Dice module.
 

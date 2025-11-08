@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
+## [0.6.0] - 2025-12-15
+
+### Added
+- `uno_cards` module covering creation of and some typical manipulations of standard Uno decks and hands
+- `UnoCard::plays_on` centralizes Uno card eligibility checks, and `Hand<UnoCard>::playable_on` surfaces the playable indices for a given discard.
+- Targeted unit tests for Uno matching scenarios, including declared colors and action cards.
+- A refreshed `examples/cards` program that pairs a high-card showdown with an Uno color rally to highlight cross-module workflows.
+
+### Changed
+- README emphasizes Uno coverage within the cards toolkit and links directly to the new cards example.
+
+---
 ## [0.5.0] - 2025-11-02
 
 ### Added
