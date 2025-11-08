@@ -121,11 +121,7 @@ impl GameState {
                         _ => (),
                     }
                 }
-                if has_trio && has_pair {
-                    25
-                } else {
-                    0
-                }
+                if has_trio && has_pair { 25 } else { 0 }
             }
             Categories::SmallStraight => {
                 sorted_rolls.dedup();
