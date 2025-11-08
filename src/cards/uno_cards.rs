@@ -1,10 +1,11 @@
 //! Uno Card Module
 
-use crate::{cards::CardFaces, Card};
+use crate::{Card, cards::CardFaces};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// Structure representing the information on a single standard Uno card.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct UnoCard {
@@ -38,13 +39,15 @@ impl CardFaces for UnoCard {
 }
 
 impl UnoCard {
-    /// Returns whether this card can be legally played on another card.
+    /// Returns `true` if this card can be legally played on the `other` card.
     pub fn plays_on(&self, other: &UnoCard, declared_color: Option<UnoColor>) -> bool {
-        use UnoCardKind::*;
+        use UnoAction::{DrawTwo, Reverse, Skip};
+        use UnoCardKind::{Action, Number, Wild, WildDrawFour};
         if let Some(declared) = declared_color
-        && self.color == declared {
-                return true;
-            }
+            && self.color == declared
+        {
+            return true;
+        }
 
         if self.color == other.color {
             return true;
@@ -59,9 +62,9 @@ impl UnoCard {
                 }
             }
             Action(uno_action) => match uno_action {
-                DrawTwo => matches!(other.kind, DrawTwo),
-                Skip => matches!(other.kind, Skip),
-                Reverse => matches!(other.kind, Reverse),
+                DrawTwo => matches!(other.kind, Action(DrawTwo)),
+                Skip => matches!(other.kind, Action(Skip)),
+                Reverse => matches!(other.kind, Action(Reverse)),
             },
         }
     }
@@ -95,6 +98,7 @@ pub enum UnoCardKind {
     WildDrawFour,
 }
 impl UnoCardKind {
+    /// Returns true if the card is a wild card.
     pub fn is_wild(&self) -> bool {
         matches!(self, Self::Wild | Self::WildDrawFour)
     }
@@ -103,7 +107,7 @@ impl std::fmt::Display for UnoCardKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             UnoCardKind::Number(number) => write!(f, "#{}", number),
-            UnoCardKind::Action(action) => write!(f, "{}!", action),
+            UnoCardKind::Action(action) => write!(f, "{}", action),
             UnoCardKind::Wild => write!(f, "Wild"),
             UnoCardKind::WildDrawFour => write!(f, "Wild + Draw 4"),
         }
@@ -199,19 +203,125 @@ pub fn uno_wild_cards() -> Vec<UnoCard> {
 }
 
 impl super::Hand<UnoCard> {
+    /// Returns a list of `(index, &Card)` of cards in the hand that can play on a showing `top` card
     pub fn playable_on(
         &self,
         top: &Card<UnoCard>,
         declared_color: Option<UnoColor>,
     ) -> Vec<(usize, &Card<UnoCard>)> {
-        todo!();
+        let mut playable = Vec::new();
+        for (idx, card) in self.cards.iter().enumerate() {
+            if card.faces.plays_on(&top.faces, declared_color) {
+                playable.push((idx, card));
+            }
+        }
+        playable
+    }
+    /// Determine the number of points this hand is currently worth.
+    pub fn points(&self) -> usize {
+        let mut pts = 0usize;
+        for card in &self.cards {
+            match card.faces.kind {
+                UnoCardKind::Number(face_value) => pts += face_value as usize,
+                UnoCardKind::Action(_) => pts += 20,
+                UnoCardKind::Wild | UnoCardKind::WildDrawFour => pts += 50,
+            }
+        }
+        pts
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{AddCard, Card, Hand};
     use std::collections::BTreeMap;
+
+    fn face(color: UnoColor, kind: UnoCardKind) -> UnoCard {
+        UnoCard { color, kind }
+    }
+
+    fn card(color: UnoColor, kind: UnoCardKind) -> Card<UnoCard> {
+        Card::new_card(face(color, kind))
+    }
+
+    #[test]
+    fn plays_on_honors_color_number_action_and_declared_color() {
+        let red_three = face(UnoColor::Red, UnoCardKind::Number(3));
+        let red_five = face(UnoColor::Red, UnoCardKind::Number(5));
+        let blue_three = face(UnoColor::Blue, UnoCardKind::Number(3));
+        let green_four = face(UnoColor::Green, UnoCardKind::Number(4));
+
+        assert!(red_three.plays_on(&red_five, None), "matching colors");
+        assert!(red_three.plays_on(&blue_three, None), "matching numbers");
+        assert!(
+            !red_three.plays_on(&green_four, None),
+            "no color or number match"
+        );
+
+        let blue_skip = face(UnoColor::Blue, UnoCardKind::Action(UnoAction::Skip));
+        let yellow_skip = face(UnoColor::Yellow, UnoCardKind::Action(UnoAction::Skip));
+        assert!(
+            blue_skip.plays_on(&yellow_skip, None),
+            "same action despite color"
+        );
+
+        let wild = face(UnoColor::Black, UnoCardKind::Wild);
+        let draw_four = face(UnoColor::Black, UnoCardKind::WildDrawFour);
+        assert!(wild.plays_on(&red_three, None));
+        assert!(draw_four.plays_on(&red_three, None));
+
+        assert!(
+            blue_skip.plays_on(&wild, Some(UnoColor::Blue)),
+            "declared color allows play"
+        );
+        assert!(red_three.plays_on(&wild, Some(UnoColor::Red)));
+        assert!(
+            !green_four.plays_on(&wild, Some(UnoColor::Blue)),
+            "mismatched declaration"
+        );
+    }
+
+    #[test]
+    fn playable_on_identifies_valid_hand_cards() {
+        let mut hand = Hand::<UnoCard>::new("bot");
+        for card in [
+            card(UnoColor::Red, UnoCardKind::Number(3)),
+            card(UnoColor::Blue, UnoCardKind::Number(3)),
+            card(UnoColor::Yellow, UnoCardKind::Action(UnoAction::Skip)),
+            card(UnoColor::Black, UnoCardKind::Wild),
+        ] {
+            hand.add_card(card);
+        }
+
+        let top = card(UnoColor::Green, UnoCardKind::Number(3));
+        {
+            let playable = hand.playable_on(&top, None);
+            let snapshot: Vec<(usize, UnoColor, UnoCardKind)> = playable
+                .iter()
+                .map(|(idx, card)| (*idx, card.faces.color, card.faces.kind))
+                .collect();
+
+            assert_eq!(
+                snapshot,
+                vec![
+                    (0, UnoColor::Red, UnoCardKind::Number(3)),
+                    (1, UnoColor::Blue, UnoCardKind::Number(3)),
+                    (3, UnoColor::Black, UnoCardKind::Wild),
+                ],
+                "cards matching by number or being wild are playable",
+            );
+        }
+
+        let wild_top = card(UnoColor::Black, UnoCardKind::Wild);
+        let declared = hand.playable_on(&wild_top, Some(UnoColor::Yellow));
+        let declared_indices: Vec<usize> = declared.iter().map(|(idx, _)| *idx).collect();
+        assert_eq!(
+            declared_indices,
+            vec![2, 3],
+            "only declared color and wilds remain playable"
+        );
+    }
 
     #[test]
     fn number_cards_follow_expected_distribution() {
@@ -226,9 +336,11 @@ mod tests {
             MAIN_UNO_COLORS.len() * expected_per_color,
             "Unexpected number of Uno number cards"
         );
-        assert!(cards
-            .iter()
-            .all(|card| matches!(card.kind, UnoCardKind::Number(_))));
+        assert!(
+            cards
+                .iter()
+                .all(|card| matches!(card.kind, UnoCardKind::Number(_)))
+        );
 
         for color in MAIN_UNO_COLORS {
             for number in 0u8..=9 {
