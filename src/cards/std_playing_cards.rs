@@ -33,12 +33,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct StandardCard {
+    /// Numeric value used for comparisons (ace high by default).
+    pub value: u8,
     /// The suit (♣, ♦, ♥, ♠, or `Wild` for Jokers).
     pub suit: Suit,
     /// The rank, including face cards and optional joker.
     pub rank: Rank,
-    /// Numeric value used for comparisons (ace high by default).
-    pub value: u8,
 }
 impl StandardCard {
     /// Create a new standard playing card face.
@@ -551,9 +551,11 @@ mod tests {
     fn remove_ranks_removes_expected_cards() {
         let std_minus_two_ranks = standard_52().remove_ranks(&[Rank::Two, Rank::Jack]);
         assert_eq!(std_minus_two_ranks.len(), 44);
-        assert!(!std_minus_two_ranks
-            .iter()
-            .any(|c| matches!(c.rank, Rank::Two | Rank::Jack)));
+        assert!(
+            !std_minus_two_ranks
+                .iter()
+                .any(|c| matches!(c.rank, Rank::Two | Rank::Jack))
+        );
     }
 
     #[test]
