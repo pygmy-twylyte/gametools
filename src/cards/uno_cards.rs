@@ -71,6 +71,7 @@ impl UnoCard {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum UnoColor {
     Red,
     Blue,
@@ -91,6 +92,7 @@ impl std::fmt::Display for UnoColor {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum UnoCardKind {
     Number(u8),
     Action(UnoAction),
@@ -115,6 +117,7 @@ impl std::fmt::Display for UnoCardKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum UnoAction {
     DrawTwo,
     Skip,
