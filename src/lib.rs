@@ -24,10 +24,10 @@ pub use cards::{
 };
 
 pub mod dominos;
-pub use dominos::{BonePile, Domino, DominoHand, Train, MAX_PIPS};
+pub use dominos::{BonePile, Domino, DominoHand, MAX_PIPS, Train};
 
 pub mod spinners;
-pub use spinners::{wedges_from_tuples, wedges_from_values, Spinner, Wedge};
+pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 
 pub mod gameerror;
 pub use gameerror::GameError;
