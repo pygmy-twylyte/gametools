@@ -203,7 +203,11 @@ pub fn uno_wild_cards() -> Vec<UnoCard> {
 }
 
 impl super::Hand<UnoCard> {
-    /// Returns a list of `(index, &Card)` of cards in the hand that can play on a showing `top` card
+    /// Return the cards in this hand that can legally be played on `top`.
+    ///
+    /// `declared_color` should be provided when a wild has set the active color; when `None`
+    /// the visible face drives eligibility. Each result pairs the card's index within the
+    /// hand (handy for follow-up removal) with a reference to the card.
     pub fn playable_on(
         &self,
         top: &Card<UnoCard>,
