@@ -23,6 +23,7 @@
 //! ```
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, TakeCard};
 
+use rand::seq::SliceRandom;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -80,6 +81,17 @@ impl<T: CardFaces> Pile<T> {
             name: name.to_string(),
             cards: Vec::<Card<T>>::new(),
         }
+    }
+}
+impl<T: CardFaces> Pile<T> {
+    /// Peek at the card on top of the pile.
+    pub fn check_top_card(&self) -> Option<&Card<T>> {
+        self.cards.last()
+    }
+    /// Shuffle the cards in the pile
+    pub fn shuffle(&mut self) {
+        let mut rng = rand::rng();
+        self.cards.shuffle(&mut rng);
     }
 }
 
