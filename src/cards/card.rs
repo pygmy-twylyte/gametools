@@ -68,6 +68,17 @@ pub trait CardFaces {
     fn compare(&self, other: &Self) -> std::cmp::Ordering;
 }
 
+impl<T: CardFaces> From<T> for Card<T> {
+    fn from(faces: T) -> Self {
+        Card {
+            faces,
+            uuid: Uuid::new_v4(),
+            deck_id: None,
+            face_up: true,
+        }
+    }
+}
+
 impl<T: CardFaces> Card<T> {
     /// Create a new card from a struct that is CardFaces.
     ///
@@ -143,9 +154,9 @@ impl<T: CardFaces> Card<T> {
     /// let mut deck = Deck::new("demo", vec![Card::new_card(Face(1))]);
     /// let card = deck.cards[0].clone();
     /// let deck_copy = deck.clone();
-    /// assert!(card.is_from_deck(deck_copy));
+    /// assert!(card.is_from_deck(&deck_copy));
     /// ```
-    pub fn is_from_deck(&self, deck: Deck<T>) -> bool {
+    pub fn is_from_deck(&self, deck: &Deck<T>) -> bool {
         self.deck_id == Some(deck.deck_id)
     }
 
