@@ -89,6 +89,8 @@ pub use hand::{Hand, Hand as CardHand};
 pub use pile::Pile;
 pub use std_playing_cards::{Rank, StandardCard, Suit};
 
+use crate::GameError;
+
 /// Shared behaviors for card containers such as [`Deck`], [`Hand`], and [`Pile`].
 pub trait CardCollection {
     /// Determine the number of cards in the collection.
@@ -174,6 +176,26 @@ pub trait TakeCard<T: CardFaces> {
     }
     /// Take the `Card` matching the `search_card` from the collection, if it exists.
     fn take_match(&mut self, search_card: &Card<T>) -> Option<Card<T>>;
+}
+
+/// Move a card from one collection to another.
+///
+/// The sender must implement TakeCard and the receiver, AddCard.
+///
+/// # Errors
+/// - GameError::CardNotFound if the specified `Card` does not belong to the `sender`.
+pub fn transfer_card<C, S, R>(card: &Card<C>, sender: &mut S, recv: &mut R) -> Result<(), GameError>
+where
+    C: CardFaces,
+    S: TakeCard<C>,
+    R: AddCard<C>,
+{
+    if let Some(mover) = sender.take_match(card) {
+        recv.add_card(mover);
+        Ok(())
+    } else {
+        Err(GameError::CardNotFound)
+    }
 }
 
 #[cfg(test)]
