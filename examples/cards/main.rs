@@ -28,10 +28,7 @@ fn run_high_card_showdown() -> ShowdownResult {
     const PLAYERS: [&str; 2] = ["Ava", "Bo"];
 
     let faces = std_playing_cards::standard_52();
-    let mut deck = Deck::new(
-        "classic-52",
-        faces.into_iter().map(Card::new_card).collect(),
-    );
+    let mut deck = Deck::with_borrowed_faces("classic-52", &faces);
     deck.shuffle();
 
     let mut hands = deck.deal(&PLAYERS, 3);
@@ -106,7 +103,7 @@ fn run_high_card_showdown() -> ShowdownResult {
 
 fn run_uno_color_rally(showdown: &ShowdownResult) {
     let faces = uno_cards::full_uno_set();
-    let mut deck = Deck::new("uno", faces.into_iter().map(Card::new_card).collect());
+    let mut deck = Deck::with_borrowed_faces("uno", &faces);
     deck.shuffle();
 
     let players = ["Ava", "Bo", "Kai"];
