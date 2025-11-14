@@ -34,26 +34,8 @@ pub struct Pile<T: CardFaces> {
     /// The descriptive name of the pile (for logging or UI).
     pub name: String,
     /// Cards currently stored in the pile.
-    pub cards: Vec<Card<T>>,
+    cards: Vec<Card<T>>,
 }
-impl<T: CardFaces> CardCollection for Pile<T> {
-    fn size(&self) -> usize {
-        self.cards.len()
-    }
-
-    fn show_faces(&mut self) {
-        for ref mut card in &mut self.cards {
-            card.face_up = true;
-        }
-    }
-
-    fn show_backs(&mut self) {
-        for ref mut card in &mut self.cards {
-            card.face_up = false;
-        }
-    }
-}
-
 impl<T: CardFaces> Pile<T> {
     /// Create an empty pile with the supplied name.
     ///
@@ -74,7 +56,7 @@ impl<T: CardFaces> Pile<T> {
     ///
     /// let pile = Pile::<Face>::new_pile("discard");
     /// assert_eq!(pile.name, "discard");
-    /// assert!(pile.cards.is_empty());
+    /// assert!(pile.cards().is_empty());
     /// ```
     pub fn new_pile(name: &str) -> Self {
         Self {
@@ -82,16 +64,38 @@ impl<T: CardFaces> Pile<T> {
             cards: Vec::<Card<T>>::new(),
         }
     }
-}
-impl<T: CardFaces> Pile<T> {
+
     /// Peek at the card on top of the pile.
     pub fn check_top_card(&self) -> Option<&Card<T>> {
         self.cards.last()
     }
+
     /// Shuffle the cards in the pile
     pub fn shuffle(&mut self) {
         let mut rng = rand::rng();
         self.cards.shuffle(&mut rng);
+    }
+
+    /// Obtain a slice of the cards in the pile.
+    pub fn cards(&self) -> &[Card<T>] {
+        &self.cards
+    }
+}
+impl<T: CardFaces> CardCollection for Pile<T> {
+    fn size(&self) -> usize {
+        self.cards.len()
+    }
+
+    fn show_faces(&mut self) {
+        for ref mut card in &mut self.cards {
+            card.face_up = true;
+        }
+    }
+
+    fn show_backs(&mut self) {
+        for ref mut card in &mut self.cards {
+            card.face_up = false;
+        }
     }
 }
 
