@@ -15,7 +15,7 @@
 //!     .map(Card::new_card)
 //!     .collect::<Vec<_>>();
 //!
-//! let mut deck = Deck::new("standard", cards);
+//! let mut deck = Deck::from_cards("standard", cards);
 //! assert_eq!(deck.size(), 52);
 //!
 //! // Create an individual card by rank and suit.
