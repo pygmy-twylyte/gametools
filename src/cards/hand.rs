@@ -29,14 +29,49 @@ use crate::cards::{AddCard, Card, CardCollection, CardFaces, TakeCard};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// Cards held by a single player.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-/// Cards held by a single player.
 pub struct Hand<T: CardFaces> {
     /// Player identifier or display name.
     pub player: String,
     /// Cards currently in the player's hand. The last card is considered the "top".
-    pub cards: Vec<Card<T>>,
+    cards: Vec<Card<T>>,
+}
+
+impl<T: CardFaces> Hand<T> {
+    /// Create an empty hand for the supplied `player`.
+    ///
+    /// ```
+    /// use gametools::{CardFaces, Hand, CardCollection};
+    ///
+    /// #[derive(Clone)]
+    /// struct Face;
+    ///
+    /// impl CardFaces for Face {
+    ///     fn display_front(&self) -> String { String::from("X") }
+    ///     fn display_back(&self) -> Option<String> { None }
+    ///     fn matches(&self, _other: &Self) -> bool { true }
+    ///     fn compare(&self, _other: &Self) -> std::cmp::Ordering {
+    ///         std::cmp::Ordering::Equal
+    ///     }
+    /// }
+    ///
+    /// let hand = Hand::<Face>::new("player");
+    /// assert_eq!(hand.player, "player");
+    /// assert_eq!(hand.size(), 0);
+    /// ```
+    pub fn new(player: &str) -> Self {
+        Self {
+            player: player.to_string(),
+            cards: Vec::<Card<T>>::new(),
+        }
+    }
+
+    /// Obtain a slice of the cards in the hand.
+    pub fn cards(&self) -> &[Card<T>] {
+        &self.cards
+    }
 }
 
 impl<T: CardFaces> CardCollection for Hand<T> {
@@ -53,36 +88,6 @@ impl<T: CardFaces> CardCollection for Hand<T> {
     fn show_backs(&mut self) {
         for ref mut card in &mut self.cards {
             card.face_up = false;
-        }
-    }
-}
-
-impl<T: CardFaces> Hand<T> {
-    /// Create an empty hand for the supplied `player`.
-    ///
-    /// ```
-    /// use gametools::{CardFaces, Hand};
-    ///
-    /// #[derive(Clone)]
-    /// struct Face;
-    ///
-    /// impl CardFaces for Face {
-    ///     fn display_front(&self) -> String { String::from("X") }
-    ///     fn display_back(&self) -> Option<String> { None }
-    ///     fn matches(&self, _other: &Self) -> bool { true }
-    ///     fn compare(&self, _other: &Self) -> std::cmp::Ordering {
-    ///         std::cmp::Ordering::Equal
-    ///     }
-    /// }
-    ///
-    /// let hand = Hand::<Face>::new("player");
-    /// assert_eq!(hand.player, "player");
-    /// assert_eq!(hand.cards.len(), 0);
-    /// ```
-    pub fn new(player: &str) -> Self {
-        Self {
-            player: player.to_string(),
-            cards: Vec::<Card<T>>::new(),
         }
     }
 }

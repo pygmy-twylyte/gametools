@@ -217,7 +217,7 @@ impl super::Hand<UnoCard> {
         declared_color: Option<UnoColor>,
     ) -> Vec<(usize, &Card<UnoCard>)> {
         let mut playable = Vec::new();
-        for (idx, card) in self.cards.iter().enumerate() {
+        for (idx, card) in self.cards().iter().enumerate() {
             if card.faces.plays_on(&top.faces, declared_color) {
                 playable.push((idx, card));
             }
@@ -227,7 +227,7 @@ impl super::Hand<UnoCard> {
     /// Determine the number of points this hand is currently worth.
     pub fn points(&self) -> usize {
         let mut pts = 0usize;
-        for card in &self.cards {
+        for card in self.cards() {
             match card.faces.kind {
                 UnoCardKind::Number(face_value) => pts += face_value as usize,
                 UnoCardKind::Action(_) => pts += 20,

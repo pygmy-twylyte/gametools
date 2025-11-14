@@ -177,7 +177,7 @@ fn describe_standard_card(face: StandardCard) -> String {
 
 fn print_hand<T: CardFaces>(hand: &Hand<T>) {
     println!("{}'s hand:", hand.player);
-    for (idx, card) in hand.cards.iter().enumerate() {
+    for (idx, card) in hand.cards().iter().enumerate() {
         println!("  [{idx}] {card}");
     }
 }

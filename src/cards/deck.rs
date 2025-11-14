@@ -235,7 +235,7 @@ impl<T: CardFaces> Deck<T> {
     /// let hands = deck.deal(&["alice", "bob"], 1);
     ///
     /// assert_eq!(hands[0].player, "alice");
-    /// assert_eq!(hands[0].cards.len(), 1);
+    /// assert_eq!(hands[0].size(), 1);
     /// assert_eq!(hands[1].player, "bob");
     /// assert_eq!(deck.size(), 2);
     /// ```
@@ -403,8 +403,8 @@ mod tests {
         assert_eq!(hands.len(), 2);
         assert_eq!(hands[0].player, "alice");
         assert_eq!(hands[1].player, "bob");
-        let alice_ids: Vec<u8> = hands[0].cards.iter().map(|c| c.faces.id).collect();
-        let bob_ids: Vec<u8> = hands[1].cards.iter().map(|c| c.faces.id).collect();
+        let alice_ids: Vec<u8> = hands[0].cards().iter().map(|c| c.faces.id).collect();
+        let bob_ids: Vec<u8> = hands[1].cards().iter().map(|c| c.faces.id).collect();
         assert_eq!(alice_ids, vec![6, 4]);
         assert_eq!(bob_ids, vec![5, 3]);
         let deck_ids: Vec<u8> = deck.cards.iter().map(|c| c.faces.id).collect();
@@ -419,7 +419,7 @@ mod tests {
 
         let hands = deck.deal(&players, 2);
 
-        let lengths: Vec<usize> = hands.iter().map(|hand| hand.cards.len()).collect();
+        let lengths: Vec<usize> = hands.iter().map(|hand| hand.cards().len()).collect();
         assert_eq!(lengths, vec![2, 1]);
         assert!(deck.cards.is_empty());
     }

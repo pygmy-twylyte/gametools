@@ -108,7 +108,7 @@ pub trait AddCard<T: CardFaces> {
     /// Add a list of cards to the collection.
     ///
     /// ```
-    /// use gametools::{AddCard, Card, CardFaces, Hand};
+    /// use gametools::{AddCard, Card, CardFaces, Hand, CardCollection};
     ///
     /// #[derive(Clone)]
     /// struct Face(u8);
@@ -122,7 +122,7 @@ pub trait AddCard<T: CardFaces> {
     ///
     /// let mut hand = Hand::<Face>::new("player");
     /// hand.add_cards(vec![Card::new_card(Face(1)), Card::new_card(Face(2))]);
-    /// assert_eq!(hand.cards.len(), 2);
+    /// assert_eq!(hand.size(), 2);
     /// ```
     fn add_cards(&mut self, cards: Vec<Card<T>>) {
         for card in cards {
