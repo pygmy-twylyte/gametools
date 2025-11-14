@@ -15,7 +15,7 @@
 //!     .map(Card::new_card)
 //!     .collect::<Vec<_>>();
 //!
-//! let mut deck = Deck::new("standard", cards);
+//! let mut deck = Deck::from_cards("standard", cards);
 //! assert_eq!(deck.size(), 52);
 //!
 //! // Create an individual card by rank and suit.
@@ -23,7 +23,10 @@
 //! assert_eq!(ace_spades.rank, Rank::Ace);
 //! assert_eq!(ace_spades.suit, Suit::Spades);
 //! ```
-use crate::cards::{Card, CardFaces, Hand};
+use crate::{
+    CardCollection as _,
+    cards::{Card, CardFaces, Hand},
+};
 use std::collections::BTreeMap;
 
 #[cfg(feature = "serde")]
@@ -329,7 +332,7 @@ impl Hand<StandardCard> {
     /// ```
     pub fn contains(&self, rank: Rank, suit: Suit) -> bool {
         let search = StandardCard::new_card(rank, suit);
-        self.cards.iter().any(|card| card.faces.matches(&search))
+        self.cards().iter().any(|card| card.faces.matches(&search))
     }
 
     /// Count how many cards in the hand have a specific rank.
@@ -345,7 +348,7 @@ impl Hand<StandardCard> {
     /// assert_eq!(hand.count_rank(Rank::Ace), 2);
     /// ```
     pub fn count_rank(&self, rank: Rank) -> usize {
-        self.cards.iter().filter(|c| c.faces.rank == rank).count()
+        self.cards().iter().filter(|c| c.faces.rank == rank).count()
     }
 
     /// Create a map of `Rank` counts for the current `Hand`.
@@ -365,7 +368,7 @@ impl Hand<StandardCard> {
     /// ```
     pub fn rank_map(&self) -> BTreeMap<Rank, usize> {
         let mut rank_map = BTreeMap::new();
-        for card in &self.cards {
+        for card in self.cards() {
             rank_map
                 .entry(card.faces.rank)
                 .and_modify(|count| *count += 1)
@@ -376,13 +379,13 @@ impl Hand<StandardCard> {
 
     /// Count how many cards in the hand have a specific suit.
     pub fn count_suit(&self, suit: Suit) -> usize {
-        self.cards.iter().filter(|c| c.faces.suit == suit).count()
+        self.cards().iter().filter(|c| c.faces.suit == suit).count()
     }
 
     /// Create a map of `Suit` counts for the current `Hand`.
     pub fn suit_map(&self) -> BTreeMap<Suit, usize> {
         let mut suit_map = BTreeMap::new();
-        for card in &self.cards {
+        for card in self.cards() {
             suit_map
                 .entry(card.faces.suit)
                 .and_modify(|count| *count += 1)
@@ -393,7 +396,7 @@ impl Hand<StandardCard> {
 
     /// Returns true if every card in the hand belongs to the same `Suit`.
     pub fn is_flush(&self) -> bool {
-        let total_cards = self.cards.len();
+        let total_cards = self.size();
         if total_cards == 0 {
             return false;
         }
@@ -417,12 +420,12 @@ impl Hand<StandardCard> {
         if count == 0 {
             return Some(Vec::new());
         }
-        if self.cards.len() < count {
+        if self.size() < count {
             return None;
         }
 
         let mut rank_groups: BTreeMap<Rank, Vec<&Card<StandardCard>>> = BTreeMap::new();
-        for card in &self.cards {
+        for card in self.cards() {
             rank_groups.entry(card.faces.rank).or_default().push(card);
         }
 
@@ -459,13 +462,13 @@ impl Hand<StandardCard> {
         if count == 0 {
             return Some(Vec::new());
         }
-        if self.cards.len() < count || count > 14 {
+        if self.size() < count || count > 14 {
             return None;
         }
 
         // group cards according their ranks
         let mut rank_groups: BTreeMap<Rank, Vec<&Card<StandardCard>>> = BTreeMap::new();
-        for card in &self.cards {
+        for card in self.cards() {
             rank_groups.entry(card.faces.rank).or_default().push(card);
         }
 
@@ -527,7 +530,7 @@ impl Hand<StandardCard> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cards::Card;
+    use crate::{AddCard, cards::Card};
     use std::collections::BTreeSet;
 
     #[test]
@@ -653,8 +656,7 @@ mod tests {
         ];
 
         for (rank, suit) in cards {
-            hand.cards
-                .push(Card::new_card(StandardCard::new_card(rank, suit)));
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
         }
 
         let straight = hand.find_n_straight(5).expect("expected ace-low straight");
@@ -676,10 +678,9 @@ mod tests {
         ];
 
         for (rank, suit) in cards {
-            hand.cards
-                .push(Card::new_card(StandardCard::new_card(rank, suit)));
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
         }
-        hand.cards.push(Card::new_card(StandardCard::new_card(
+        hand.add_card(Card::new_card(StandardCard::new_card(
             Rank::Joker,
             Suit::Wild,
         )));
@@ -712,10 +713,9 @@ mod tests {
             (Rank::Six, Suit::Spades),
         ];
         for (rank, suit) in cards {
-            hand.cards
-                .push(Card::new_card(StandardCard::new_card(rank, suit)));
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
         }
-        hand.cards.push(Card::new_card(StandardCard::new_card(
+        hand.add_card(Card::new_card(StandardCard::new_card(
             Rank::Joker,
             Suit::Wild,
         )));
@@ -732,8 +732,7 @@ mod tests {
             (Rank::Joker, Suit::Wild),
         ];
         for (rank, suit) in cards {
-            hand.cards
-                .push(Card::new_card(StandardCard::new_card(rank, suit)));
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
         }
 
         let trio = hand
@@ -758,8 +757,7 @@ mod tests {
             (Rank::Joker, Suit::Wild),
         ];
         for (rank, suit) in cards {
-            hand.cards
-                .push(Card::new_card(StandardCard::new_card(rank, suit)));
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
         }
 
         assert!(hand.is_flush());
@@ -769,7 +767,7 @@ mod tests {
     fn hand_of_only_jokers_counts_as_flush_and_of_a_kind() {
         let mut hand = Hand::new("player");
         for _ in 0..3 {
-            hand.cards.push(Card::new_card(StandardCard::new_card(
+            hand.add_card(Card::new_card(StandardCard::new_card(
                 Rank::Joker,
                 Suit::Wild,
             )));

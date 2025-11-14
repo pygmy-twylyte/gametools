@@ -37,6 +37,20 @@ use crate::Deck;
 
 use super::deck::DeckId;
 
+/// Describes how to work with the front and back of a card, as well as how to compare
+/// or match two cards of the same type.
+///
+/// Importantly, here "matches" means that the cards are completely interchangeable for
+/// ownership / removal / collection management purposes. Specific games will need to be
+/// able to match only on certain combinatons of aspects of their cards' faces, which
+/// should be implemented as methods on the specific card type.
+pub trait CardFaces {
+    fn display_front(&self) -> String;
+    fn display_back(&self) -> Option<String>;
+    fn matches(&self, other: &Self) -> bool;
+    fn compare(&self, other: &Self) -> std::cmp::Ordering;
+}
+
 /// A generic card of any kind, as long as it has faces.
 ///
 /// The [`faces`](Self::faces) field stores application-specific information while the
@@ -54,18 +68,15 @@ pub struct Card<T: CardFaces> {
     pub face_up: bool,
 }
 
-/// Describes how to work with the front and back of a card, as well as how to compare
-/// or match two cards of the same type.
-///
-/// Importantly, here "matches" means that the cards are completely interchangeable for
-/// ownership / removal / collection management purposes. Specific games will need to be
-/// able to match only on specific combinatons of aspects of their cards' faces, which
-/// should be implemented as methods on the specific card type.
-pub trait CardFaces {
-    fn display_front(&self) -> String;
-    fn display_back(&self) -> Option<String>;
-    fn matches(&self, other: &Self) -> bool;
-    fn compare(&self, other: &Self) -> std::cmp::Ordering;
+impl<T: CardFaces> From<T> for Card<T> {
+    fn from(faces: T) -> Self {
+        Card {
+            faces,
+            uuid: Uuid::new_v4(),
+            deck_id: None,
+            face_up: true,
+        }
+    }
 }
 
 impl<T: CardFaces> Card<T> {
@@ -140,13 +151,13 @@ impl<T: CardFaces> Card<T> {
     ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
     /// }
     ///
-    /// let mut deck = Deck::new("demo", vec![Card::new_card(Face(1))]);
-    /// let card = deck.cards[0].clone();
+    /// let mut deck = Deck::from_cards("demo", [Card::new_card(Face(1))]);
+    /// let card = deck.cards()[0].clone();
     /// let deck_copy = deck.clone();
-    /// assert!(card.is_from_deck(deck_copy));
+    /// assert!(card.is_from_deck(&deck_copy));
     /// ```
-    pub fn is_from_deck(&self, deck: Deck<T>) -> bool {
-        self.deck_id == Some(deck.deck_id)
+    pub fn is_from_deck(&self, deck: &Deck<T>) -> bool {
+        self.deck_id == Some(deck.deck_id())
     }
 
     /// Force a card to belong to the deck identified by `deck_id`.

@@ -38,11 +38,11 @@
 //!     }
 //! }
 //!
-//! let cards = (1..=3)
+//! let mut cards = (1..=3)
 //!     .map(|value| Card::new_card(NumberFace(value)))
 //!     .collect::<Vec<_>>();
 //!
-//! let mut deck = Deck::new("number-demo", cards);
+//! let mut deck = Deck::from_cards("number-demo", cards);
 //! assert_eq!(deck.size(), 3);
 //! deck.show_backs();
 //! ```
@@ -68,8 +68,8 @@
 //!     collection.take_cards(3)
 //! }
 //!
-//! let cards = (0..5).map(|n| Card::new_card(Stub(n))).collect();
-//! let mut deck = Deck::new("demo", cards);
+//! let mut cards = (0..5).map(|n| Card::new_card(Stub(n))).collect::<Vec<_>>();
+//! let mut deck = Deck::from_cards("demo", cards);
 //! let hand_cards = draw_three::<Stub, _>(&mut deck);
 //!
 //! let mut hand = Hand::<Stub>::new("player");
@@ -89,6 +89,8 @@ pub use hand::{Hand, Hand as CardHand};
 pub use pile::Pile;
 pub use std_playing_cards::{Rank, StandardCard, Suit};
 
+use crate::GameError;
+
 /// Shared behaviors for card containers such as [`Deck`], [`Hand`], and [`Pile`].
 pub trait CardCollection {
     /// Determine the number of cards in the collection.
@@ -106,7 +108,7 @@ pub trait AddCard<T: CardFaces> {
     /// Add a list of cards to the collection.
     ///
     /// ```
-    /// use gametools::{AddCard, Card, CardFaces, Hand};
+    /// use gametools::{AddCard, Card, CardFaces, Hand, CardCollection};
     ///
     /// #[derive(Clone)]
     /// struct Face(u8);
@@ -120,7 +122,7 @@ pub trait AddCard<T: CardFaces> {
     ///
     /// let mut hand = Hand::<Face>::new("player");
     /// hand.add_cards(vec![Card::new_card(Face(1)), Card::new_card(Face(2))]);
-    /// assert_eq!(hand.cards.len(), 2);
+    /// assert_eq!(hand.size(), 2);
     /// ```
     fn add_cards(&mut self, cards: Vec<Card<T>>) {
         for card in cards {
@@ -151,9 +153,9 @@ pub trait TakeCard<T: CardFaces> {
     ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
     /// }
     ///
-    /// let mut deck = Deck::new(
+    /// let mut deck = Deck::from_cards(
     ///     "demo",
-    ///     vec![Card::new_card(Face(1)), Card::new_card(Face(2)), Card::new_card(Face(3))],
+    ///     [Card::new_card(Face(1)), Card::new_card(Face(2)), Card::new_card(Face(3))],
     /// );
     ///
     /// let drawn = deck.take_cards(2);
@@ -174,6 +176,26 @@ pub trait TakeCard<T: CardFaces> {
     }
     /// Take the `Card` matching the `search_card` from the collection, if it exists.
     fn take_match(&mut self, search_card: &Card<T>) -> Option<Card<T>>;
+}
+
+/// Move a card from one collection to another.
+///
+/// The sender must implement TakeCard and the receiver, AddCard.
+///
+/// # Errors
+/// - GameError::CardNotFound if the specified `Card` does not belong to the `sender`.
+pub fn transfer_card<C, S, R>(card: &Card<C>, sender: &mut S, recv: &mut R) -> Result<(), GameError>
+where
+    C: CardFaces,
+    S: TakeCard<C>,
+    R: AddCard<C>,
+{
+    if let Some(mover) = sender.take_match(card) {
+        recv.add_card(mover);
+        Ok(())
+    } else {
+        Err(GameError::CardNotFound)
+    }
 }
 
 #[cfg(test)]
