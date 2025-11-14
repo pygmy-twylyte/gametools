@@ -19,8 +19,8 @@
 //!     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
 //! }
 //!
-//! let cards = (1..=3).map(|n| Card::new_card(Number(n))).collect();
-//! let mut deck = Deck::new("numbers", cards);
+//! let cards = (1..=3).map(|n| Card::new_card(Number(n))).collect::<Vec<_>>();
+//! let mut deck = Deck::from_cards("numbers", cards);
 //! assert_eq!(deck.size(), 3);
 //! let drawn = deck.take_card().unwrap();
 //! assert_eq!(drawn.faces.0, 3);
@@ -28,13 +28,13 @@
 //! ```
 
 use crate::cards::{AddCard, Card, CardCollection, CardFaces, Hand, TakeCard};
-use rand::prelude::*;
+use rand::prelude::SliceRandom;
 use uuid::Uuid;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// Uniquely identifies a specific deck instance.
 pub struct DeckId(Uuid);
@@ -46,11 +46,19 @@ pub struct Deck<T: CardFaces> {
     /// Friendly name used to describe the deck.
     pub name: String,
     /// Unique identifier automatically assigned at deck creation.
-    pub deck_id: DeckId,
-    /// Cards stored with the most recently added at the end of the vector.
-    pub cards: Vec<Card<T>>,
+    deck_id: DeckId,
+    /// Cards stored with the "top" card at the end of the vector.
+    cards: Vec<Card<T>>,
 }
 impl<T: CardFaces + Clone> Deck<T> {
+    /// Create a new, empty `Deck`
+    pub fn new() -> Self {
+        Self {
+            name: String::new(),
+            deck_id: DeckId(Uuid::new_v4()),
+            cards: Vec::new(),
+        }
+    }
     /// Build a deck from an owned vector of [`Card`]s.
     ///
     /// Each card is tagged with the deck's [`DeckId`], allowing downstream code
@@ -70,21 +78,49 @@ impl<T: CardFaces + Clone> Deck<T> {
     /// }
     ///
     /// let cards = vec![Card::new_card(Face(1)), Card::new_card(Face(2))];
-    /// let deck = Deck::new("demo", cards);
-    /// assert!(deck.cards.iter().all(|card| card.deck_id == Some(deck.deck_id)));
+    /// let deck = Deck::from_cards("demo", cards);
+    /// assert!(deck
+    ///     .cards()
+    ///     .iter()
+    ///     .all(|card| card.deck_id == Some(deck.deck_id())));
     /// ```
-    pub fn new(name: &str, mut cards: Vec<Card<T>>) -> Self {
+    pub fn from_cards(name: &str, cards: impl IntoIterator<Item = Card<T>>) -> Self {
         let deck_id = DeckId(Uuid::new_v4());
-        cards.iter_mut().for_each(|c| c.assign_to_deck(deck_id));
         Self {
             name: name.to_string(),
             deck_id,
-            cards,
+            cards: cards
+                .into_iter()
+                .map(|mut c| {
+                    c.assign_to_deck(deck_id);
+                    c
+                })
+                .collect::<Vec<_>>(),
         }
     }
 
     /// Create a deck by supplying raw face values that will be wrapped in [`Card`]s.
     ///
+    /// The faces are consumed by this constructor. If you want to retain faces to build
+    /// additional [`Deck`]s, use [`Deck::with_borrowed_faces`] instead.
+    pub fn from_faces(name: &str, faces: impl IntoIterator<Item = T>) -> Self {
+        let deck_id = DeckId(Uuid::new_v4());
+        Self {
+            name: name.to_string(),
+            deck_id,
+            cards: faces
+                .into_iter()
+                .map(|face| {
+                    let mut card = Card::from(face);
+                    card.assign_to_deck(deck_id);
+                    card
+                })
+                .collect(),
+        }
+    }
+    /// Create a deck by supplying raw face values that will be wrapped in [`Card`]s.
+    ///
+    /// The faces are not consumed, but each face is cloned in order to create the corresponding [`Card`]s.
     /// ```
     /// use gametools::{CardFaces, Deck};
     ///
@@ -99,15 +135,27 @@ impl<T: CardFaces + Clone> Deck<T> {
     /// }
     ///
     /// let faces = vec![Face("A"), Face("B")];
-    /// let deck = Deck::new_from_faces("demo", &faces);
-    /// assert_eq!(deck.cards.len(), 2);
+    /// let deck = Deck::with_borrowed_faces("demo", &faces);
+    /// assert_eq!(deck.cards().len(), 2);
     /// ```
-    pub fn new_from_faces(name: &str, faces: &Vec<T>) -> Self {
+    pub fn with_borrowed_faces(name: &str, faces: &[T]) -> Self {
         let cards = faces
             .iter()
-            .map(|f| Card::new_card(f.clone()))
+            .map(|f| Card::from(f.clone()))
             .collect::<Vec<_>>();
-        Self::new(name, cards)
+        Self::from_cards(name, cards)
+    }
+}
+
+impl<T: CardFaces> Deck<T> {
+    /// Obtain a slice of the cards remaining in the deck.
+    pub fn cards(&self) -> &[Card<T>] {
+        &self.cards
+    }
+
+    /// Get the unique identifier for this deck.
+    pub fn deck_id(&self) -> DeckId {
+        self.deck_id
     }
 
     /// Randomly permute the order of cards in the deck.
@@ -125,10 +173,10 @@ impl<T: CardFaces + Clone> Deck<T> {
     ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
     /// }
     ///
-    /// let cards = (0..5).map(|n| Card::new_card(Face(n))).collect();
-    /// let mut deck = Deck::new("demo", cards);
+    /// let cards = (0..5).map(|n| Card::new_card(Face(n))).collect::<Vec<_>>();
+    /// let mut deck = Deck::from_cards("demo", cards);
     /// deck.shuffle(); // order changes, but size remains the same
-    /// assert_eq!(deck.cards.len(), 5);
+    /// assert_eq!(deck.cards().len(), 5);
     /// ```
     pub fn shuffle(&mut self) {
         self.cards.shuffle(&mut rand::rng());
@@ -149,11 +197,11 @@ impl<T: CardFaces + Clone> Deck<T> {
     ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
     /// }
     ///
-    /// let deck = Deck::new("demo", vec![Card::new_card(Face(1))]);
-    /// let card = deck.cards[0].clone();
+    /// let deck = Deck::from_cards("demo", [Card::new_card(Face(1))]);
+    /// let card = deck.cards()[0].clone();
     /// assert!(deck.owns_card(&card));
     ///
-    /// let other_deck = Deck::new("other", vec![Card::new_card(Face(2))]);
+    /// let other_deck = Deck::from_cards("other", [Card::new_card(Face(2))]);
     /// assert!(!other_deck.owns_card(&card));
     /// ```
     pub fn owns_card(&self, card: &Card<T>) -> bool {
@@ -182,8 +230,8 @@ impl<T: CardFaces + Clone> Deck<T> {
     ///     fn compare(&self, other: &Self) -> std::cmp::Ordering { self.0.cmp(&other.0) }
     /// }
     ///
-    /// let cards = (1..=4).map(|n| Card::new_card(Face(n))).collect();
-    /// let mut deck = Deck::new("demo", cards);
+    /// let cards = (1..=4).map(|n| Card::new_card(Face(n))).collect::<Vec<_>>();
+    /// let mut deck = Deck::from_cards("demo", cards);
     /// let hands = deck.deal(&["alice", "bob"], 1);
     ///
     /// assert_eq!(hands[0].player, "alice");
@@ -206,6 +254,17 @@ impl<T: CardFaces + Clone> Deck<T> {
         hands
     }
 }
+
+impl<T: CardFaces> Default for Deck<T> {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            deck_id: DeckId(Uuid::new_v4()),
+            cards: Default::default(),
+        }
+    }
+}
+
 impl<T: CardFaces> CardCollection for Deck<T> {
     fn size(&self) -> usize {
         self.cards.len()
@@ -278,7 +337,7 @@ mod tests {
     fn new_from_faces_builds_deck_with_expected_cards() {
         let faces = vec![StubFaces { id: 1 }, StubFaces { id: 2 }];
 
-        let deck = Deck::new_from_faces("test", &faces);
+        let deck = Deck::with_borrowed_faces("test", &faces);
 
         assert_eq!(deck.name, "test");
         let ids: Vec<u8> = deck.cards.iter().map(|c| c.faces.id).collect();
@@ -294,7 +353,7 @@ mod tests {
 
     #[test]
     fn new_assigns_deck_id_to_all_cards() {
-        let deck = Deck::new("test", vec![make_card(1), make_card(2)]);
+        let deck = Deck::from_cards("test", [make_card(1), make_card(2)]);
 
         assert!(
             deck.cards
@@ -306,7 +365,7 @@ mod tests {
 
     #[test]
     fn take_card_removes_last_card() {
-        let mut deck = Deck::new("test", vec![make_card(1), make_card(2)]);
+        let mut deck = Deck::from_cards("test", [make_card(1), make_card(2)]);
 
         let taken = deck.take_card().unwrap();
 
@@ -316,7 +375,7 @@ mod tests {
 
     #[test]
     fn take_match_removes_matching_card() {
-        let mut deck = Deck::new("test", vec![make_card(1), make_card(2), make_card(3)]);
+        let mut deck = Deck::from_cards("test", [make_card(1), make_card(2), make_card(3)]);
         let search = Card::new_card(StubFaces { id: 2 });
 
         let taken = deck.take_match(&search).expect("card should be found");
@@ -336,7 +395,7 @@ mod tests {
             make_card(5),
             make_card(6),
         ];
-        let mut deck = Deck::new("test", cards);
+        let mut deck = Deck::from_cards("test", cards);
         let players = vec!["alice", "bob"];
 
         let hands = deck.deal(&players, 2);
@@ -355,7 +414,7 @@ mod tests {
     #[test]
     fn deal_gracefully_handles_insufficient_cards() {
         let cards = vec![make_card(1), make_card(2), make_card(3)];
-        let mut deck = Deck::new("test", cards);
+        let mut deck = Deck::from_cards("test", cards);
         let players = vec!["a", "b"];
 
         let hands = deck.deal(&players, 2);
@@ -367,9 +426,9 @@ mod tests {
 
     #[test]
     fn owns_card_identifies_membership() {
-        let deck = Deck::new("test", vec![make_card(1), make_card(2)]);
+        let deck = Deck::from_cards("test", [make_card(1), make_card(2)]);
         let deck_card = deck.cards[0].clone();
-        let mut other_deck = Deck::new("other", vec![make_card(3)]);
+        let mut other_deck = Deck::from_cards("other", [make_card(3)]);
         let other_card = other_deck.take_card().expect("card expected");
 
         assert!(deck.owns_card(&deck_card));
