@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
+## [0.7.0] - 2025-11-14
+
+### Changed
+- `Wedge::cover`/`uncover` now operate on borrowed wedges and clone only what they need, avoiding the `Clone` + `mut` dance at each call site.
+- Split the `Spinner<T>` impl blocks so general helpers (e.g., `spin`, `add_wedge`) only require `T: Clone`, and the comparison-driven helpers additionally bound `T: PartialEq`.
+- `Spinner::cover`, `uncover`, `remove_wedges`, and `replace_value` now accept borrowed match values so callers can avoid cloning owned types; `replace_value` still consumes the replacement so it works for owned values as well.
+- Documentation and unit tests updated to reflect the borrowed-parameter API, plus a regression test proving `replace_value` functions for `String` wedges.
+
+---
 ## [0.6.0] - 2025-12-15
 
 ### Added

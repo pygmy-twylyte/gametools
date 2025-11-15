@@ -312,7 +312,7 @@ impl<T: Clone + PartialEq> Spinner<T> {
     }
 
     /// Replaces a wedge value with another. Affects all wedges with that value.
-    pub fn replace_value(&self, match_val: &T, new_val: &T) -> Spinner<T> {
+    pub fn replace_value(&self, match_val: &T, new_val: T) -> Spinner<T> {
         let wedges = &self.wedges;
         let updated = wedges
             .clone()
@@ -582,9 +582,18 @@ mod spinner_tests {
             Wedge::new("Signals"),
             Wedge::new("Sheik Yerbouti"), // oops, that's Zappa
         ]);
-        let rush_albums = rush_albums.replace_value(&"Sheik Yerbouti", &"Power Windows");
+        let rush_albums = rush_albums.replace_value(&"Sheik Yerbouti", "Power Windows");
         for _ in 1..100 {
             assert!(["2112", "Signals", "Power Windows"].contains(&rush_albums.spin().unwrap()))
         }
+    }
+
+    #[test]
+    fn replace_value_supports_owned_values() {
+        let apple = String::from("Apple");
+        let banana = String::from("Banana");
+        let spinner = Spinner::new(vec![Wedge::new(apple.clone())]);
+        let spinner = spinner.replace_value(&apple, banana.clone());
+        assert_eq!(spinner.spin().unwrap(), banana);
     }
 }

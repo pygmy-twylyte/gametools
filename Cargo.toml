@@ -1,6 +1,6 @@
 [package]
 name = "gametools"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["pygmy-twylyte <davidjvbrown.md@gmail.com>"]
 edition = "2024"
 description = "Game component toolkit for dice, dominos, spinners, and fully extensible card decks."
