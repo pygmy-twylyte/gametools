@@ -47,7 +47,7 @@
 //!
 //! // create a new spinner with "Red" wedges covered
 //! // (blocks spinner from returning this value when landing on it, returns None instead)
-//! let new_spinner = spinner.cover("Red");
+//! let new_spinner = spinner.cover(&"Red");
 //! for _ in 1..100 {
 //!     if let Some(val) = new_spinner.spin() {
 //!         assert_ne!(val, "Red");
@@ -64,7 +64,7 @@
 //!    Wedge::new_weighted("Blue", 2).cover(),
 //!    Wedge::new_weighted("Green", 2).cover(),
 //! ]);
-//! let new_spinner = spinner.uncover("Red");
+//! let new_spinner = spinner.uncover(&"Red");
 //! // should now only be able to return Some("Red") or None
 //! for _ in 1..100 {
 //!     if let Some(val) = new_spinner.spin() {
@@ -186,7 +186,7 @@ where
     weights: Vec<usize>,
 }
 
-impl<T: Clone + PartialEq> Spinner<T> {
+impl<T: Clone> Spinner<T> {
     /// Create a new spinner with a vector of wedges.
     pub fn new(wedges: Vec<Wedge<T>>) -> Self {
         let weights = wedges.iter().map(|w| w.width).collect();
@@ -229,54 +229,10 @@ impl<T: Clone + PartialEq> Spinner<T> {
         Some(chosen_wedge.value)
     }
 
-    /// Returns a new spinner with a target value covered (blocked).
-    /// Returns a clone of the original spinner if there is no wedge matching the target value.
-    ///
-    /// ## Example
-    /// ```
-    /// use gametools::spinners::{Wedge, Spinner};
-    /// let original = Spinner::new(vec![
-    ///     Wedge::new("Red"),
-    ///     Wedge::new("Green"),
-    ///     Wedge::new("Blue"),
-    /// ]);
-    /// let red_blocked = original.cover("Red");
-    /// // red_blocked.spin() now returns None if the spinner lands on Red
-    /// if let Some(color) = red_blocked.spin() {
-    ///     assert!((color == "Green") | (color == "Blue"));
-    /// }
-    /// ```
-    pub fn cover(&self, target_val: T) -> Spinner<T> {
-        // create and return a new spinner with active = false on target wedges
-        let wedges = &self.wedges;
-        let covered = wedges
-            .iter()
-            .map(|w| match w.value == target_val {
-                true => w.cover(),
-                false => w.clone(),
-            })
-            .collect();
-        Spinner::new(covered)
-    }
-
     /// Covers (inactivates) all wedges on the spinner.
     pub fn cover_all(&self) -> Spinner<T> {
         let all_covered = self.wedges.iter().map(|w| w.cover()).collect();
         Spinner::new(all_covered)
-    }
-
-    /// Returns a new spinner after uncovering any wedges that match a target value.
-    pub fn uncover(&self, target_val: T) -> Spinner<T> {
-        // create and return a new spinner with active = true on target wedges
-        let wedges = &self.wedges;
-        let uncovered = wedges
-            .iter()
-            .map(|w| match w.value == target_val {
-                true => w.uncover(),
-                false => w.clone(),
-            })
-            .collect();
-        Spinner::new(uncovered)
     }
 
     /// Uncover / (re)activate all wedges on the spinner.
@@ -308,6 +264,66 @@ impl<T: Clone + PartialEq> Spinner<T> {
         added.push(new_wedge);
         Spinner::new(added)
     }
+}
+
+impl<T: Clone + PartialEq> Spinner<T> {
+    /// Returns a new spinner with a target value covered (blocked).
+    /// Returns a clone of the original spinner if there is no wedge matching the target value.
+    ///
+    /// ## Example
+    /// ```
+    /// use gametools::spinners::{Wedge, Spinner};
+    /// let original = Spinner::new(vec![
+    ///     Wedge::new("Red"),
+    ///     Wedge::new("Green"),
+    ///     Wedge::new("Blue"),
+    /// ]);
+    /// let red_blocked = original.cover(&"Red");
+    /// // red_blocked.spin() now returns None if the spinner lands on Red
+    /// if let Some(color) = red_blocked.spin() {
+    ///     assert!((color == "Green") | (color == "Blue"));
+    /// }
+    /// ```
+    pub fn cover(&self, target_val: &T) -> Spinner<T> {
+        // create and return a new spinner with active = false on target wedges
+        let wedges = &self.wedges;
+        let covered = wedges
+            .iter()
+            .map(|w| match w.value == *target_val {
+                true => w.cover(),
+                false => w.clone(),
+            })
+            .collect();
+        Spinner::new(covered)
+    }
+
+    /// Returns a new spinner after uncovering any wedges that match a target value.
+    pub fn uncover(&self, target_val: &T) -> Spinner<T> {
+        // create and return a new spinner with active = true on target wedges
+        let wedges = &self.wedges;
+        let uncovered = wedges
+            .iter()
+            .map(|w| match w.value == *target_val {
+                true => w.uncover(),
+                false => w.clone(),
+            })
+            .collect();
+        Spinner::new(uncovered)
+    }
+
+    /// Replaces a wedge value with another. Affects all wedges with that value.
+    pub fn replace_value(&self, match_val: &T, new_val: &T) -> Spinner<T> {
+        let wedges = &self.wedges;
+        let updated = wedges
+            .clone()
+            .into_iter()
+            .map(|w| match w.value == *match_val {
+                true => Wedge::new_weighted(new_val.clone(), w.width),
+                false => w,
+            })
+            .collect();
+        Spinner::new(updated)
+    }
 
     /// Remove any wedges matching a particular value from the spinner.
     ///
@@ -319,34 +335,20 @@ impl<T: Clone + PartialEq> Spinner<T> {
     ///     Wedge::new("Lose"),
     /// ]);
     ///
-    /// let never_lose_again = spinner.remove_wedges("Lose");
+    /// let never_lose_again = spinner.remove_wedges(&"Lose");
     ///
     /// if let Some(spin) = never_lose_again.spin() {
     ///     assert_ne!(spin, "Lose");
     /// }
     /// ```
-    pub fn remove_wedges(&self, value: T) -> Spinner<T> {
+    pub fn remove_wedges(&self, value: &T) -> Spinner<T> {
         let wedges = &self.wedges;
         let shrunken = wedges
             .clone()
             .into_iter()
-            .filter(|w| w.value != value)
+            .filter(|w| w.value != *value)
             .collect();
         Spinner::new(shrunken)
-    }
-
-    /// Replaces a wedge value with another. Affects all wedges with that value.
-    pub fn replace_value(&self, match_val: T, new_val: T) -> Spinner<T> {
-        let wedges = &self.wedges;
-        let updated = wedges
-            .clone()
-            .into_iter()
-            .map(|w| match w.value == match_val {
-                true => Wedge::new_weighted(new_val.clone(), w.width),
-                false => w,
-            })
-            .collect();
-        Spinner::new(updated)
     }
 }
 
@@ -476,7 +478,7 @@ mod spinner_tests {
             Wedge::new_weighted("Green", 2),
             Wedge::new_weighted("Red", 2),
         ]);
-        let new_spinner = spinner.cover("Red");
+        let new_spinner = spinner.cover(&"Red");
         for _ in 1..100 {
             if let Some(val) = new_spinner.spin() {
                 assert_ne!(val, "Red");
@@ -493,7 +495,7 @@ mod spinner_tests {
             Wedge::new_weighted("Blue", 2).cover(),
             Wedge::new_weighted("Green", 2).cover(),
         ]);
-        let new_spinner = spinner.uncover("Red");
+        let new_spinner = spinner.uncover(&"Red");
         // should now only be able to return Some("Red") or None
         for _ in 1..100 {
             if let Some(val) = new_spinner.spin() {
@@ -545,7 +547,7 @@ mod spinner_tests {
     #[test]
     fn can_remove_wedges_matching_value_from_spinner() {
         let spinner = Spinner::new(vec![Wedge::new(0), Wedge::new(1), Wedge::new(1)]);
-        let one_removed = spinner.remove_wedges(1);
+        let one_removed = spinner.remove_wedges(&1);
         for _ in 1..100 {
             match one_removed.spin() {
                 Some(spin) => assert_eq!(spin, 0),
@@ -580,7 +582,7 @@ mod spinner_tests {
             Wedge::new("Signals"),
             Wedge::new("Sheik Yerbouti"), // oops, that's Zappa
         ]);
-        let rush_albums = rush_albums.replace_value("Sheik Yerbouti", "Power Windows");
+        let rush_albums = rush_albums.replace_value(&"Sheik Yerbouti", &"Power Windows");
         for _ in 1..100 {
             assert!(["2112", "Signals", "Power Windows"].contains(&rush_albums.spin().unwrap()))
         }
