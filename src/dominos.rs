@@ -346,7 +346,7 @@ impl DominoHand {
     ///
     /// The will return with an error if a tile doesn't match the one before it,
     /// or if this player doesn't have permission to use that train.
-    pub fn play_line(&mut self, id_sequence: &Vec<usize>, train: &mut Train) -> GameResult<()> {
+    pub fn play_line(&mut self, id_sequence: &[usize], train: &mut Train) -> GameResult<()> {
         for domino_id in id_sequence {
             let pos = self
                 .tiles
