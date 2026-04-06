@@ -1,61 +1,38 @@
 //! # Game Error Module
 //!
 //! This module defines the [`GameError`] enum, which represents common error conditions
-//! that may arise during gameplay logic—such as trying to draw from an empty stack,
-//! attempting to play a tile that doesn’t match, or encountering missing components.
+//! that may arise during gameplay logic such as trying to draw from an empty stack,
+//! attempting to play a tile that does not match, or encountering missing components.
 //!
 
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
 /// Error types for problematic game conditions.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum GameError {
+    #[error("cannot draw from empty stack '{0}'")]
     StackEmpty(String),
+    #[error("too few cards remain in '{0}' to satisfy need")]
     StackTooSmall(String),
+    #[error("the card sought was not found in this collection")]
     CardNotFound,
+    #[error("insufficient tiles left in the bone pile")]
     InsufficientTiles,
+    #[error("that tile does not match the tail of the train")]
     TileUnconnected,
+    #[error("attempted to play on a closed train")]
     TrainClosed,
+    #[error("spin() returned None: empty spinner or landed on covered wedge")]
     SpinnerEmpty,
+    #[error("attempted to roll zero dice into a DicePool")]
     DicePoolWithNoDice,
+    #[error("attempted to create a die with zero sides")]
     DieWithZeroSides,
+    #[error("refilling pool must have items with which to refill")]
+    PoolCannotBeEmpty,
+    #[error("invalid index {0} for pool size {1}")]
+    InvalidPoolIndex(usize, usize),
 }
-impl fmt::Display for GameError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            GameError::StackEmpty(n) => write!(f, "cannot draw from empty stack '{n}'"),
-            GameError::StackTooSmall(n) => {
-                write!(f, "too few cards remain in '{n}' to satisfy need")
-            }
-            GameError::CardNotFound => {
-                write!(f, "the card sought was not found in this collection")
-            }
-            GameError::InsufficientTiles => {
-                write!(f, "insufficient tiles left in the bone pile")
-            }
-            GameError::TileUnconnected => {
-                write!(f, "that tile does not match the tail of the train")
-            }
-            GameError::TrainClosed => {
-                write!(f, "attempted to play on a closed train")
-            }
-            GameError::SpinnerEmpty => {
-                write!(
-                    f,
-                    "spin() returned None: empty spinner or landed on covered wedge"
-                )
-            }
-            GameError::DicePoolWithNoDice => {
-                write!(f, "attempted to roll zero dice into a DicePool")
-            }
-            GameError::DieWithZeroSides => {
-                write!(f, "attempted to create a die with zero sides")
-            }
-        }
-    }
-}
-impl Error for GameError {}
 
 #[cfg(test)]
 mod tests {
@@ -100,6 +77,10 @@ mod tests {
             (
                 GameError::DieWithZeroSides,
                 "attempted to create a die with zero sides",
+            ),
+            (
+                GameError::PoolCannotBeEmpty,
+                "refilling pool must have items with which to refill",
             ),
         ];
 

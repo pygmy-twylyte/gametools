@@ -15,21 +15,22 @@
 //! - Pathfinding with backtracking + pruning to find optimum domino train in a hand.
 //! - Custom GameResult and GameError types to help with common game conditions.
 
-pub mod dice;
-pub use dice::{DicePool, Die};
-
 pub mod cards;
 pub use cards::{
     AddCard, Card, CardCollection, CardFaces, CardHand, Deck, Hand, Pile, Rank, Suit, TakeCard,
 };
 
+pub mod dice;
+pub use dice::{DicePool, Die};
+
 pub mod dominos;
 pub use dominos::{BonePile, Domino, DominoHand, MAX_PIPS, Train};
+
+pub mod refilling_pool;
 
 pub mod spinners;
 pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 
 pub mod gameerror;
 pub use gameerror::GameError;
-
 pub type GameResult<T> = Result<T, GameError>;
