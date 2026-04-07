@@ -27,6 +27,7 @@ pub mod dominos;
 pub use dominos::{BonePile, Domino, DominoHand, MAX_PIPS, Train};
 
 pub mod refilling_pool;
+pub use refilling_pool::RefillingPool;
 
 pub mod spinners;
 pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};

@@ -13,16 +13,73 @@ use rand::seq::SliceRandom as _;
 
 use crate::{GameResult, gameerror::GameError};
 
+/// # `RefillingPool<T>`
+///
+/// This is an unordered pool or pile of items: letters, numbers, pictures, strings --
+/// anything that implements `Clone`. Things drawn from the `RefillingPool` are returned
+/// in random order. Once the pool is exhausted, it is automatically refilled with the
+/// original set of items. Item order is re-randomized with each refill.
+///
+/// Note that `RefillingPool` implements `Iterator`, so adapters like `filter`, `map` and
+/// `take` can be combined with it some useful ways.
+///
+/// # Examples
+/// Here's a way you might create a set of random but eventually repeating phrases for NPC
+/// dialogue:
+///
+/// ```
+/// use gametools::{GameResult, RefillingPool};
+///
+/// # fn main() -> GameResult<()> {
+/// let mut halt_phrases = RefillingPool::new([
+///     "Freeze!",
+///     "Halt!",
+///     "Stop!",
+/// ])?;
+/// assert_eq!( halt_phrases.full_size(), 3);
+/// assert_eq!( halt_phrases.current_size(), 3);
+///
+/// println!("Guard says: {}", halt_phrases.draw());
+///
+/// // Guard said any one of the three phrases above, so two are left
+/// assert_eq!( halt_phrases.current_size(), 2 );
+///
+/// let _either_of_the_last_two = halt_phrases.draw();
+/// assert_eq!( halt_phrases.current_size(), 1 );
+///
+/// let _last_remaining = halt_phrases.draw();
+/// assert_eq!( halt_phrases.current_size(), 0 );
+///
+/// let _another_draw_refills_on_demand = halt_phrases.draw();
+/// assert_eq!( halt_phrases.current_size(), 2 );
+///
+/// # Ok(()) }
+/// ```
+#[derive(Debug, Clone, PartialEq)]
 pub struct RefillingPool<T> {
     items: Vec<T>,
     unused: Vec<usize>,
 }
 
 impl<T> RefillingPool<T> {
-    /// Create a new `RefillingPool` from a collection.
+    /// Create a new `RefillingPool` from an iterable collection.
     ///
     /// # Errors
     /// - `PoolHasNoRefills` if `items` is empty.
+    ///
+    /// # Examples
+    /// ```
+    /// # use gametools::GameResult;
+    /// # fn main() -> GameResult<()> {
+    /// use gametools::RefillingPool;
+    ///
+    /// let mut pool = RefillingPool::new(["foo", "bar", "baz"])?;
+    /// assert_eq!(pool.full_size(), 3);
+    ///
+    /// let mut pool = RefillingPool::new(0..5)?;
+    /// assert_eq!(pool.full_size(), 5);
+    /// # Ok(()) }
+    /// ```
     pub fn new(items: impl IntoIterator<Item = T>) -> GameResult<Self> {
         let items: Vec<T> = items.into_iter().collect();
         if items.is_empty() {
@@ -37,6 +94,27 @@ impl<T> RefillingPool<T> {
     ///
     /// Items added are available to `draw()` immediately and are included in
     /// all subsequent refills.
+    ///
+    /// # Examples
+    /// ```
+    /// use gametools::{GameResult, RefillingPool};
+    /// # fn main() -> GameResult<()> {
+    ///
+    /// let mut pool = RefillingPool::new([
+    ///     "eenie", "meenie", "miney",
+    /// ])?;
+    /// assert_eq!( pool.full_size(), 3 );
+    /// assert_eq!( pool.current_size(), 3);
+    ///
+    /// // oh no, we forgot moe!
+    /// assert!(!pool.by_ref().take(50).any(|i| i == "moe"));
+    /// pool.add("moe");
+    /// assert_eq!( pool.full_size(), 4);
+    ///
+    /// // depending on luck and where we are in refill cycle, we could draw at most six
+    /// // times before "moe" (worst case)
+    /// assert!( pool.take(7).any(|i| i == "moe"));
+    /// # Ok(()) }
     pub fn add(&mut self, item: T) {
         self.items.push(item);
         self.unused.push(self.items.len() - 1);
