@@ -5,7 +5,7 @@
 //! games and simulations.
 //!
 //! ## Features
-//! - RefillingPool - a randomized, infinitely refilling pool of arbitrary types of items
+//! - `RefillingPool` - a randomized, infinitely refilling pool of arbitrary types of items
 //! - Cards module that supports cards of any type, with 1 or 2 faces.
 //! - Pre-defined StandardCard type for standard playing cards.
 //! - Hand analytics for standard cards (detect straight, "n" of a kind, etc.) including Joker / wildcard handling.
