@@ -1,5 +1,5 @@
-//! `RefillingPool` module
-//!
+//! # `RefillingPool` - a randomized pool of items that refills itself when empty.
+//! ---
 //! A `RefillingPool` is a randomly ordered collection of almost any kind of item.
 //! Items drawn from the pool are returned in randomized order until the pool is empty.
 //! When the pool is empty, it refills with the original items. It is guaranteed that
@@ -15,8 +15,8 @@ use crate::{GameResult, gameerror::GameError};
 
 /// # `RefillingPool<T>`
 ///
-/// This is an unordered pool or pile of items: letters, numbers, pictures, strings --
-/// anything that implements `Clone`. Things drawn from the `RefillingPool` are returned
+/// This is an unordered collection of things: letters, numbers, pictures, strings --
+/// anything that implements `Clone`. Items drawn from the `RefillingPool` are returned
 /// in random order. Once the pool is exhausted, it is automatically refilled with the
 /// original set of items. Item order is re-randomized with each refill.
 ///
@@ -111,9 +111,10 @@ impl<T> RefillingPool<T> {
     /// pool.add("moe");
     /// assert_eq!( pool.full_size(), 4);
     ///
-    /// // depending on luck and where we are in refill cycle, we could draw at most six
-    /// // times before "moe" (worst case)
-    /// assert!( pool.take(7).any(|i| i == "moe"));
+    /// // we could draw at most the new number of items in the full pool before "moe" appears
+    /// let size = pool.full_size();
+    /// assert!( pool.take(size).any(|i| i == "moe"));
+    ///
     /// # Ok(()) }
     pub fn add(&mut self, item: T) {
         self.items.push(item);
@@ -135,12 +136,32 @@ impl<T> RefillingPool<T> {
         Ok(self.items.swap_remove(index))
     }
 
-    /// Get the size of the pool when newly refilled.
+    /// Get the size of the pool when new or newly refilled.
+    ///
+    /// # Examples
+    /// ```
+    /// # use gametools::{GameResult, RefillingPool};
+    /// # fn main() -> GameResult<()> {
+    /// let pool = RefillingPool::new(0..3)?;
+    /// assert_eq!( pool.full_size(), 3);
+    /// # Ok(()) }
+    /// ```
     pub fn full_size(&self) -> usize {
         self.items.len()
     }
 
-    /// Get the number of items remaining before the pool refills.
+    /// Get the number of items remaining before a refill is triggered.
+    ///
+    /// # Examples
+    /// ```
+    /// # use gametools::{GameResult, RefillingPool};
+    /// # fn main() -> GameResult<()> {
+    /// let mut pool = RefillingPool::new(0..10)?;
+    /// assert_eq!( pool.current_size(), 10 );
+    /// let _ = pool.draw();
+    /// assert_eq!( pool.current_size(), 9 );
+    /// # Ok(()) }
+    /// ```
     pub fn current_size(&self) -> usize {
         self.unused.len()
     }
@@ -152,8 +173,61 @@ impl<T> RefillingPool<T> {
     }
 }
 
+impl<T: PartialEq> RefillingPool<T> {
+    /// Remove an item from the pool, if it exists. If there are multiple copies of the item,
+    /// only the first one found is removed.
+    ///
+    /// # Examples
+    /// ```
+    /// # use gametools::{GameResult, RefillingPool};
+    /// # fn main() -> GameResult<()> {
+    /// let mut pool = RefillingPool::new(["Alex", "Geddy", "Neil"])?;
+    /// assert_eq!( pool.full_size(), 3 );
+    /// assert_eq!( pool.current_size(), 3);
+    ///
+    /// let rip_professor = pool.remove(&"Neil");
+    /// assert_eq!( pool.full_size(), 2);
+    /// assert_eq!( pool.current_size(), 2);
+    /// assert_eq!( rip_professor, Some("Neil"));
+    /// # Ok(()) }
+    /// ```
+    pub fn remove(&mut self, item: &T) -> Option<T> {
+        if let Some(index) = self.items.iter().position(|i| i == item) {
+            self.remove_index(index).ok()
+        } else {
+            None
+        }
+    }
+
+    /// Determine the index of an item within the `RefillingPool`, if it exists.
+    /// If multiple copies of the item are present, the index of the first copy found
+    /// is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use gametools::{GameResult, RefillingPool};
+    /// # fn main() -> GameResult<()> {
+    /// let pool = RefillingPool::new(["zero", "one", "two"])?;
+    /// assert_eq!( pool.index_of(&"one"), Some(1) );
+    /// assert!( pool.index_of(&"five").is_none() );
+    /// # Ok(()) }
+    /// ```
+    pub fn index_of(&self, item: &T) -> Option<usize> {
+        self.items.iter().position(|i| i == item)
+    }
+}
+
 impl<T: Clone> RefillingPool<T> {
     /// Draw an item from the pool.
+    ///
+    /// # Examples
+    /// ```
+    /// # use gametools::{GameResult, RefillingPool};
+    /// # fn main() -> GameResult<()> {
+    /// let mut pool = RefillingPool::new(['a', 'b', 'c'])?;
+    /// let drawn_letter = pool.draw();
+    /// assert!(['a','b','c'].contains(&drawn_letter));
+    /// # Ok(()) }
     pub fn draw(&mut self) -> T {
         if self.unused.is_empty() {
             self.refill();
@@ -189,16 +263,22 @@ mod tests {
     }
 
     #[test]
-    fn pool_full_and_current_size_correct_after_draws_and_refill() {
+    fn pool_full_and_current_sizes_correct_after_draws_and_refill() {
         let mut pool = RefillingPool::new([1, 2, 3]).unwrap();
         assert_eq!(dbg!(pool.full_size()), 3);
         assert_eq!(dbg!(pool.current_size()), 3);
-        let _ = pool.draw();
-        assert_eq!(dbg!(pool.full_size()), 3);
-        assert_eq!(dbg!(pool.current_size()), 2);
+
+        pool.draw();
+        assert_eq!(pool.full_size(), 3);
+        assert_eq!(pool.current_size(), 2);
+
         pool.draw();
         pool.draw();
         assert_eq!(dbg!(pool.full_size()), 3);
         assert_eq!(dbg!(pool.current_size()), 0);
+
+        // next draw() should trigger refill then immediate draw()
+        pool.draw();
+        assert_eq!(pool.current_size(), 2);
     }
 }
