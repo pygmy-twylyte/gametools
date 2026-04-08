@@ -386,7 +386,7 @@ mod spinner_tests {
     fn wedge_new_default_returns_expected_values() {
         let bad_one = Wedge::new("Bankrupt!");
         assert_eq!(bad_one.width, 1);
-        assert_eq!(bad_one.active, true);
+        assert!(bad_one.active);
         assert_eq!(bad_one.value, "Bankrupt!");
     }
 

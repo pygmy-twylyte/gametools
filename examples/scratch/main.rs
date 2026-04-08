@@ -12,7 +12,7 @@ fn main() {
     let mut hand_1 = hands.pop().unwrap();
     let mut hand_2 = hands.pop().unwrap();
 
-    for ref hand in [&hand_1, &hand_2] {
+    for hand in [&hand_1, &hand_2] {
         print!("{} >> ", hand.player);
         show_cards(hand.cards());
     }
@@ -46,7 +46,7 @@ fn main() {
     print!("{} >>", hand_2.player);
     show_cards(hand_2.cards());
     print!("{} >>", discard.name);
-    show_cards(&discard.cards());
+    show_cards(discard.cards());
 
     // confirm the card moved from hand_1 -> hand_2 -> discard is the one from the deck,
     // not a search card somehow added to the mix.

@@ -520,10 +520,10 @@ mod tests {
 
         // exploding roll enough times that we're sure we'll have at least one explode
         for _ in 1..=10000 {
-            // a die that explodes on n, where n in the max roll, can never roll any multiple of n
+            // a die that explodes on n, where n is the max roll, can never roll any multiple of n
             let roll = die.roll_exploding();
             assert!(
-                roll % die.sides != 0,
+                !roll.is_multiple_of(die.sides),
                 "exploding d{} rolled a {} -- should be impossible!",
                 die.sides,
                 roll
@@ -583,7 +583,7 @@ mod tests {
         assert_eq!(bins[&9], 1);
         assert_eq!(bins[&0], 1);
         assert_eq!(bins[&5], 1);
-        assert!(bins.get(&3).is_none());
+        assert!(!bins.contains_key(&3));
     }
 
     #[test]

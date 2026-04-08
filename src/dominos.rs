@@ -464,7 +464,7 @@ mod domino_tests {
     fn train_new_works() {
         let train = Train::new("zappa", false, 12);
         assert_eq!(train.player, "zappa");
-        assert_eq!(train.open, false);
+        assert!(!train.open);
         assert_eq!(train.head, 12);
     }
 

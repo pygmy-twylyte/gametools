@@ -265,8 +265,9 @@ mod tests {
 
     #[test]
     fn take_cards_respects_count_and_order() {
-        let mut collection = StubCollection::default();
-        collection.cards = vec![make_card(1), make_card(2), make_card(3)];
+        let mut collection = StubCollection {
+            cards: vec![make_card(1), make_card(2), make_card(3)],
+        };
 
         let taken = collection.take_cards(2);
 
@@ -279,8 +280,9 @@ mod tests {
 
     #[test]
     fn take_cards_stops_when_collection_is_empty() {
-        let mut collection = StubCollection::default();
-        collection.cards = vec![make_card(5)];
+        let mut collection = StubCollection {
+            cards: vec![make_card(5)],
+        };
 
         let taken = collection.take_cards(3);
 

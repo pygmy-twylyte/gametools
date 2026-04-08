@@ -501,11 +501,11 @@ impl Hand<StandardCard> {
                 };
 
                 // if there's a natural card to fill this rank slot, use it and move on
-                if let Some(cards) = available.get_mut(&rank) {
-                    if let Some(card) = cards.pop() {
-                        straight_cards.push(card);
-                        continue;
-                    }
+                if let Some(cards) = available.get_mut(&rank)
+                    && let Some(card) = cards.pop()
+                {
+                    straight_cards.push(card);
+                    continue;
                 }
 
                 // if there's Joker to fill this rank slot, use it and move on
