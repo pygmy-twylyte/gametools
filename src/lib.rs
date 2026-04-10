@@ -7,14 +7,14 @@
 //! ## Features
 //! - `RefillingPool` - a randomized, infinitely refilling pool of arbitrary types of items
 //! - Cards module that supports cards of any type, with 1 or 2 faces.
-//! - Pre-defined StandardCard type for standard playing cards.
+//! - Pre-defined `StandardCard` type for standard playing cards.
 //! - Hand analytics for standard cards (detect straight, "n" of a kind, etc.) including Joker / wildcard handling.
 //! - Numeric dice with up to 255 sides.
 //! - Tools for playing with and transforming pools of dice.
 //! - Spinners (random selectors) with "wedges" returning arbitrary types and can be covered/blocked or weighted.
 //! - Domino set creation (up to full double-18) and train management.
 //! - Pathfinding algorithm to find optimum domino train in a hand.
-//! - Custom GameResult and GameError types to handle common game conditions.
+//! - Custom `GameResult` and `GameError` types to handle common game conditions.
 
 pub mod cards;
 pub use cards::{
