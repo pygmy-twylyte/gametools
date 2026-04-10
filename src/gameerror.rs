@@ -20,6 +20,8 @@ pub enum GameError {
     InsufficientTiles,
     #[error("that tile does not match the tail of the train")]
     TileUnconnected,
+    #[error("tile with id '{0}' not found in hand")]
+    TileNotFound(usize),
     #[error("attempted to play on a closed train")]
     TrainClosed,
     #[error("spin() returned None: empty spinner or landed on covered wedge")]
