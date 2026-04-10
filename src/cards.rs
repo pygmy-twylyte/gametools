@@ -180,10 +180,10 @@ pub trait TakeCard<T: CardFaces> {
 
 /// Move a card from one collection to another.
 ///
-/// The sender must implement TakeCard and the receiver, AddCard.
+/// The sender must implement `TakeCard` and the receiver, `AddCard`.
 ///
 /// # Errors
-/// - GameError::CardNotFound if the specified `Card` does not belong to the `sender`.
+/// - `GameError::CardNotFound` if the specified `Card` does not belong to the `sender`.
 pub fn transfer_card<C, S, R>(card: &Card<C>, sender: &mut S, recv: &mut R) -> Result<(), GameError>
 where
     C: CardFaces,

@@ -80,13 +80,16 @@ impl Die {
     /// let d0 = Die::new(0);  // panic!
     ///
     /// ```
+    #[must_use]
     pub fn new(sides: u8) -> Die {
         assert!(sides > 0, "a Die with zero sides cannot be created");
         Die { sides }
     }
 
-    /// Non-panic version of new(). Returns a GameError instead of panicking if
-    /// an attempt is made to create a zero-sided die.
+    /// Non-panic version of `Die::new()`.
+    ///
+    /// # Errors
+    /// - `GameError::DieWithNoSides` if called with `sides` set to zero.
     pub fn try_new(sides: u8) -> Result<Die, GameError> {
         if sides == 0 {
             Err(GameError::DieWithZeroSides)
@@ -103,11 +106,12 @@ impl Die {
     /// let value = d10.roll();
     /// assert!((1..=10).contains(&value));
     /// ```
+    #[must_use]
     pub fn roll(&self) -> u8 {
         rand::random_range(1..=self.sides)
     }
 
-    /// Rolls the die multiple times and returns results as a DicePool.
+    /// Rolls the die multiple times and returns results as a `DicePool`.
     ///
     /// ## Panics
     /// - panics on attempt to roll zero dice to create a pool
@@ -122,6 +126,7 @@ impl Die {
     ///
     /// let no_dice = d10.roll_into_pool(0);    // this will panic!
     /// ```
+    #[must_use]
     pub fn roll_into_pool(&self, times: usize) -> DicePool {
         assert!(
             times != 0,
@@ -132,10 +137,12 @@ impl Die {
         }
     }
 
-    /// Rolls the die a number of times and returns a DicePool.
-    /// This is a "try" version of roll_into_pool() suggested by @jerryshell. It functions
-    /// the same way as that function, but returns an error instead of panicking if called
-    /// with times = 0.
+    /// Rolls the die a number of times and returns a `DicePool`.
+    ///
+    /// This is a panic-free version of `roll_into_pool()`.
+    ///
+    /// # Errors
+    /// - `GameError::DicePoolWithNoDice` if called with `times` set to zero.
     pub fn try_roll_into_pool(&self, times: usize) -> Result<DicePool, GameError> {
         if times == 0 {
             Err(GameError::DicePoolWithNoDice)
@@ -150,7 +157,7 @@ impl Die {
     /// if the specified trigger number is rolled.
     ///
     /// The value returned is maxed at 255 so that exploding dice results can still
-    /// be used in a DicePool. Even with a d20, it would take rolling 13 consecutive 20s to hit the cap.
+    /// be used in a `DicePool`. Even with a d20, it would take rolling 13 consecutive 20s to hit the cap.
     ///
     /// ```
     /// use gametools::Die;
@@ -165,6 +172,7 @@ impl Die {
     ///     assert_ne!(result, 5)
     /// }
     /// ```
+    #[must_use]
     pub fn roll_explode_on(&self, trigger: u8) -> u8 {
         let mut total = self.roll();
         if total == trigger {
@@ -187,6 +195,7 @@ impl Die {
     ///     assert!(result % 10 != 0);
     /// }
     /// ```
+    #[must_use]
     pub fn roll_exploding(&self) -> u8 {
         self.roll_explode_on(self.sides)
     }
@@ -197,7 +206,7 @@ impl Die {
 /// This is considered as a group of n > 0 dice all simultaneously rolled. The collection containing
 /// the individual die states (rolls) is not guaranteed to maintain any particular order. For
 /// game logic where the order of results counts, it is generally better to get the rolls on demand
-/// through roll() or roll_exploding().
+/// through `roll()` or `roll_exploding()`.
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
@@ -224,7 +233,8 @@ impl From<Vec<u8>> for DicePool {
 }
 
 impl DicePool {
-    /// Creates a new, empty DicePool
+    /// Creates a new, empty `DicePool`
+    #[must_use]
     pub fn new() -> DicePool {
         DicePool {
             rolls: Vec::<u8>::new(),
@@ -232,26 +242,30 @@ impl DicePool {
     }
 
     /// Returns a slice of all rolls in the pool.
+    #[must_use]
     pub fn results(&self) -> &[u8] {
         &self.rolls
     }
 
     /// Adds a roll (u8) to the pool.
     pub fn add_roll(&mut self, roll: u8) {
-        self.rolls.push(roll)
+        self.rolls.push(roll);
     }
 
     /// Returns sum of all die rolls in the pool.
+    #[must_use]
     pub fn sum(&self) -> u64 {
-        self.rolls.iter().map(|x| *x as u64).sum()
+        self.rolls.iter().map(|x| u64::from(*x)).sum()
     }
 
     /// Returns number of die rolls in the pool.
+    #[must_use]
     pub fn size(&self) -> usize {
         self.rolls.len()
     }
 
-    /// Adds a buff / bonus to all rolls in the pool, with a maximum of 255 (u8_max).
+    /// Adds a buff / bonus to all rolls in the pool, with a maximum of 255 (`u8::MAX`).
+    #[must_use]
     pub fn buff(&self, bonus: u8) -> Self {
         let buffed_rolls = self
             .rolls
@@ -266,6 +280,7 @@ impl DicePool {
 
     /// Nerfs / reduces all rolls in the pool by the specified amount
     /// with a minimum of zero.
+    #[must_use]
     pub fn nerf(&self, penalty: u8) -> Self {
         let nerfed_rolls = self
             .rolls
@@ -278,8 +293,9 @@ impl DicePool {
         }
     }
 
-    /// Returns an tuple in an Option::Some((min, max)) of the rolls in the pool, or None if the pool is empty
+    /// Returns an tuple in an `Option::Some((min, max))` of the rolls in the pool, or None if the pool is empty
     /// or no minimum or maximum can be determined.
+    #[must_use]
     pub fn range(&self) -> Option<(u8, u8)> {
         // ? operator on iter().max() takes care of the empty pool case for us
         let max = self.rolls.iter().max()?;
@@ -288,8 +304,9 @@ impl DicePool {
     }
 
     /// Counts the number of times a particular value was rolled in the pool
+    #[must_use]
     pub fn count_roll(&self, value: u8) -> usize {
-        self.rolls.iter().filter(|&r| *r == value).count()
+        bytecount::count(&self.rolls, value)
     }
 
     /// Returns a hashmap of "binned" values from the dicepool, where bins\[value\] = # of times that value was rolled.
@@ -304,6 +321,7 @@ impl DicePool {
     /// assert_eq!(bins[&1], 2);
     /// assert!(bins.get(&5).is_none());
     /// ```
+    #[must_use]
     pub fn binned_rolls(&self) -> HashMap<u8, usize> {
         let mut bins = HashMap::new();
         for roll in &self.rolls {
@@ -315,6 +333,7 @@ impl DicePool {
     /// Returns a new pool with only the highest-scoring 'n' rolls, discarding the rest.
     /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
     /// unchanged (cloned) pool is returned.
+    #[must_use]
     pub fn take_highest(&self, count: usize) -> Self {
         match count {
             0 => DicePool::new(),
@@ -331,6 +350,7 @@ impl DicePool {
     /// Returns a new pool with only the lowest-scoring 'n' rolls, discarding the rest.
     /// If n is zero, an empty pool is returned. If n is greater than the pool size, an
     /// unchanged (cloned) pool is returned.
+    #[must_use]
     pub fn take_lowest(&self, count: usize) -> Self {
         match count {
             0 => DicePool::new(),
@@ -345,6 +365,7 @@ impl DicePool {
     }
 
     /// Rerolls any result that meets predicate criteria
+    #[must_use]
     pub fn reroll_if<F>(&self, die: &Die, predicate: F) -> DicePool
     where
         F: Fn(u8) -> bool,
@@ -369,22 +390,27 @@ impl DicePool {
     /// Counts the number of rolls in the pool over a specified threshold
     /// value.
     ///
-    /// This is a convenience function that simply calls count_if() with the
+    /// This is a convenience function that simply calls `count_if()` with the
     /// appropriate closure.
+    #[must_use]
     pub fn count_over(&self, threshold: u8) -> usize {
         self.count_if(|roll| roll > threshold)
     }
 
-    /// Takes a list of indices for dice to re-roll and returns a new DicePool with
+    /// Takes a list of indices for dice to re-roll and returns a new `DicePool` with
     /// new (but not necessarily different!) values for the indicated dice.
+    #[must_use]
     pub fn reroll_by_idx(&self, die: &Die, indices: &[usize]) -> DicePool {
         let new_rolls: Vec<_> = self
             .results()
             .iter()
             .enumerate()
-            .map(|(idx, orig_roll)| match indices.contains(&idx) {
-                true => die.roll(),
-                false => *orig_roll,
+            .map(|(idx, orig_roll)| {
+                if indices.contains(&idx) {
+                    die.roll()
+                } else {
+                    *orig_roll
+                }
             })
             .collect();
 

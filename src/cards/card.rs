@@ -80,10 +80,10 @@ impl<T: CardFaces> From<T> for Card<T> {
 }
 
 impl<T: CardFaces> Card<T> {
-    /// Create a new card from a struct that is CardFaces.
+    /// Create a new card from a struct that is `CardFaces`.
     ///
-    /// By default, there are orphan or dummy cards that don't belong to a Deck. A DeckId
-    /// is assigned to them if they are passed through Deck::new() or Deck::new_from_faces().
+    /// By default, there are orphan or dummy cards that don't belong to a Deck. A `DeckId`
+    /// is assigned to them if they are passed through `Deck::new()` or `Deck::new_from_faces()`.
     ///
     /// ```
     /// use gametools::{Card, CardFaces};

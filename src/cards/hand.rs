@@ -49,18 +49,20 @@ impl<T: CardFaces> Hand<T> {
     /// struct Face;
     ///
     /// impl CardFaces for Face {
-    ///     fn display_front(&self) -> String { String::from("X") }
-    ///     fn display_back(&self) -> Option<String> { None }
-    ///     fn matches(&self, _other: &Self) -> bool { true }
-    ///     fn compare(&self, _other: &Self) -> std::cmp::Ordering {
-    ///         std::cmp::Ordering::Equal
-    ///     }
+    ///     /* omitted for clarity */
+    /// #    fn display_front(&self) -> String { String::from("X") }
+    /// #    fn display_back(&self) -> Option<String> { None }
+    /// #    fn matches(&self, _other: &Self) -> bool { true }
+    /// #    fn compare(&self, _other: &Self) -> std::cmp::Ordering {
+    /// #        std::cmp::Ordering::Equal
+    /// #    }
     /// }
     ///
     /// let hand = Hand::<Face>::new("player");
     /// assert_eq!(hand.player, "player");
     /// assert_eq!(hand.size(), 0);
     /// ```
+    #[must_use]
     pub fn new(player: &str) -> Self {
         Self {
             player: player.to_string(),
@@ -69,6 +71,7 @@ impl<T: CardFaces> Hand<T> {
     }
 
     /// Obtain a slice of the cards in the hand.
+    #[must_use]
     pub fn cards(&self) -> &[Card<T>] {
         &self.cards
     }

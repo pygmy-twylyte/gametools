@@ -40,6 +40,7 @@ impl CardFaces for UnoCard {
 
 impl UnoCard {
     /// Returns `true` if this card can be legally played on the `other` card.
+    #[must_use]
     pub fn plays_on(&self, other: &UnoCard, declared_color: Option<UnoColor>) -> bool {
         use UnoAction::{DrawTwo, Reverse, Skip};
         use UnoCardKind::{Action, Number, Wild, WildDrawFour};
@@ -101,6 +102,7 @@ pub enum UnoCardKind {
 }
 impl UnoCardKind {
     /// Returns true if the card is a wild card.
+    #[must_use]
     pub fn is_wild(&self) -> bool {
         matches!(self, Self::Wild | Self::WildDrawFour)
     }
@@ -108,8 +110,8 @@ impl UnoCardKind {
 impl std::fmt::Display for UnoCardKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            UnoCardKind::Number(number) => write!(f, "#{}", number),
-            UnoCardKind::Action(action) => write!(f, "{}", action),
+            UnoCardKind::Number(number) => write!(f, "#{number}"),
+            UnoCardKind::Action(action) => write!(f, "{action}"),
             UnoCardKind::Wild => write!(f, "Wild"),
             UnoCardKind::WildDrawFour => write!(f, "Wild + Draw 4"),
         }
@@ -143,6 +145,7 @@ pub const MAIN_UNO_COLORS: &[UnoColor] = &[
 ];
 
 /// Create a full set of 108 Uno cards
+#[must_use]
 pub fn full_uno_set() -> Vec<UnoCard> {
     let mut cards = Vec::new();
     cards.extend(uno_number_cards());
@@ -152,6 +155,7 @@ pub fn full_uno_set() -> Vec<UnoCard> {
 }
 
 /// Create all of the number card faces for a standard Uno deck
+#[must_use]
 pub fn uno_number_cards() -> Vec<UnoCard> {
     let mut cards = Vec::new();
     for color in MAIN_UNO_COLORS {
@@ -159,8 +163,9 @@ pub fn uno_number_cards() -> Vec<UnoCard> {
             for _ in 0..*count {
                 cards.push(UnoCard {
                     color: *color,
+                    #[allow(clippy::cast_possible_truncation)]
                     kind: UnoCardKind::Number(number as u8),
-                })
+                });
             }
         }
     }
@@ -168,6 +173,7 @@ pub fn uno_number_cards() -> Vec<UnoCard> {
 }
 
 /// Create all of the action cards in a standard Uno deck
+#[must_use]
 pub fn uno_action_cards() -> Vec<UnoCard> {
     let mut cards = Vec::new();
     for color in MAIN_UNO_COLORS {
@@ -190,6 +196,7 @@ pub fn uno_action_cards() -> Vec<UnoCard> {
 }
 
 /// Create the wild cards for a standard Uno deck
+#[must_use]
 pub fn uno_wild_cards() -> Vec<UnoCard> {
     let mut cards = Vec::new();
     for _ in 0..4 {
@@ -211,6 +218,7 @@ impl super::Hand<UnoCard> {
     /// `declared_color` should be provided when a wild has set the active color; when `None`
     /// the visible face drives eligibility. Each result pairs the card's index within the
     /// hand (handy for follow-up removal) with a reference to the card.
+    #[must_use]
     pub fn playable_on(
         &self,
         top: &Card<UnoCard>,
@@ -225,6 +233,7 @@ impl super::Hand<UnoCard> {
         playable
     }
     /// Determine the number of points this hand is currently worth.
+    #[must_use]
     pub fn points(&self) -> usize {
         let mut pts = 0usize;
         for card in self.cards() {
