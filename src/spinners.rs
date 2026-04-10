@@ -3,7 +3,7 @@
 //! Implements a game Spinner, comprised of Wedges which can be uniform or of different
 //! relative widths, and can be blocked / covered according to game conditions. Wedges
 //! may contain numeric values, strings, enums, or other user-defined types (so long as
-//! they implement Clone and PartialEq). Spinner methods largely return new Spinners
+//! they implement `Clone` and `PartialEq`). Spinner methods largely return new Spinners
 //! with the requested changes, rather than modifying the original spinner. This is
 //! to allow for functional (chainable) programming patterns, and to avoid mutable state.
 //!
@@ -96,6 +96,7 @@ pub fn wedges_from_values<T: Clone>(values: Vec<T>) -> Vec<Wedge<T>> {
 /// assert_eq!(wedges.len(), 3);
 /// assert_eq!(wedges[0], Wedge::new_weighted("Small", 1));
 /// ```
+#[must_use]
 pub fn wedges_from_tuples<T: Clone>(tuples: Vec<(T, usize)>) -> Vec<Wedge<T>> {
     tuples
         .into_iter()
@@ -134,6 +135,7 @@ impl<T: Clone> Wedge<T> {
     }
 
     /// Creates a new wedge with commonly used defaults (width = 1, active = true).
+    #[must_use]
     pub fn new(value: T) -> Self {
         Self {
             value,
@@ -143,6 +145,7 @@ impl<T: Clone> Wedge<T> {
     }
 
     /// Cover this wedge (blocks spinner from returning this value when landing on it.)
+    #[must_use]
     pub fn cover(&self) -> Self {
         Self {
             value: self.value.clone(),
@@ -152,6 +155,7 @@ impl<T: Clone> Wedge<T> {
     }
 
     /// Uncover this wedge (removes any block so value is returned if spinner lands on it.)
+    #[must_use]
     pub fn uncover(&self) -> Self {
         Self {
             value: self.value.clone(),
@@ -188,12 +192,14 @@ where
 
 impl<T: Clone> Spinner<T> {
     /// Create a new spinner with a vector of wedges.
+    #[must_use]
     pub fn new(wedges: Vec<Wedge<T>>) -> Self {
         let weights = wedges.iter().map(|w| w.width).collect();
         Self { wedges, weights }
     }
 
     /// Obtain a vector of the wedges currently on the spinner.
+    #[must_use]
     pub fn wedges(&self) -> Vec<Wedge<T>> {
         self.wedges.clone()
     }
@@ -216,6 +222,7 @@ impl<T: Clone> Spinner<T> {
     /// ]);
     /// let toss = loaded_coin.spin().unwrap();  // will be "Heads" 75% of the time
     /// ```
+    #[must_use]
     pub fn spin(&self) -> Option<T> {
         if self.wedges.is_empty() {
             return None;
@@ -230,14 +237,16 @@ impl<T: Clone> Spinner<T> {
     }
 
     /// Covers (inactivates) all wedges on the spinner.
+    #[must_use]
     pub fn cover_all(&self) -> Spinner<T> {
-        let all_covered = self.wedges.iter().map(|w| w.cover()).collect();
+        let all_covered = self.wedges.iter().map(Wedge::cover).collect();
         Spinner::new(all_covered)
     }
 
     /// Uncover / (re)activate all wedges on the spinner.
+    #[must_use]
     pub fn uncover_all(&self) -> Spinner<T> {
-        let uncovered = self.wedges.iter().map(|w| w.uncover()).collect();
+        let uncovered = self.wedges.iter().map(Wedge::uncover).collect();
         Spinner::new(uncovered)
     }
 
@@ -259,6 +268,7 @@ impl<T: Clone> Spinner<T> {
     /// }
     ///
     /// ```
+    #[must_use]
     pub fn add_wedge(&self, new_wedge: Wedge<T>) -> Spinner<T> {
         let mut added = self.wedges.clone();
         added.push(new_wedge);
@@ -284,42 +294,54 @@ impl<T: Clone + PartialEq> Spinner<T> {
     ///     assert!((color == "Green") | (color == "Blue"));
     /// }
     /// ```
+    #[must_use]
     pub fn cover(&self, target_val: &T) -> Spinner<T> {
         // create and return a new spinner with active = false on target wedges
         let wedges = &self.wedges;
         let covered = wedges
             .iter()
-            .map(|w| match w.value == *target_val {
-                true => w.cover(),
-                false => w.clone(),
+            .map(|w| {
+                if w.value == *target_val {
+                    w.cover()
+                } else {
+                    w.clone()
+                }
             })
             .collect();
         Spinner::new(covered)
     }
 
     /// Returns a new spinner after uncovering any wedges that match a target value.
+    #[must_use]
     pub fn uncover(&self, target_val: &T) -> Spinner<T> {
         // create and return a new spinner with active = true on target wedges
         let wedges = &self.wedges;
         let uncovered = wedges
             .iter()
-            .map(|w| match w.value == *target_val {
-                true => w.uncover(),
-                false => w.clone(),
+            .map(|w| {
+                if w.value == *target_val {
+                    w.uncover()
+                } else {
+                    w.clone()
+                }
             })
             .collect();
         Spinner::new(uncovered)
     }
 
     /// Replaces a wedge value with another. Affects all wedges with that value.
-    pub fn replace_value(&self, match_val: &T, new_val: T) -> Spinner<T> {
+    #[must_use]
+    pub fn replace_value(&self, match_val: &T, new_val: &T) -> Spinner<T> {
         let wedges = &self.wedges;
         let updated = wedges
             .clone()
             .into_iter()
-            .map(|w| match w.value == *match_val {
-                true => Wedge::new_weighted(new_val.clone(), w.width),
-                false => w,
+            .map(|w| {
+                if w.value == *match_val {
+                    Wedge::new_weighted(new_val.clone(), w.width)
+                } else {
+                    w
+                }
             })
             .collect();
         Spinner::new(updated)
@@ -341,6 +363,7 @@ impl<T: Clone + PartialEq> Spinner<T> {
     ///     assert_ne!(spin, "Lose");
     /// }
     /// ```
+    #[must_use]
     pub fn remove_wedges(&self, value: &T) -> Spinner<T> {
         let wedges = &self.wedges;
         let shrunken = wedges
@@ -582,7 +605,7 @@ mod spinner_tests {
             Wedge::new("Signals"),
             Wedge::new("Sheik Yerbouti"), // oops, that's Zappa
         ]);
-        let rush_albums = rush_albums.replace_value(&"Sheik Yerbouti", "Power Windows");
+        let rush_albums = rush_albums.replace_value(&"Sheik Yerbouti", &"Power Windows");
         for _ in 1..100 {
             assert!(["2112", "Signals", "Power Windows"].contains(&rush_albums.spin().unwrap()))
         }
@@ -593,7 +616,7 @@ mod spinner_tests {
         let apple = String::from("Apple");
         let banana = String::from("Banana");
         let spinner = Spinner::new(vec![Wedge::new(apple.clone())]);
-        let spinner = spinner.replace_value(&apple, banana.clone());
+        let spinner = spinner.replace_value(&apple, &banana);
         assert_eq!(spinner.spin().unwrap(), banana);
     }
 }
