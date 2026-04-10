@@ -52,6 +52,7 @@ pub struct Deck<T: CardFaces> {
 }
 impl<T: CardFaces + Clone> Deck<T> {
     /// Create a new, empty `Deck`
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: String::new(),
@@ -149,11 +150,13 @@ impl<T: CardFaces + Clone> Deck<T> {
 
 impl<T: CardFaces> Deck<T> {
     /// Obtain a slice of the cards remaining in the deck.
+    #[must_use]
     pub fn cards(&self) -> &[Card<T>] {
         &self.cards
     }
 
     /// Get the unique identifier for this deck.
+    #[must_use]
     pub fn deck_id(&self) -> DeckId {
         self.deck_id
     }
@@ -258,9 +261,9 @@ impl<T: CardFaces> Deck<T> {
 impl<T: CardFaces> Default for Deck<T> {
     fn default() -> Self {
         Self {
-            name: Default::default(),
+            name: String::default(),
             deck_id: DeckId(Uuid::new_v4()),
-            cards: Default::default(),
+            cards: Vec::default(),
         }
     }
 }

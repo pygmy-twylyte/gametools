@@ -53,6 +53,7 @@ impl StandardCard {
     /// assert_eq!(card.rank, Rank::Queen);
     /// assert_eq!(card.suit, Suit::Hearts);
     /// ```
+    #[must_use]
     pub fn new_card(rank: Rank, suit: Suit) -> Self {
         Self {
             rank,
@@ -129,6 +130,7 @@ impl Rank {
     /// assert!(ranks.contains(&Rank::Ace));
     /// assert!(!ranks.contains(&Rank::Joker));
     /// ```
+    #[must_use]
     pub fn normal_ranks() -> Vec<Rank> {
         vec![
             Rank::Two,
@@ -147,6 +149,7 @@ impl Rank {
         ]
     }
     /// Return the standard ranks plus the optional `Rank::Joker`.
+    #[must_use]
     pub fn all_ranks() -> Vec<Rank> {
         let mut all_ranks = Rank::normal_ranks();
         all_ranks.push(Rank::Joker);
@@ -162,6 +165,7 @@ impl Rank {
     /// assert_eq!(Rank::from_value(1), Some(Rank::Ace));
     /// assert_eq!(Rank::from_value(42), None);
     /// ```
+    #[must_use]
     pub fn from_value(value: u8) -> Option<Rank> {
         match value {
             1 | 14 => Some(Rank::Ace),
@@ -213,10 +217,12 @@ impl Suit {
     /// assert_eq!(suits.len(), 4);
     /// assert!(suits.contains(&Suit::Hearts));
     /// ```
+    #[must_use]
     pub fn normal_suits() -> Vec<Suit> {
         vec![Suit::Clubs, Suit::Hearts, Suit::Diamonds, Suit::Spades]
     }
     /// Return the four suits plus `Suit::Wild`.
+    #[must_use]
     pub fn all_suits() -> Vec<Suit> {
         let mut all_suits = Suit::normal_suits();
         all_suits.push(Suit::Wild);
@@ -238,6 +244,7 @@ impl Suit {
 /// let deck = standard_52();
 /// assert_eq!(deck.len(), 52);
 /// ```
+#[must_use]
 pub fn standard_52() -> Vec<StandardCard> {
     let mut deck = Vec::new();
     for suit in Suit::normal_suits() {
@@ -250,10 +257,15 @@ pub fn standard_52() -> Vec<StandardCard> {
 
 /// Trait that extends a `Vec<StandardCard>` to assist in building modified decks.
 pub trait DeckModifier {
+    #[must_use]
     fn add_jokers(self, count: u8) -> Self;
+    #[must_use]
     fn remove_ranks(self, ranks: &[Rank]) -> Self;
+    #[must_use]
     fn remove_suits(self, suits: &[Suit]) -> Self;
+    #[must_use]
     fn add_cards(self, cards: impl Iterator<Item = StandardCard>) -> Self;
+    #[must_use]
     fn duplicate(self, times: usize) -> Self;
 }
 impl DeckModifier for Vec<StandardCard> {
@@ -296,16 +308,33 @@ impl DeckModifier for Vec<StandardCard> {
 /// let deck = standard_52_with_jokers();
 /// assert_eq!(deck.len(), 54);
 /// ```
+#[must_use]
 pub fn standard_52_with_jokers() -> Vec<StandardCard> {
     standard_52().add_jokers(2)
 }
 
 /// Create a Piquet deck (32 cards, ranks 2-6 excluded.)
+///
+/// ```
+/// use gametools::cards::std_playing_cards::piquet_deck;
+///
+/// let deck = piquet_deck();
+/// assert_eq!(deck.len(), 32);
+/// ```
+#[must_use]
 pub fn piquet_deck() -> Vec<StandardCard> {
     standard_52().remove_ranks(&[Rank::Two, Rank::Three, Rank::Four, Rank::Five, Rank::Six])
 }
 
 /// Create a Euchre deck (24 cards, ranks 2-8 excluded.
+///
+/// ```
+/// use gametools::cards::std_playing_cards::euchre_deck;
+///
+/// let deck = euchre_deck();
+/// assert_eq!(deck.len(), 24);
+/// ```
+#[must_use]
 pub fn euchre_deck() -> Vec<StandardCard> {
     standard_52().remove_ranks(&[
         Rank::Two,
@@ -330,6 +359,7 @@ impl Hand<StandardCard> {
     /// assert!(hand.contains(Rank::Ace, Suit::Spades));
     /// assert!(!hand.contains(Rank::Queen, Suit::Hearts));
     /// ```
+    #[must_use]
     pub fn contains(&self, rank: Rank, suit: Suit) -> bool {
         let search = StandardCard::new_card(rank, suit);
         self.cards().iter().any(|card| card.faces.matches(&search))
@@ -347,6 +377,7 @@ impl Hand<StandardCard> {
     /// hand.add_card(Card::new_card(StandardCard::new_card(Rank::King, Suit::Clubs)));
     /// assert_eq!(hand.count_rank(Rank::Ace), 2);
     /// ```
+    #[must_use]
     pub fn count_rank(&self, rank: Rank) -> usize {
         self.cards().iter().filter(|c| c.faces.rank == rank).count()
     }
@@ -366,6 +397,7 @@ impl Hand<StandardCard> {
     /// assert_eq!(ranks.get(&Rank::Three), Some(&2));
     /// assert_eq!(ranks.get(&Rank::Ace), Some(&1));
     /// ```
+    #[must_use]
     pub fn rank_map(&self) -> BTreeMap<Rank, usize> {
         let mut rank_map = BTreeMap::new();
         for card in self.cards() {
@@ -378,11 +410,13 @@ impl Hand<StandardCard> {
     }
 
     /// Count how many cards in the hand have a specific suit.
+    #[must_use]
     pub fn count_suit(&self, suit: Suit) -> usize {
         self.cards().iter().filter(|c| c.faces.suit == suit).count()
     }
 
     /// Create a map of `Suit` counts for the current `Hand`.
+    #[must_use]
     pub fn suit_map(&self) -> BTreeMap<Suit, usize> {
         let mut suit_map = BTreeMap::new();
         for card in self.cards() {
@@ -395,6 +429,7 @@ impl Hand<StandardCard> {
     }
 
     /// Returns true if every card in the hand belongs to the same `Suit`.
+    #[must_use]
     pub fn is_flush(&self) -> bool {
         let total_cards = self.size();
         if total_cards == 0 {
@@ -416,6 +451,7 @@ impl Hand<StandardCard> {
     /// Check for N cards of a kind.
     ///
     /// Returns `None` if none reach N, or `Some` cards if there are any.
+    #[must_use]
     pub fn find_n_of_a_kind(&self, count: usize) -> Option<Vec<&StandardCard>> {
         if count == 0 {
             return Some(Vec::new());
@@ -457,6 +493,7 @@ impl Hand<StandardCard> {
     /// Returns `Some` ordered cards that form a straight of the requested length, or `None` if no straight exists.
     ///
     /// Jokers serve as wild cards and may fill any missing rank. Aces may be used high or low.
+    #[must_use]
     pub fn find_n_straight(&self, count: usize) -> Option<Vec<&StandardCard>> {
         // handle edge cases with obvious results
         if count == 0 {
@@ -494,6 +531,7 @@ impl Hand<StandardCard> {
             let mut success = true;
 
             for offset in 0..count {
+                #[allow(clippy::cast_possible_truncation)]
                 let value = (start + offset) as u8;
                 let Some(rank) = Rank::from_value(value) else {
                     success = false;
@@ -501,11 +539,11 @@ impl Hand<StandardCard> {
                 };
 
                 // if there's a natural card to fill this rank slot, use it and move on
-                if let Some(cards) = available.get_mut(&rank) {
-                    if let Some(card) = cards.pop() {
-                        straight_cards.push(card);
-                        continue;
-                    }
+                if let Some(cards) = available.get_mut(&rank)
+                    && let Some(card) = cards.pop()
+                {
+                    straight_cards.push(card);
+                    continue;
                 }
 
                 // if there's Joker to fill this rank slot, use it and move on

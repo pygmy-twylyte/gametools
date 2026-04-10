@@ -58,6 +58,7 @@ impl<T: CardFaces> Pile<T> {
     /// assert_eq!(pile.name, "discard");
     /// assert!(pile.cards().is_empty());
     /// ```
+    #[must_use]
     pub fn new_pile(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -66,6 +67,7 @@ impl<T: CardFaces> Pile<T> {
     }
 
     /// Peek at the card on top of the pile.
+    #[must_use]
     pub fn check_top_card(&self) -> Option<&Card<T>> {
         self.cards.last()
     }
@@ -77,6 +79,7 @@ impl<T: CardFaces> Pile<T> {
     }
 
     /// Obtain a slice of the cards in the pile.
+    #[must_use]
     pub fn cards(&self) -> &[Card<T>] {
         &self.cards
     }
