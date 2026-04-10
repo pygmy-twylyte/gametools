@@ -119,6 +119,7 @@ impl<T> RefillingPool<T> {
     pub fn add(&mut self, item: T) {
         self.items.push(item);
         self.unused.push(self.items.len() - 1);
+        self.unused.shuffle(&mut rand::rng());
     }
 
     /// Remove an item from the pool by index.
