@@ -53,19 +53,23 @@ pub struct Domino {
 impl Domino {
     /// Create a new domino.
     ///
-    /// Typically called from Bonepile:new() when creating a new set of dominos,
+    /// Typically called from `Bonepile:new()` when creating a new set of dominos,
     /// but can be used directly if desired. The id field is meant to hold a unique
     /// numeric id for the tile, making it easier to track when left and right can
     /// be flipped at any time.
+    #[must_use]
     pub fn new(left: u8, right: u8, id: usize) -> Self {
         Self { left, right, id }
     }
+    #[must_use]
     pub fn left(&self) -> u8 {
         self.left
     }
+    #[must_use]
     pub fn right(&self) -> u8 {
         self.right
     }
+    #[must_use]
     pub fn id(&self) -> usize {
         self.id
     }
@@ -78,6 +82,7 @@ impl Domino {
     /// assert_eq!(right, worst_tile.right());
     /// assert_eq!(unique_id, worst_tile.id());
     /// ```
+    #[must_use]
     pub fn as_tuple(&self) -> (u8, u8, usize) {
         (self.left, self.right, self.id)
     }
@@ -91,6 +96,7 @@ impl Domino {
     /// assert_eq!(flipped.left(), right_orig);
     /// assert_eq!(flipped.id(), id_orig);
     /// ```
+    #[must_use]
     pub fn flipped(&self) -> Self {
         Self {
             left: self.right,
@@ -109,6 +115,7 @@ impl Domino {
     /// assert_eq!(tile_0_0.points_with_zero_worth(0), 0);
     /// assert_eq!(tile_10_5.points_with_zero_worth(50), 15);
     /// ```
+    #[must_use]
     pub fn points_with_zero_worth(&self, value: u8) -> u8 {
         match self.left + self.right {
             0 => value,
@@ -117,6 +124,7 @@ impl Domino {
     }
 
     /// Returns the total number of pips on the tile.
+    #[must_use]
     pub fn points(&self) -> u8 {
         self.left + self.right
     }
@@ -137,7 +145,8 @@ pub struct BonePile {
 impl BonePile {
     /// Create a new randomized set of dominos, specifying the maximum number of pips per side.
     ///
-    /// This is capped at MAX_PIPS = 18 per side, the highest typically found in any domino set.
+    /// This is capped at `MAX_PIPS` = 18 per side, the highest typically found in any domino set.
+    #[must_use]
     pub fn new(most_pips: u8) -> Self {
         let mut tiles = Vec::<Domino>::new();
         let max = std::cmp::min(most_pips, MAX_PIPS);
@@ -190,18 +199,15 @@ pub struct Train {
 }
 impl fmt::Display for Train {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let open_or_closed = match self.open {
-            true => "[O]-",
-            false => "[X]-",
-        };
+        let open_or_closed = if self.open { "[O]-" } else { "[X]-" };
         let head = format!("-({})", self.head);
         let mut output = open_or_closed.to_string();
         output.push_str(&self.player);
         output.push_str(&head);
         for tile in &self.tiles {
-            output.push_str(&tile.to_string())
+            output.push_str(&tile.to_string());
         }
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 impl Train {
@@ -216,6 +222,7 @@ impl Train {
     /// let player_train = Train::new("JoePlayer#123", false, start_val);
     /// let community_train = Train::new("everyone", true, start_val);
     /// ```
+    #[must_use]
     pub fn new(player: &str, open: bool, start: u8) -> Self {
         Self {
             player: player.to_owned(),
@@ -227,8 +234,8 @@ impl Train {
     }
     /// Attempt to play a tile on the train.
     ///
-    /// Returns Err(GameError) if it isn't a valid play or if the train
-    /// is closed and doesn't belong to the calling player.
+    /// # Errors
+    /// - if it isn't a valid play or if the train is closed and doesn't belong to the calling player.
     pub fn play(&mut self, tile: Domino, player: &str) -> GameResult<()> {
         if !self.open && self.player != player {
             return Err(GameError::TrainClosed);
@@ -258,11 +265,12 @@ impl fmt::Display for DominoHand {
         for tile in &self.tiles {
             output.push_str(&tile.to_string());
         }
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 impl DominoHand {
     /// Create a new empty hand.
+    #[must_use]
     pub fn new(player: &str) -> Self {
         Self {
             player: player.to_owned(),
@@ -271,7 +279,8 @@ impl DominoHand {
     }
     /// Create a new hand and draw tiles for it.
     ///
-    /// This returns either Ok(DominoHand), or Err(GameError::InsufficientTiles).
+    /// # Errors
+    /// - if the pile does not have enough tiles to draw the requested count.
     pub fn new_with_draw(player: &str, count: usize, pile: &mut BonePile) -> GameResult<Self> {
         if let Some(starting_tiles) = pile.draw_tiles(count) {
             Ok(Self {
@@ -291,6 +300,7 @@ impl DominoHand {
     /// hand of 15 tiles, execution takes around 200-300 ms on a modern processor (unoptimized + debug)...
     /// but it increases exponentially. A few runs of 25 tiles took anywhere from 11 sec to 3 min,
     /// and I didn't wait long enough for 30 tiles to finish.
+    #[must_use]
     pub fn find_longest_from(&self, head: u8) -> Vec<usize> {
         // * build a graph - #pips are nodes, and dominos that connect them are edges
         // * modeled with a HashMap (key = #pips, val = list of domino ids that can connect to it)
@@ -340,19 +350,20 @@ impl DominoHand {
             *best = working.clone();
         }
     }
+
     /// Takes a sequence of domino ids and attempt to play them on a train.
     ///
-    /// _PANIC_ : if you pass a domino_id that doesn't exist in this hand
-    ///
-    /// The will return with an error if a tile doesn't match the one before it,
-    /// or if this player doesn't have permission to use that train.
+    /// # Errors
+    /// - if a tile in the sequence doesn't fit in the train
+    /// - if the player doesn't have permission to play on the train
+    /// - if one of the tiles in the sequence is missing from the hand
     pub fn play_line(&mut self, id_sequence: &[usize], train: &mut Train) -> GameResult<()> {
         for domino_id in id_sequence {
             let pos = self
                 .tiles
                 .iter()
                 .position(|&t| t.id == *domino_id)
-                .expect("specified domino id not found in play_line");
+                .ok_or(GameError::TileNotFound(*domino_id))?;
             let tile = self.tiles.swap_remove(pos);
             train.play(tile, &self.player)?;
         }
@@ -540,8 +551,7 @@ mod domino_tests {
     }
 
     #[test]
-    #[should_panic]
-    fn hand_play_line_panics_on_bad_id() {
+    fn hand_play_line_errors_on_bad_id() {
         // create a hand with 3 sequential dominos and an open/community train
         let mut hand = DominoHand::new("test");
         hand.tiles = vec![
@@ -552,7 +562,7 @@ mod domino_tests {
         let mut train = Train::new("open", true, 1);
 
         let bad_sequence = vec![9, 8, 9, 8]; // these domino ids aren't in the hand
-        let _result = hand.play_line(&bad_sequence, &mut train); // should panic!
+        assert!(hand.play_line(&bad_sequence, &mut train).is_err());
     }
 
     #[test]
