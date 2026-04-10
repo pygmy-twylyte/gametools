@@ -46,7 +46,7 @@ pub struct Deck<T: CardFaces> {
     /// Friendly name used to describe the deck.
     pub name: String,
     /// Unique identifier automatically assigned at deck creation.
-    id: DeckId,
+    deck_id: DeckId,
     /// Cards stored with the "top" card at the end of the vector.
     cards: Vec<Card<T>>,
 }
@@ -56,7 +56,7 @@ impl<T: CardFaces + Clone> Deck<T> {
     pub fn new() -> Self {
         Self {
             name: String::new(),
-            id: DeckId(Uuid::new_v4()),
+            deck_id: DeckId(Uuid::new_v4()),
             cards: Vec::new(),
         }
     }
@@ -89,7 +89,7 @@ impl<T: CardFaces + Clone> Deck<T> {
         let deck_id = DeckId(Uuid::new_v4());
         Self {
             name: name.to_string(),
-            id: deck_id,
+            deck_id,
             cards: cards
                 .into_iter()
                 .map(|mut c| {
@@ -108,7 +108,7 @@ impl<T: CardFaces + Clone> Deck<T> {
         let deck_id = DeckId(Uuid::new_v4());
         Self {
             name: name.to_string(),
-            id: deck_id,
+            deck_id,
             cards: faces
                 .into_iter()
                 .map(|face| {
@@ -158,7 +158,7 @@ impl<T: CardFaces> Deck<T> {
     /// Get the unique identifier for this deck.
     #[must_use]
     pub fn deck_id(&self) -> DeckId {
-        self.id
+        self.deck_id
     }
 
     /// Randomly permute the order of cards in the deck.
@@ -209,7 +209,7 @@ impl<T: CardFaces> Deck<T> {
     /// ```
     pub fn owns_card(&self, card: &Card<T>) -> bool {
         if let Some(card_deck_id) = &card.deck_id {
-            self.id == *card_deck_id
+            self.deck_id == *card_deck_id
         } else {
             false
         }
@@ -262,7 +262,7 @@ impl<T: CardFaces> Default for Deck<T> {
     fn default() -> Self {
         Self {
             name: String::default(),
-            id: DeckId(Uuid::new_v4()),
+            deck_id: DeckId(Uuid::new_v4()),
             cards: Vec::default(),
         }
     }
@@ -347,14 +347,22 @@ mod tests {
         assert_eq!(ids, vec![1, 2]);
         // ensure original faces untouched
         assert_eq!(faces[0].id, 1);
-        assert!(deck.cards.iter().all(|card| card.deck_id == Some(deck.id)));
+        assert!(
+            deck.cards
+                .iter()
+                .all(|card| card.deck_id == Some(deck.deck_id))
+        );
     }
 
     #[test]
     fn new_assigns_deck_id_to_all_cards() {
         let deck = Deck::from_cards("test", [make_card(1), make_card(2)]);
 
-        assert!(deck.cards.iter().all(|card| card.deck_id == Some(deck.id)));
+        assert!(
+            deck.cards
+                .iter()
+                .all(|card| card.deck_id == Some(deck.deck_id))
+        );
         assert!(deck.cards.iter().all(|card| card.deck_id.is_some()));
     }
 
