@@ -133,7 +133,9 @@ impl<T> RefillingPool<T> {
             return Err(GameError::PoolCannotBeEmpty);
         }
         self.unused.retain(|&ui| ui != index);
-        Ok(self.items.swap_remove(index))
+        let item = self.items.swap_remove(index);
+        self.refill();
+        Ok(item)
     }
 
     /// Get the size of the pool when new or newly refilled.
@@ -146,6 +148,7 @@ impl<T> RefillingPool<T> {
     /// assert_eq!( pool.full_size(), 3);
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn full_size(&self) -> usize {
         self.items.len()
     }
@@ -162,6 +165,7 @@ impl<T> RefillingPool<T> {
     /// assert_eq!( pool.current_size(), 9 );
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn current_size(&self) -> usize {
         self.unused.len()
     }
@@ -228,6 +232,10 @@ impl<T: Clone> RefillingPool<T> {
     /// let drawn_letter = pool.draw();
     /// assert!(['a','b','c'].contains(&drawn_letter));
     /// # Ok(()) }
+    #[allow(
+        clippy::missing_panics_doc,
+        reason = "cannot panic, refills before pop()"
+    )]
     pub fn draw(&mut self) -> T {
         if self.unused.is_empty() {
             self.refill();
@@ -241,6 +249,14 @@ impl<T: Clone> Iterator for RefillingPool<T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         Some(self.draw())
+    }
+}
+
+impl<T: Clone> TryFrom<&[T]> for RefillingPool<T> {
+    type Error = GameError;
+
+    fn try_from(items: &[T]) -> Result<Self, Self::Error> {
+        RefillingPool::new(items.to_vec())
     }
 }
 
@@ -280,5 +296,45 @@ mod tests {
         // next draw() should trigger refill then immediate draw()
         pool.draw();
         assert_eq!(pool.current_size(), 2);
+    }
+
+    #[test]
+    fn test_refilling_pool_add() {
+        let mut pool = RefillingPool::new([1, 2, 3]).unwrap();
+        for _ in 1..=300 {
+            assert!([1, 2, 3].contains(&pool.draw()))
+        }
+        pool.add(4);
+        assert_eq!(pool.full_size(), 4);
+        for _ in 1..=300 {
+            assert!([1, 2, 3, 4].contains(&pool.draw()))
+        }
+    }
+
+    #[test]
+    fn test_refilling_pool_remove_index() {
+        let mut pool = RefillingPool::new([1, 2, 3]).unwrap();
+        let _ = pool.remove_index(0);
+        assert_eq!(pool.full_size(), 2);
+        assert_eq!(pool.current_size(), 2);
+        assert!(pool.take(500).all(|item| item != 1));
+    }
+
+    #[test]
+    fn test_refilling_pool_index_of() {
+        let pool = RefillingPool::new([1, 2, 3]).unwrap();
+        assert_eq!(pool.index_of(&1), Some(0));
+        assert_eq!(pool.index_of(&2), Some(1));
+        assert_eq!(pool.index_of(&3), Some(2));
+        assert_eq!(pool.index_of(&4), None);
+    }
+
+    #[test]
+    fn test_refilling_pool_remove() {
+        let mut pool = RefillingPool::new([1, 2, 3]).unwrap();
+        let _ = pool.remove(&1);
+        assert_eq!(pool.full_size(), 2);
+        assert_eq!(pool.current_size(), 2);
+        assert!(pool.take(500).all(|item| item != 1));
     }
 }
