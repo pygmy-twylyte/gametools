@@ -233,6 +233,7 @@ impl<T: Clone> RefillingPool<T> {
     /// let drawn_letter = pool.draw();
     /// assert!(['a','b','c'].contains(&drawn_letter));
     /// # Ok(()) }
+    ///
     #[allow(
         clippy::missing_panics_doc,
         reason = "cannot panic, refills before pop()"
@@ -242,6 +243,126 @@ impl<T: Clone> RefillingPool<T> {
             self.refill();
         }
         self.items[self.unused.pop().unwrap()].clone()
+    }
+
+    /// Draw an item from the pool, but filtered by a predicate.
+    ///
+    /// When drawing from the pool in this form, it **may not be an infinite source**:
+    /// if no `unused` items in the current refill cycle pass the predicate, `None` is
+    /// returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use gametools::{GameResult, RefillingPool};
+    /// # fn main() -> GameResult<()> {
+    /// let mut pool = RefillingPool::new(['a', 'b', 'c'])?;
+    ///
+    /// let drawn_letter = pool.draw_where(|c| *c == 'a');
+    /// assert_eq!(drawn_letter, Some('a'));
+    ///
+    /// let no_a_left_until_refill = pool.draw_where(|c| *c == 'a');
+    /// assert_eq!(no_a_left_until_refill, None);
+    /// # Ok(()) }
+    ///
+    pub fn draw_where<F>(&mut self, mut pred: F) -> Option<T>
+    where
+        F: FnMut(&T) -> bool,
+    {
+        if self.unused.is_empty() {
+            self.refill();
+        }
+
+        let passing_unused_idx = self.unused.iter().position(|i| pred(&self.items[*i]))?;
+        let passing_item_idx = self.unused.swap_remove(passing_unused_idx);
+        Some(self.items[passing_item_idx].clone())
+    }
+
+    /// Draw an item from the pool, but filtered by a predicate using supplied context.
+    ///
+    /// When drawing using this method, **it is not guaranteed to be an infinite source**:
+    /// If none of the unused items in the current refill cycle match the predicate in the
+    /// given `context`, `None` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use gametools::RefillingPool;
+    /// # use gametools::GameResult;
+    /// # fn main() -> GameResult<()> {
+    ///
+    /// let mut pool = RefillingPool::new([1, 2, 3, 4])?;
+    ///
+    /// let mode = 2;
+    /// let chooser = |c: &i32, i: &i32| *i % *c == 0;
+    ///
+    /// let even = pool.draw_with_context(&mode, chooser);
+    /// assert!(even.is_some());
+    ///
+    /// let even = pool.draw_with_context(&mode, chooser);
+    /// assert!(even.is_some());
+    ///
+    /// let even = pool.draw_with_context(&mode, chooser);
+    /// assert!(even.is_none());
+    /// assert_eq!(pool.current_size(), 2);
+    /// # Ok(()) }
+    /// ```
+    pub fn draw_with_context<C, F>(&mut self, context: &C, mut chooser: F) -> Option<T>
+    where
+        F: FnMut(&C, &T) -> bool,
+    {
+        if self.unused.is_empty() {
+            self.refill();
+        }
+
+        let passing_unused_idx = self
+            .unused
+            .iter()
+            .position(|i| chooser(context, &self.items[*i]))?;
+        let passing_item_idx = self.unused.swap_remove(passing_unused_idx);
+        Some(self.items[passing_item_idx].clone())
+    }
+
+    /// Draw a preferred item from the `RefillingPool`, falling back to a random item from the
+    /// pool if there are none available.
+    ///
+    /// Preferred items can be defined by specifying a context and a rule (function) to evaluate
+    /// the yet-unused items for "preferred" status.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use gametools::{RefillingPool, GameResult};
+    /// enum WhichFirst {
+    ///     Even,
+    ///     Odd,
+    /// }
+    /// # fn main() -> GameResult<()> {
+    ///
+    /// let mut pool = RefillingPool::new([1,2,3])?;
+    ///
+    /// // our context (mode) and a function to evaluate items with it
+    /// let mode = WhichFirst::Even;
+    /// let chooser = |context: &WhichFirst, item: &u32| match context {
+    ///     WhichFirst::Even => item.is_multiple_of(2),
+    ///     WhichFirst::Odd => !item.is_multiple_of(2),
+    /// };
+    ///
+    /// let preferred = pool.draw_with_context_or_any(&mode, chooser);
+    /// // 2 is the only even #, so must be returned first
+    /// assert_eq!(preferred, 2);
+    ///
+    /// let no_even_left = pool.draw_with_context_or_any(&mode, chooser);
+    /// // no preferred item was left, so anything else left in the pool is returned
+    /// assert!([1,3].contains(&no_even_left));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn draw_with_context_or_any<C, F>(&mut self, context: &C, chooser: F) -> T
+    where
+        F: FnMut(&C, &T) -> bool,
+    {
+        self.draw_with_context(context, chooser)
+            .unwrap_or_else(|| self.draw())
     }
 }
 
