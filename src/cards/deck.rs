@@ -46,6 +46,10 @@ pub struct Deck<T: CardFaces> {
     /// Friendly name used to describe the deck.
     pub name: String,
     /// Unique identifier automatically assigned at deck creation.
+    #[allow(
+        clippy::struct_field_names,
+        reason = "serialization compatability issue"
+    )]
     deck_id: DeckId,
     /// Cards stored with the "top" card at the end of the vector.
     cards: Vec<Card<T>>,
