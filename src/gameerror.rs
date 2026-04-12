@@ -36,6 +36,14 @@ pub enum GameError {
     InvalidPoolIndex(usize, usize),
 }
 
+#[derive(Debug, Clone, Error)]
+pub enum DiceError {
+    #[error("a die with zero sides cannot be created")]
+    DieWithNoSides,
+    #[error("invalid explode trigger: {explode_on} on {sides}-sided die")]
+    InvalidExplodeTrigger { explode_on: u64, sides: u64 },
+}
+
 #[cfg(test)]
 mod tests {
     use super::GameError;
