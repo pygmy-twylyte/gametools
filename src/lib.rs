@@ -22,7 +22,7 @@ pub use cards::{
 };
 
 pub mod dice;
-pub use dice::{DicePool, Die};
+pub use dice::{Die, DieResult, Rolls};
 
 pub mod dominos;
 pub use dominos::{BonePile, Domino, DominoHand, MAX_PIPS, Train};
