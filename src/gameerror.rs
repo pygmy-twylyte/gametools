@@ -42,6 +42,8 @@ pub enum DiceError {
     DieWithNoSides,
     #[error("invalid explode trigger: {explode_on} on {sides}-sided die")]
     InvalidExplodeTrigger { explode_on: u64, sides: u64 },
+    #[error("one sided die would infinitely explode")]
+    InfiniteExplosion,
 }
 
 #[cfg(test)]
