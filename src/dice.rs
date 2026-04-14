@@ -1,5 +1,10 @@
 //! # `Dice` - types and manipulations commonly needed for die-based games
 //!
+//! ## Types
+//! - `Die` - a single numeric die with arbitrary number of sides and optional exploding behavior
+//! - `Rolls` - an immutable pool of results from `Die` rolls
+//! - `DieResult<T>` - alias for `Result<T, DiceError>`
+//!
 pub type DieResult<T> = Result<T, DiceError>;
 
 use std::collections::BTreeMap;
@@ -47,6 +52,9 @@ impl Die {
         if sides == 0 {
             return Err(DiceError::DieWithNoSides);
         }
+        if sides == 1 {
+            return Err(DiceError::InfiniteExplosion);
+        }
         if explode_on > sides || explode_on == 0 {
             return Err(DiceError::InvalidExplodeTrigger { explode_on, sides });
         }
@@ -93,7 +101,7 @@ impl Die {
 }
 
 /// A set of results from rolling dice.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Rolls(Vec<u64>);
 impl Rolls {
     /// Add all of the individual rolls together and return the result.
@@ -167,6 +175,7 @@ impl Rolls {
         Rolls(sorted.into_iter().skip(count).collect())
     }
     /// Return the number of rolls in this set that satisfy the given `chooser` predicate.
+    #[must_use]
     pub fn count_where<P>(&self, mut chooser: P) -> usize
     where
         P: FnMut(u64) -> bool,
@@ -202,7 +211,13 @@ impl IntoIterator for Rolls {
 
 #[cfg(test)]
 mod tests {
-    use super::{Die, DieResult, Rolls};
+    use std::collections::{BTreeMap, HashSet};
+
+    use crate::Rolls;
+
+    use super::{DiceError, Die, DieResult};
+
+    const N_TEST_ROLLS: usize = 100;
 
     #[test]
     fn can_create_regular_die() -> DieResult<()> {
@@ -210,5 +225,169 @@ mod tests {
         assert_eq!(d6.sides, 6);
         assert!(d6.explode_on.is_none());
         Ok(())
+    }
+
+    #[test]
+    fn can_create_exploding_die() -> DieResult<()> {
+        let die = Die::exploding(4, 4)?;
+        assert_eq!(die.sides, 4);
+        assert!(matches!(die.explode_on, Some(4)));
+        Ok(())
+    }
+
+    #[test]
+    fn creating_die_with_no_sides_yields_correct_error() {
+        let die = Die::new(0);
+        assert!(die.is_err_and(|e| matches!(e, DiceError::DieWithNoSides)));
+        let exploder = Die::exploding(0, 0);
+        assert!(exploder.is_err_and(|e| matches!(e, DiceError::DieWithNoSides)));
+    }
+
+    #[test]
+    fn creating_exploding_die_with_one_side_yields_correct_error() {
+        let exploder = Die::exploding(1, 1);
+        assert!(exploder.is_err_and(|e| matches!(e, DiceError::InfiniteExplosion)));
+    }
+
+    #[test]
+    fn creating_exploding_die_with_invalid_trigger_yields_correct_error() {
+        let high_trigger = Die::exploding(4, 5);
+        assert!(high_trigger.is_err_and(|e| matches!(
+            e,
+            DiceError::InvalidExplodeTrigger {
+                explode_on: 5,
+                sides: 4
+            }
+        )));
+        let zero_trigger = Die::exploding(4, 0);
+        assert!(zero_trigger.is_err_and(|e| matches!(
+            e,
+            DiceError::InvalidExplodeTrigger {
+                explode_on: 0,
+                sides: 4
+            }
+        )));
+    }
+
+    #[test]
+    fn regular_dice_yield_correct_range() {
+        let d4 = Die::new(4).unwrap();
+        assert_eq!(d4.sides, 4);
+        assert!(
+            (0..N_TEST_ROLLS)
+                .map(|_| d4.roll())
+                .all(|r| r > 0 && r <= d4.sides)
+        );
+    }
+
+    #[test]
+    fn regular_dice_yield_every_expected_value() {
+        let expected_vals = HashSet::from([1u64, 2, 3, 4, 5, 6]);
+        let d6 = Die::new(6).unwrap();
+        let actual_vals: HashSet<u64> = (0..N_TEST_ROLLS).map(|_| d6.roll()).collect();
+        assert_eq!(expected_vals, actual_vals);
+    }
+
+    #[test]
+    fn exploding_dice_sometimes_yield_higher_than_number_of_sides() {
+        let d4_x4 = Die::exploding(4, 4).unwrap();
+        assert!((0..N_TEST_ROLLS).map(|_| d4_x4.roll()).any(|roll| roll > 4));
+    }
+
+    #[test]
+    fn exploding_die_cannot_yield_its_trigger_value() {
+        let d4_x4 = Die::exploding(4, 4).unwrap();
+        assert!(
+            !(0..N_TEST_ROLLS)
+                .map(|_| d4_x4.roll())
+                .any(|roll| roll == 4)
+        );
+    }
+
+    #[test]
+    fn die_roll_n_returns_correct_rolls() -> DieResult<()> {
+        let d4_rolls = Die::new(4)?.roll_n(N_TEST_ROLLS);
+        assert_eq!(d4_rolls.len(), N_TEST_ROLLS);
+        assert_eq!(d4_rolls.min().unwrap(), 1);
+        assert_eq!(d4_rolls.max().unwrap(), 4);
+        Ok(())
+    }
+
+    #[test]
+    fn rolls_sum_is_correct() {
+        let empty_rolls = Rolls::from(vec![]);
+        assert_eq!(empty_rolls.sum(), 0);
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.sum(), 11);
+    }
+
+    #[test]
+    fn rolls_len_is_correct() {
+        let rolls = Rolls::from([1, 1, 1].as_ref());
+        assert_eq!(rolls.len(), 3);
+    }
+
+    #[test]
+    fn rolls_is_empty_is_correct() {
+        let empty_rolls = Rolls::from(vec![]);
+        assert!(empty_rolls.is_empty());
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert!(!d4_rolls.is_empty());
+    }
+
+    #[test]
+    fn rolls_max_is_correct() {
+        let empty_rolls = Rolls::from(vec![]);
+        assert_eq!(empty_rolls.max(), None);
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.max(), Some(4));
+    }
+
+    #[test]
+    fn rolls_min_is_correct() {
+        let empty_rolls = Rolls::from(vec![]);
+        assert_eq!(empty_rolls.min(), None);
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.min(), Some(1));
+    }
+
+    #[test]
+    fn rolls_histogram_is_correct() {
+        let expected: BTreeMap<u64, usize> = BTreeMap::from([(1, 2), (2, 1), (3, 1), (4, 1)]);
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.histogram(), expected);
+    }
+
+    #[test]
+    fn rolls_highest_returns_right_rolls_in_descending_order() {
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.highest(2), Rolls::from(vec![4, 3]));
+    }
+
+    #[test]
+    fn rolls_lowest_returns_right_rolls_in_ascending_order() {
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.lowest(3), Rolls::from(vec![1, 1, 2]));
+    }
+
+    #[test]
+    fn rolls_drop_highest_returns_right_rolls_in_descending_order() {
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.drop_highest(2), Rolls::from(vec![2, 1, 1]));
+    }
+
+    #[test]
+    fn rolls_drop_lowest_returns_right_rolls_in_ascending_order() {
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.drop_lowest(2), Rolls::from(vec![2, 3, 4]));
+    }
+
+    #[test]
+    fn rolls_count_where_is_correct() {
+        let d4_rolls = Rolls::from(vec![1, 3, 2, 4, 1]);
+        assert_eq!(d4_rolls.count_where(|r| r == 1), 2);
+        assert_eq!(d4_rolls.count_where(|r| r > 2), 2);
+        assert_eq!(d4_rolls.count_where(|r| !r.is_multiple_of(2)), 3);
+        assert_eq!(d4_rolls.count_where(u64::is_power_of_two), 4);
     }
 }
