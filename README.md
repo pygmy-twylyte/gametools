@@ -5,15 +5,15 @@
 
 # gametools
 
-**gametools** is a lightweight Rust library for simulating game components like dice rolls, extensible card decks, dominos, and spinners. It's designed to be modular, testable, and usable in both game engines and CLI tools. The goal is to provide reusable game apparatus — not game logic — so you can build your rules on top of well-tested building blocks.
+**gametools** is a lightweight Rust library implementing components and mechanics common to tabletop and many other games. It's intended to be reusable and simplify the creation of games and game engines without blurring into the realm of physical simulation of apparatus or game-specific logic.
 
 ## Features
 
-- 🎲 Numeric dice up to 255 sides, plus dice pools with chainable operations
-- 🃏 Extensible cards toolkit: compose custom face types, deck/hand/pile flows, plus ready-made standard 52-card and Uno helpers
-- 🁫 Dominos with support for longest-path train solving
-- 🌀 Spinners with support for weighted wedges and optional blocking
-- 💥 Human-readable game errors for common failure conditions
+- `Dice` module that supports plain and "exploding" dice with any number of sides, with a `Rolls` result type that facilitates manipulation and analysis of rolls common to many games.
+- Extensible `Cards` toolkit: compose custom face types, deck/hand/pile flows, plus ready-made standard 52-card and Uno helpers
+- `Dominos` module with support for longest-path train solving
+- `Spinners` with support for weighted wedges and optional blocking
+- `RefillingPool` - a collection of any type which distributes its contents randomly and refills itself when empty; conditional draw methods make it possible to preferentially yield certain items first according to context.
 - 🧪 Well-documented and tested with 90%+ code coverage
 
 ## Example: Cards
@@ -46,13 +46,17 @@ assert_eq!(hand.size(), 3);
 ## Example: Dice
 
 ```rust
-use gametools::{Die, DicePool};
+use gametools::Die;
 
-let d6 = Die::new(6);
-let total = d6.roll_into_pool(5)
-    .take_highest(4)
-    .nerf(1)
-    .sum();
+let rolls: Rolls = Die::new(6)?.roll_n(5);
+let histogram = rolls.histogram();
+
+if histogram.len() == 2 && histogram.values().any(|roll| roll == 2 | roll == 3) {
+    println!("Full House!");
+}
+if histogram.len() == 1 {
+    println!("Yahtzee!");
+}
 ```
 
 ## Example: Spinners
