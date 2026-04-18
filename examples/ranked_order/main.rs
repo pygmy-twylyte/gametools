@@ -12,11 +12,6 @@ struct RpgCharacter {
     modifier: Option<u64>,
 }
 impl RpgCharacter {
-    fn initiative(&self, die: &Die) -> u64 {
-        // expressing encumbrance as an integer % of some max (60 = 60%, 110 = 110%) allows us to
-        // avoid casting by using a u64. Multiplying by 100/enc = dividing by enc/100.
-        (self.dex / 5 + die.roll() + self.modifier.unwrap_or_default()) * 100 / self.encumbrance
-    }
     fn take_turn(&self) {
         println!(
             "{} (dex:{} mod:{} enc:{}) takes a turn → ",
@@ -30,11 +25,13 @@ impl RpgCharacter {
 
 fn main() -> GameResult<()> {
     let d20 = Die::new(20).unwrap();
+    let initiative = |npc: &RpgCharacter| {
+        (npc.dex / 5 + d20.roll() + npc.modifier.unwrap_or_default()) * 100 / npc.encumbrance
+    };
     let militia = create_characters(30)?;
     let mut turn_order = DescendingOrder::new();
     for character in militia {
-        let initiative = character.initiative(&d20);
-        turn_order.push(character, initiative);
+        turn_order.push_with_ranker(character, initiative);
     }
     while let Some((npc, _)) = turn_order.pop() {
         npc.take_turn();
