@@ -1,9 +1,9 @@
 [package]
 name = "gametools"
-version = "0.8.0-pre"
+version = "0.8.0"
 authors = ["pygmy-twylyte <davidjvbrown.md@gmail.com>"]
 edition = "2024"
-description = "Game component toolkit for dice, dominos, spinners, and fully extensible card decks."
+description = "Toolkit for game-building in Rust: cards, dice, dominos, spinners, refillable pools, and ordering helpers."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/pygmy-twylyte/gametools"
 readme = "README.md"
