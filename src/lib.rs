@@ -36,3 +36,9 @@ pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 pub mod gameerror;
 pub use gameerror::GameError;
 pub type GameResult<T> = Result<T, GameError>;
+
+pub mod ordering;
+pub use ordering::{
+    AscendingOrder, DescendingOrder, Max, MaxPriorityQ, Min, MinPriorityQ, PriorityQueue,
+    RankedOrder,
+};
