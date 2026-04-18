@@ -1,8 +1,8 @@
-//! # Game Error Module
+//! Shared error types used across the crate.
 //!
-//! This module defines the [`GameError`] enum, which represents common error conditions
-//! that may arise during gameplay logic such as trying to draw from an empty stack,
-//! attempting to play a tile that does not match, or encountering missing components.
+//! [`GameError`] covers higher-level collection and gameplay failures, while [`DiceError`]
+//! keeps the dice module's validation errors specific and can be converted into
+//! [`GameError`] when needed.
 //!
 
 use thiserror::Error;
@@ -38,6 +38,7 @@ pub enum GameError {
     DiceError(#[from] DiceError),
 }
 
+/// Errors specific to creating and rolling dice.
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum DiceError {
     #[error("a die with zero sides cannot be created")]
