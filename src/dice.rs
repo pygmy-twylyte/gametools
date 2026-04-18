@@ -5,6 +5,16 @@
 //! - `Rolls` - an immutable pool of results from `Die` rolls
 //! - `DieResult<T>` - alias for `Result<T, DiceError>`
 //!
+//! ## Example
+//! ```
+//! use gametools::Die;
+//!
+//! let rolls = Die::new(20)?.roll_n(3);
+//! assert_eq!(rolls.len(), 3);
+//! assert!(rolls.iter().all(|roll| (1..=20).contains(roll)));
+//! # Ok::<(), gametools::DiceError>(())
+//! ```
+//!
 pub type DieResult<T> = Result<T, DiceError>;
 
 use std::collections::BTreeMap;
