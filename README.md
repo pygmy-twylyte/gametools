@@ -14,6 +14,7 @@
 - `Dominos` module with support for longest-path train solving
 - `Spinners` with support for weighted wedges and optional blocking
 - `RefillingPool` - a collection of any type which distributes its contents randomly and refills itself when empty; conditional draw methods make it possible to preferentially yield certain items first according to context.
+- `ordering` module containing `RankedOrder` and `PriorityQueue`: `Vec`- and `BinaryHeap`-backed structures that can hold any type and maintain the order of their elements. The type system is leveraged to allow these to work in either min-first or max-first fashion without having to manually wrap types in `Reverse` to get that behavior. `RankedOrder` is optimized for batched processing and inspection of the full order, whereas `PriorityQueue` is optimized for rapid push()/pop() cycles and situations where only the top priority element is needed.
 - 🧪 Well-documented and tested with 90%+ code coverage
 
 ## Example: Cards
