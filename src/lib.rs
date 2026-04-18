@@ -5,16 +5,13 @@
 //! games and simulations.
 //!
 //! ## Features
-//! - `RefillingPool` - a randomized, infinitely refilling pool of arbitrary types of items
-//! - Cards module that supports cards of any type, with 1 or 2 faces.
-//! - Pre-defined `StandardCard` type for standard playing cards.
-//! - Hand analytics for standard cards (detect straight, "n" of a kind, etc.) including Joker / wildcard handling.
-//! - Numeric dice with up to 255 sides.
-//! - Tools for playing with and transforming pools of dice.
-//! - Spinners (random selectors) with "wedges" returning arbitrary types and can be covered/blocked or weighted.
-//! - Domino set creation (up to full double-18) and train management.
-//! - Pathfinding algorithm to find optimum domino train in a hand.
-//! - Custom `GameResult` and `GameError` types to handle common game conditions.
+//! - `cards`: generic card faces plus deck, hand, and pile abstractions, with standard 52-card and Uno helpers.
+//! - `dice`: `Die` and `Rolls` support for regular and exploding dice along with common roll-analysis helpers.
+//! - `ordering`: stable ranked lists (`RankedOrder`) and heap-backed queues (`PriorityQueue`) for turn order and scheduling.
+//! - `refilling_pool`: infinitely reusable random pools with conditional and contextual draw helpers.
+//! - `spinners`: decision wheels with weighted, coverable wedges that can hold arbitrary values.
+//! - `dominos`: domino set creation, train management, and longest-train solving.
+//! - `GameError`, `DiceError`, and `GameResult` for shared error handling across the crate.
 
 pub mod cards;
 pub use cards::{
@@ -34,7 +31,7 @@ pub mod spinners;
 pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 
 pub mod gameerror;
-pub use gameerror::GameError;
+pub use gameerror::{DiceError, GameError};
 pub type GameResult<T> = Result<T, GameError>;
 
 pub mod ordering;
