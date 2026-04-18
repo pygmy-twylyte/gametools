@@ -1,49 +1,68 @@
-//! `PriorityQueue` - a collection of items that can be handled in a prioritized order.
+//! Priority queue utilities for retrieving only the next highest- or lowest-priority item.
+//!
+//! `PriorityQueue` is backed by a `BinaryHeap`, so it is the better fit when you
+//! care about fast insertion and removal of the next item rather than inspecting
+//! the full ordering of the collection.
+//!
+//! # Examples
+//!
+//! ```
+//! use gametools::ordering::{MaxPriorityQ, MinPriorityQ};
+//!
+//! let mut max_q = MaxPriorityQ::new();
+//! max_q.push("low", 1);
+//! max_q.push("high", 3);
+//!
+//! assert_eq!(max_q.pop(), Some(("high", 3)));
+//!
+//! let mut min_q = MinPriorityQ::new();
+//! min_q.push("late", 10);
+//! min_q.push("soon", 5);
+//!
+//! assert_eq!(min_q.pop(), Some(("soon", 5)));
+//! ```
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::marker::PhantomData;
 
+/// A [`PriorityQueue`] that yields the highest-priority items first.
 pub type MaxPriorityQ<P, T> = PriorityQueue<P, T, Max>;
+/// A [`PriorityQueue`] that yields the lowest-priority items first.
 pub type MinPriorityQ<P, T> = PriorityQueue<P, T, Min>;
 
-/// Type used to indicate that the `PriorityQueue` should yield the highest priority items first.
+/// Marker type for [`PriorityQueue`] values that yield the highest-priority items first.
 pub struct Max;
-/// Type used to indicate that the `PriorityQueue` should yield the lowest priority items first.
+/// Marker type for [`PriorityQueue`] values that yield the lowest-priority items first.
 pub struct Min;
 
-/// # `PriorityQueue<P, T, O = Max>`
+/// A priority queue with stable tie-breaking by insertion order.
 ///
-/// A collection that yields its items in a ranked order. If two or more items tie on
-/// priority, they are returned in the order they were inserted.
+/// This queue returns only the next item in priority order. When two items share
+/// the same priority, the item that was inserted first is returned first.
 ///
 /// # Type Parameters
-/// - `P: Ord` - the type (typically numeric) of the priority values
-/// - `T` - the type of the items in the queue
-/// - `O = Max` - determines whether the `Max` (default) or `Min` items are yielded first.
+/// - `P: Ord` - the priority value type.
+/// - `T` - the stored item type.
+/// - `O = Max` - the ordering marker, typically [`Max`] or [`Min`].
 ///
 /// # Aliases
-/// - `MaxPriorityQ<P, T>`: A priority queue that yields the highest priority items first.
-/// - `MinPriorityQ<P, T>`: A priority queue that yields the lowest priority items first.
+/// - [`MaxPriorityQ<P, T>`]: highest priorities first.
+/// - [`MinPriorityQ<P, T>`]: lowest priorities first.
 ///
 /// # Examples
 ///
 /// ```
-/// use gametools::ordering::priority_queue::{MaxPriorityQ, MinPriorityQ};
+/// use gametools::ordering::{PriorityQueue, Min};
 ///
-/// let mut max_q = MaxPriorityQ::new();
-/// let mut min_q = MinPriorityQ::new();
+/// let mut queue = PriorityQueue::<_, _, Min>::new();
+/// queue.push("boss", 10);
+/// queue.push("minion", 1);
 ///
-/// max_q.push("high", 10);
-/// max_q.push("low", 5);
-///
-/// min_q.push("high", 10);
-/// min_q.push("low", 5);
-///
-/// assert_eq!(max_q.pop(), Some(("high", 10)));
-/// assert_eq!(min_q.pop(), Some(("low", 5)));
+/// assert_eq!(queue.pop(), Some(("minion", 1)));
+/// assert_eq!(queue.pop(), Some(("boss", 10)));
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PriorityQueue<P, T, O = Max>
 where
     P: Ord,
@@ -52,21 +71,23 @@ where
     seq: u64,
 }
 impl<P: Ord, T, O> PriorityQueue<P, T, O> {
-    /// Create a new, empty `PriorityQueue`.
+    /// Creates an empty `PriorityQueue`.
     ///
     /// # Examples
     ///
     /// ```
-    /// use gametools::ordering::priority_queue::{MaxPriorityQ, PriorityQueue, Min};
+    /// use gametools::ordering::{MaxPriorityQ, PriorityQueue, Min};
     ///
-    /// let mut q_high_first = MaxPriorityQ::new();
-    /// q_high_first.push("foo", 1);
+    /// let mut max_q = MaxPriorityQ::new();
+    /// max_q.push("token", 1);
     ///
-    /// // or more verbose / explicit
-    /// let mut q_low_first = PriorityQueue::<_, _, Min>::new();
-    /// q_low_first.push(2,2);
+    /// let mut min_q = PriorityQueue::<_, _, Min>::new();
+    /// min_q.push("token", 1);
+    ///
+    /// assert_eq!(max_q.pop(), Some(("token", 1)));
+    /// assert_eq!(min_q.pop(), Some(("token", 1)));
     /// ```
-    ///
+    #[must_use]
     pub fn new() -> Self {
         Self {
             heap: BinaryHeap::new(),
@@ -98,33 +119,89 @@ impl<P: Ord, T, O> PriorityQueue<P, T, O> {
 }
 
 impl<P: Ord, T> PriorityQueue<P, T, Max> {
-    /// Take the highest ranked item (and assigned priority value) from the queue.
+    /// Removes and returns the highest-priority item.
+    ///
+    /// Returns `None` if the queue is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::ordering::MaxPriorityQ;
+    ///
+    /// let mut queue = MaxPriorityQ::new();
+    /// queue.push("low", 1);
+    /// queue.push("high", 2);
+    ///
+    /// assert_eq!(queue.pop(), Some(("high", 2)));
+    /// assert_eq!(queue.pop(), Some(("low", 1)));
+    /// assert_eq!(queue.pop(), None);
+    /// ```
     pub fn pop(&mut self) -> Option<(T, P)> {
         self.pop_inner()
     }
 
-    /// Add an item to the queue with the given priority.
+    /// Inserts an item with the given priority.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::ordering::MaxPriorityQ;
+    ///
+    /// let mut queue = MaxPriorityQ::new();
+    /// queue.push("alpha", 1);
+    /// queue.push("beta", 2);
+    ///
+    /// assert_eq!(queue.pop(), Some(("beta", 2)));
+    /// ```
     pub fn push(&mut self, item: T, priority: P) {
         self.push_inner(item, priority);
     }
 }
 
 impl<P: Ord, T> PriorityQueue<P, T, Min> {
-    /// Take the lowest ranked item (and assigned priority value) from the queue.
+    /// Removes and returns the lowest-priority item.
+    ///
+    /// Returns `None` if the queue is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::ordering::MinPriorityQ;
+    ///
+    /// let mut queue = MinPriorityQ::new();
+    /// queue.push("late", 3);
+    /// queue.push("soon", 1);
+    ///
+    /// assert_eq!(queue.pop(), Some(("soon", 1)));
+    /// assert_eq!(queue.pop(), Some(("late", 3)));
+    /// assert_eq!(queue.pop(), None);
+    /// ```
     pub fn pop(&mut self) -> Option<(T, P)> {
         self.pop_inner()
     }
 
-    /// Add an item to the queue with the given priority.
+    /// Inserts an item with the given priority.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::ordering::MinPriorityQ;
+    ///
+    /// let mut queue = MinPriorityQ::new();
+    /// queue.push("late", 3);
+    /// queue.push("soon", 1);
+    ///
+    /// assert_eq!(queue.pop(), Some(("soon", 1)));
+    /// ```
     pub fn push(&mut self, item: T, priority: P) {
         self.push_inner(item, priority);
     }
 }
 
-/// Trait used to define ordering for `RankedItem<P, T, O: QueueOrder>` and enable alternative
-/// min-heap behavior from `std::collections::BinaryHeap`.
+/// Ordering strategy used internally by [`PriorityQueue`] to support max-heap
+/// and min-heap behavior with the same underlying `BinaryHeap`.
 trait QueueOrder {
-    /// Determine ordering between two items based on priority and sequence (insertion) order.
+    /// Compares two `(priority, insertion-sequence)` pairs.
     fn cmp<P: Ord>(lhs_priority: &P, lhs_seq: u64, rhs_priority: &P, rhs_seq: u64) -> Ordering;
 }
 
@@ -143,7 +220,7 @@ impl QueueOrder for Min {
     }
 }
 
-/// An item on the `PriorityQueue` with a defined `priority` and sequence number.
+/// An item stored in the heap with its priority and insertion sequence number.
 #[derive(Debug)]
 struct RankedItem<P, T, O>
 where
@@ -239,5 +316,35 @@ mod test {
         assert_eq!(q.pop(), Some(('b', 3)));
         assert_eq!(q.pop(), Some(('c', 3)));
         assert_eq!(q.pop(), None);
+    }
+
+    #[test]
+    fn empty_queues_pop_none() {
+        let mut max_q: MaxPriorityQ<i32, char> = MaxPriorityQ::new();
+        let mut min_q: MinPriorityQ<i32, char> = MinPriorityQ::new();
+
+        assert_eq!(max_q.pop(), None);
+        assert_eq!(min_q.pop(), None);
+    }
+
+    #[test]
+    fn explicit_generic_construction_respects_order_marker() {
+        let mut max_q = PriorityQueue::<_, _, Max>::new();
+        max_q.push("mid", 2);
+        max_q.push("high", 3);
+        max_q.push("low", 1);
+
+        assert_eq!(max_q.pop(), Some(("high", 3)));
+        assert_eq!(max_q.pop(), Some(("mid", 2)));
+        assert_eq!(max_q.pop(), Some(("low", 1)));
+
+        let mut min_q = PriorityQueue::<_, _, Min>::new();
+        min_q.push("mid", 2);
+        min_q.push("high", 3);
+        min_q.push("low", 1);
+
+        assert_eq!(min_q.pop(), Some(("low", 1)));
+        assert_eq!(min_q.pop(), Some(("mid", 2)));
+        assert_eq!(min_q.pop(), Some(("high", 3)));
     }
 }
