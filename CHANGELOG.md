@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
+## [0.8.0] - 2026-04-18
+
+### Added
+- New `ordering` module with `RankedOrder`, `PriorityQueue`, and the `AscendingOrder` / `DescendingOrder` plus `MinPriorityQ` / `MaxPriorityQ` convenience aliases.
+- New `refilling_pool` module for self-refilling randomized pools, including conditional and contextual draw helpers.
+- New runnable examples for `dice`, `priority_queue`, `ranked_order`, and `refilling_pool`.
+- `GameError::DiceError` integration so dice-specific failures can be preserved and bubbled through broader game flows.
+
+### Changed
+- Reworked the `dice` module around `Die`, `Rolls`, and `DieResult`, replacing the earlier pool-centric API with a smaller, more focused surface.
+- `DiceError::InfiniteExplosion` now reports the invalid one-sided exploding-die case explicitly.
+- `DominoHand::play_line` now returns `GameError::TileNotFound` for an unknown tile id instead of panicking.
+- `Spinner::replace_value` now borrows the replacement value, aligning it with the rest of the borrowed spinner update APIs.
+- README and rustdoc were refreshed to match the current module layout and example set.
+
+### Removed
+- Removed the old `examples/yahtzee` example tree.
+
+---
 ## [0.7.0] - 2025-11-14
 
 ### Changed
