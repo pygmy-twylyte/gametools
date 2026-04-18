@@ -65,7 +65,7 @@ impl<T> RefillingPool<T> {
     /// Create a new `RefillingPool` from an iterable collection.
     ///
     /// # Errors
-    /// - `PoolHasNoRefills` if `items` is empty.
+    /// - `GameError::PoolCannotBeEmpty` if `items` is empty.
     ///
     /// # Examples
     /// ```
