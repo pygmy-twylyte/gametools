@@ -34,9 +34,11 @@ pub enum GameError {
     PoolCannotBeEmpty,
     #[error("invalid index {0} for pool size {1}")]
     InvalidPoolIndex(usize, usize),
+    #[error("dice error: {0}")]
+    DiceError(#[from] DiceError),
 }
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, PartialEq)]
 pub enum DiceError {
     #[error("a die with zero sides cannot be created")]
     DieWithNoSides,
