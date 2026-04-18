@@ -9,13 +9,13 @@
 
 ## Features
 
-- `Dice` module that supports plain and "exploding" dice with any number of sides, with a `Rolls` result type that facilitates manipulation and analysis of rolls common to many games.
-- Extensible `Cards` toolkit: compose custom face types, deck/hand/pile flows, plus ready-made standard 52-card and Uno helpers
-- `Dominos` module with support for longest-path train solving
-- `Spinners` with support for weighted wedges and optional blocking
-- `RefillingPool` - a collection of any type which distributes its contents randomly and refills itself when empty; conditional draw methods make it possible to preferentially yield certain items first according to context.
-- `ordering` module containing `RankedOrder` and `PriorityQueue`: `Vec`- and `BinaryHeap`-backed structures that can hold any type and maintain the order of their elements. The type system is leveraged to allow these to work in either min-first or max-first fashion without having to manually wrap types in `Reverse` to get that behavior. `RankedOrder` is optimized for batched processing and inspection of the full order, whereas `PriorityQueue` is optimized for rapid push()/pop() cycles and situations where only the top priority element is needed.
-- 🧪 Well-documented and tested with 90%+ code coverage
+- `dice`: `Die` and `Rolls` support plain and exploding dice plus common roll analysis helpers like `histogram`, `highest`, `lowest`, and `count_where`.
+- `cards`: extensible card/deck/hand/pile toolkit for custom face types, plus ready-made standard 52-card and Uno helpers.
+- `dominos`: domino set creation, trains, hands, and longest-train solving.
+- `spinners`: weighted wedges with optional covering/blocking and chainable updates.
+- `refilling_pool`: a randomized pool of any clonable type that refills itself when empty, with conditional and contextual draw helpers.
+- `ordering`: `RankedOrder` and `PriorityQueue` for stable ranked lists or heap-backed priority scheduling, with min/max or ascending/descending aliases.
+- Unit tests, doctests, and runnable examples across the crate.
 
 ## Example: Cards
 
@@ -49,10 +49,10 @@ assert_eq!(hand.size(), 3);
 ```rust
 use gametools::Die;
 
-let rolls: Rolls = Die::new(6)?.roll_n(5);
+let rolls = Die::new(6).expect("d6 should be valid").roll_n(5);
 let histogram = rolls.histogram();
 
-if histogram.len() == 2 && histogram.values().any(|roll| roll == 2 | roll == 3) {
+if histogram.len() == 2 && histogram.values().any(|count| *count == 3) {
     println!("Full House!");
 }
 if histogram.len() == 1 {
@@ -86,10 +86,16 @@ Full API docs with usage examples are available via [docs.rs](https://docs.rs/ga
 See additional usage examples in the module docs:
 
 - [Cards module](https://docs.rs/gametools/latest/gametools/cards/index.html): custom faces, deck/hand/pile traits, shuffling, drawing
+- [Dice module](https://docs.rs/gametools/latest/gametools/dice/index.html): regular and exploding dice plus `Rolls` helpers
 - [Dominos module](https://docs.rs/gametools/latest/gametools/dominos/index.html): longest-train solver
-- `examples/cards`: a mashup that ties the standard playing cards and Uno modules together for a mini showdown
-
-The examples/yahtzee folder contains an example of a Yahtzee-playing agent created using the Dice module.
+- [Ordering module](https://docs.rs/gametools/latest/gametools/ordering/index.html): ranked lists and priority queues
+- [RefillingPool module](https://docs.rs/gametools/latest/gametools/refilling_pool/index.html): self-refilling random pools with contextual draws
+- [Spinners module](https://docs.rs/gametools/latest/gametools/spinners/index.html): weighted wedges with optional blocking
+- `cargo run --example cards`: ties the standard playing cards and Uno helpers together for a mini showdown
+- `cargo run --example dice`: basic roll analysis, exploding dice, and poker-style histogram checks
+- `cargo run --example refilling_pool`: an "infinite chest" that prefers loot based on character context
+- `cargo run --example priority_queue`: ship attack ordering with `MinPriorityQ`
+- `cargo run --example ranked_order`: initiative ordering with `DescendingOrder`
 
 ## License
 
