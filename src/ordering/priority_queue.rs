@@ -32,8 +32,10 @@ pub type MaxPriorityQ<P, T> = PriorityQueue<P, T, Max>;
 pub type MinPriorityQ<P, T> = PriorityQueue<P, T, Min>;
 
 /// Marker type for [`PriorityQueue`] values that yield the highest-priority items first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Max;
 /// Marker type for [`PriorityQueue`] values that yield the lowest-priority items first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Min;
 
 /// A priority queue with stable tie-breaking by insertion order.
@@ -62,7 +64,7 @@ pub struct Min;
 /// assert_eq!(queue.pop(), Some(("minion", 1)));
 /// assert_eq!(queue.pop(), Some(("boss", 10)));
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PriorityQueue<P, T, O = Max>
 where
     P: Ord,
@@ -221,7 +223,7 @@ impl QueueOrder for Min {
 }
 
 /// An item stored in the heap with its priority and insertion sequence number.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct RankedItem<P, T, O>
 where
     P: Ord,
