@@ -1,6 +1,6 @@
 [package]
 name = "gametools"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["pygmy-twylyte <davidjvbrown.md@gmail.com>"]
 edition = "2024"
 description = "Toolkit for game-building in Rust: cards, dice, dominos, spinners, refillable pools, and ordering helpers."
