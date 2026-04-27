@@ -43,7 +43,7 @@ impl Die {
     ///
     /// # Errors
     /// - Returns `DiceError::DieWithNoSides` if `sides` is zero.
-    pub fn new(sides: u64) -> DieResult<Self> {
+    pub const fn new(sides: u64) -> DieResult<Self> {
         if sides == 0 {
             return Err(DiceError::DieWithNoSides);
         }
