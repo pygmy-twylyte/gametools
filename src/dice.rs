@@ -43,7 +43,7 @@ impl Die {
     ///
     /// # Errors
     /// - Returns `DiceError::DieWithNoSides` if `sides` is zero.
-    pub const fn new(sides: u64) -> DieResult<Self> {
+    pub fn new(sides: u64) -> DieResult<Self> {
         if sides == 0 {
             return Err(DiceError::DieWithNoSides);
         }
@@ -51,6 +51,15 @@ impl Die {
             sides,
             explode_on: None,
         })
+    }
+
+    /// Create a non-exploding `Die` with specified number of sides, unchecked for
+    /// validity. Can be used in `const` contexts.
+    pub const fn new_unchecked(sides: u64) -> Self {
+        Self {
+            sides,
+            explode_on: None,
+        }
     }
 
     /// Create an exploding `Die` with spcified number of sides and trigger value.
@@ -72,6 +81,15 @@ impl Die {
             sides,
             explode_on: Some(explode_on),
         })
+    }
+
+    /// Create a exploding `Die` with specified number of sides, unchecked for
+    /// validity. Can be used in `const` contexts.
+    pub const fn exploding_unchecked(sides: u64, explode_on: u64) -> Self {
+        Self {
+            sides,
+            explode_on: Some(explode_on),
+        }
     }
 
     /// Get the number of sides on this `Die`.
