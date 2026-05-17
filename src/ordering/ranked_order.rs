@@ -255,7 +255,7 @@ where
     /// assert_eq!(order.into_sorted_vec(), vec![('a', 97), ('b', 98), ('c', 99)]);
     /// ```
     pub fn rerank_all_by<F: Fn(&T) -> R>(&mut self, ranker: F) {
-        for item in self.items.iter_mut() {
+        for item in &mut self.items {
             item.rank = ranker(&item.item);
         }
         self.is_dirty = true;

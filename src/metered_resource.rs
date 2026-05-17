@@ -48,9 +48,11 @@ mod sealed {
 /// a metered resource should clamp at its configured bounds, not wrap around them.
 pub trait MeteredValue: sealed::Sealed + Copy + Ord {
     /// Returns `self + rhs`, saturating at the numeric maximum instead of overflowing.
+    #[must_use]
     fn saturating_add(self, rhs: Self) -> Self;
 
     /// Returns `self - rhs`, saturating at zero instead of underflowing.
+    #[must_use]
     fn saturating_sub(self, rhs: Self) -> Self;
 
     /// Converts the value to `f64` for ratio calculations.
@@ -69,6 +71,8 @@ macro_rules! impl_metered_value {
                     self.saturating_sub(rhs)
                 }
 
+                #[allow(clippy::cast_lossless)]
+                #[allow(clippy::cast_precision_loss)]
                 fn as_f64(self) -> f64 {
                     self as f64
                 }
@@ -177,6 +181,7 @@ impl<T: MeteredValue> MeteredResource<T> {
     /// assert_eq!(mana.current(), 12);
     /// # Ok(()) }
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
     pub fn new(unit: impl ToString, min: T, max: T, current: T) -> GameResult<Self> {
         if min >= max {
             return Err(ValueError::MinOverMax.into());

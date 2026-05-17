@@ -55,6 +55,7 @@ impl Die {
 
     /// Create a non-exploding `Die` with specified number of sides, unchecked for
     /// validity. Can be used in `const` contexts.
+    #[must_use]
     pub const fn new_unchecked(sides: u64) -> Self {
         Self {
             sides,
@@ -85,6 +86,7 @@ impl Die {
 
     /// Create a exploding `Die` with specified number of sides, unchecked for
     /// validity. Can be used in `const` contexts.
+    #[must_use]
     pub const fn exploding_unchecked(sides: u64, explode_on: u64) -> Self {
         Self {
             sides,
