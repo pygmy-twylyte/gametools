@@ -8,6 +8,7 @@
 //! - `cards`: generic card faces plus deck, hand, and pile abstractions, with standard 52-card and Uno helpers.
 //! - `dice`: `Die` and `Rolls` support for regular and exploding dice along with common roll-analysis helpers.
 //! - `ordering`: stable ranked lists (`RankedOrder`) and heap-backed queues (`PriorityQueue`) for turn order and scheduling.
+//! - `metered_resource`: bounded unsigned counters with saturating increase and reduction helpers.
 //! - `refilling_pool`: infinitely reusable random pools with conditional and contextual draw helpers.
 //! - `spinners`: decision wheels with weighted, coverable wedges that can hold arbitrary values.
 //! - `dominos`: domino set creation, train management, and longest-train solving.
@@ -23,6 +24,9 @@ pub use dice::{Die, DieResult, Rolls};
 
 pub mod dominos;
 pub use dominos::{BonePile, Domino, DominoHand, MAX_PIPS, Train};
+
+pub mod metered_resource;
+pub use metered_resource::MeteredResource;
 
 pub mod refilling_pool;
 pub use refilling_pool::RefillingPool;
