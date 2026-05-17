@@ -251,7 +251,7 @@ impl<T: MeteredValue> MeteredResource<T> {
     ///
     /// # fn main() -> GameResult<()> {
     /// let stamina = MeteredResource::new("stamina", 20_u32, 120, 70)?;
-    /// assert_eq!(stamina.fraction_full(), 0.5);
+    /// assert_eq!(stamina.fraction_left(), 0.5);
     /// # Ok(()) }
     /// ```
     pub fn fraction_left(&self) -> f64 {
