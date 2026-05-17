@@ -12,7 +12,7 @@
 //! # fn main() -> GameResult<()> {
 //! let mut health = MeteredResource::new("hp", 0_u32, 100, 75)?;
 //! assert_eq!(health.current(), 75);
-//! assert_eq!(health.fraction_full(), 0.75);
+//! assert_eq!(health.fraction_left(), 0.75);
 //!
 //! health.reduce_by(90);
 //! assert_eq!(health.current(), 0);
