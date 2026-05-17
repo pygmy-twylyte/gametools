@@ -12,6 +12,7 @@
 - `dice`: `Die` and `Rolls` support plain and exploding dice plus common roll analysis helpers like `histogram`, `highest`, `lowest`, and `count_where`.
 - `cards`: extensible card/deck/hand/pile toolkit for custom face types, plus ready-made standard 52-card and Uno helpers.
 - `dominos`: domino set creation, trains, hands, and longest-train solving.
+- `metered_resource`: bounded unsigned counters for resources such as health, mana, stamina, or ammunition.
 - `spinners`: weighted wedges with optional covering/blocking and chainable updates.
 - `refilling_pool`: a randomized pool of any clonable type that refills itself when empty, with conditional and contextual draw helpers.
 - `ordering`: `RankedOrder` and `PriorityQueue` for stable ranked lists or heap-backed priority scheduling, with min/max or ascending/descending aliases.
@@ -88,11 +89,13 @@ See additional usage examples in the module docs:
 - [Cards module](https://docs.rs/gametools/latest/gametools/cards/index.html): custom faces, deck/hand/pile traits, shuffling, drawing
 - [Dice module](https://docs.rs/gametools/latest/gametools/dice/index.html): regular and exploding dice plus `Rolls` helpers
 - [Dominos module](https://docs.rs/gametools/latest/gametools/dominos/index.html): longest-train solver
+- [MeteredResource module](https://docs.rs/gametools/latest/gametools/metered_resource/index.html): bounded resources with saturating increase and reduction helpers
 - [Ordering module](https://docs.rs/gametools/latest/gametools/ordering/index.html): ranked lists and priority queues
 - [RefillingPool module](https://docs.rs/gametools/latest/gametools/refilling_pool/index.html): self-refilling random pools with contextual draws
 - [Spinners module](https://docs.rs/gametools/latest/gametools/spinners/index.html): weighted wedges with optional blocking
 - `cargo run --example cards`: ties the standard playing cards and Uno helpers together for a mini showdown
 - `cargo run --example dice`: basic roll analysis, exploding dice, and poker-style histogram checks
+- `cargo run --example metered_resource`: bounded depletion, refill, and fraction-full behavior
 - `cargo run --example refilling_pool`: an "infinite chest" that prefers loot based on character context
 - `cargo run --example priority_queue`: ship attack ordering with `MinPriorityQ`
 - `cargo run --example ranked_order`: initiative ordering with `DescendingOrder`

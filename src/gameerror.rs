@@ -36,6 +36,8 @@ pub enum GameError {
     InvalidPoolIndex(usize, usize),
     #[error("dice error: {0}")]
     DiceError(#[from] DiceError),
+    #[error("value error: {0}")]
+    ValueError(#[from] ValueError),
 }
 
 /// Errors specific to creating and rolling dice.
@@ -47,6 +49,15 @@ pub enum DiceError {
     InvalidExplodeTrigger { explode_on: u64, sides: u64 },
     #[error("one sided die would infinitely explode")]
     InfiniteExplosion,
+}
+
+/// Errors deriving from invalid values.
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum ValueError {
+    #[error("min value must be less than max value")]
+    MinOverMax,
+    #[error("value outside valid range")]
+    OutOfRange,
 }
 
 #[cfg(test)]
