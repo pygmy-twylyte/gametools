@@ -338,7 +338,9 @@ impl<T: Clone + PartialEq> Spinner<T> {
             .into_iter()
             .map(|w| {
                 if w.value == *match_val {
-                    Wedge::new_weighted(new_val.clone(), w.width)
+                    let mut new_w = Wedge::new_weighted(new_val.clone(), w.width);
+                    new_w.active = w.active;
+                    new_w
                 } else {
                     w
                 }
@@ -618,5 +620,17 @@ mod spinner_tests {
         let spinner = Spinner::new(vec![Wedge::new(apple.clone())]);
         let spinner = spinner.replace_value(&apple, &banana);
         assert_eq!(spinner.spin().unwrap(), banana);
+    }
+
+    #[test]
+    fn replace_value_preserves_covered_wedges() {
+        let spinner = Spinner::new(vec![Wedge::new("Lose").cover()]);
+
+        let spinner = spinner.replace_value(&"Lose", &"Try Again");
+        let wedge = &spinner.wedges()[0];
+
+        assert_eq!(wedge.value, "Try Again");
+        assert!(!wedge.active);
+        assert!(spinner.spin().is_none());
     }
 }

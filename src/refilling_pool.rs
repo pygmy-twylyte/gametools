@@ -7,11 +7,12 @@
 //! thrice, etc.
 //!
 //! A `RefillingPool` can never be empty. Attempting to create an empty one or to remove
-//! the last item from one will generate a `GameError`.
+//! the last item from one will generate a [`RefillingPoolError`], surfaced through
+//! [`crate::GameError`] by the current public constructors.
 
 use rand::seq::SliceRandom as _;
 
-use crate::{GameResult, gameerror::GameError};
+use crate::{GameError, GameResult, RefillingPoolError};
 
 /// # `RefillingPool<T>`
 ///
@@ -65,7 +66,7 @@ impl<T> RefillingPool<T> {
     /// Create a new `RefillingPool` from an iterable collection.
     ///
     /// # Errors
-    /// - `GameError::PoolCannotBeEmpty` if `items` is empty.
+    /// - [`RefillingPoolError::PoolCannotBeEmpty`] if `items` is empty.
     ///
     /// # Examples
     /// ```
@@ -83,7 +84,7 @@ impl<T> RefillingPool<T> {
     pub fn new(items: impl IntoIterator<Item = T>) -> GameResult<Self> {
         let items: Vec<T> = items.into_iter().collect();
         if items.is_empty() {
-            return Err(GameError::PoolCannotBeEmpty);
+            return Err(RefillingPoolError::PoolCannotBeEmpty.into());
         }
         let mut unused: Vec<usize> = (0..items.len()).collect();
         unused.shuffle(&mut rand::rng());
@@ -128,10 +129,10 @@ impl<T> RefillingPool<T> {
     /// - `InvalidPoolIndex` if the supplied index is beyond current pool size.
     pub fn remove_index(&mut self, index: usize) -> GameResult<T> {
         if index >= self.items.len() {
-            return Err(GameError::InvalidPoolIndex(index, self.items.len()));
+            return Err(RefillingPoolError::InvalidPoolIndex(index, self.items.len()).into());
         }
         if self.items.len() == 1 {
-            return Err(GameError::PoolCannotBeEmpty);
+            return Err(RefillingPoolError::PoolCannotBeEmpty.into());
         }
         self.unused.retain(|&ui| ui != index);
         let item = self.items.swap_remove(index);
@@ -388,16 +389,21 @@ mod tests {
 
     #[test]
     fn creating_pool_with_no_refills_is_error() {
-        assert!(RefillingPool::<()>::new([]).is_err_and(|e| e.eq(&GameError::PoolCannotBeEmpty)));
+        assert!(RefillingPool::<()>::new([]).is_err_and(|e| {
+            e.eq(&GameError::RefillingPoolError(
+                RefillingPoolError::PoolCannotBeEmpty,
+            ))
+        }));
     }
 
     #[test]
     fn removing_last_item_is_error() {
         let mut pool = RefillingPool::new([1]).unwrap();
-        assert!(
-            pool.remove_index(0)
-                .is_err_and(|e| e.eq(&GameError::PoolCannotBeEmpty))
-        );
+        assert!(pool.remove_index(0).is_err_and(|e| {
+            e.eq(&GameError::RefillingPoolError(
+                RefillingPoolError::PoolCannotBeEmpty,
+            ))
+        }));
     }
 
     #[test]

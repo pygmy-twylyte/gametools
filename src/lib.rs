@@ -12,7 +12,7 @@
 //! - `refilling_pool`: infinitely reusable random pools with conditional and contextual draw helpers.
 //! - `spinners`: decision wheels with weighted, coverable wedges that can hold arbitrary values.
 //! - `dominos`: domino set creation, train management, and longest-train solving.
-//! - `GameError`, `DiceError`, and `GameResult` for shared error handling across the crate.
+//! - Module-specific error enums plus `GameError` / `GameResult` for aggregate error handling across the crate.
 
 pub mod cards;
 pub use cards::{
@@ -35,7 +35,9 @@ pub mod spinners;
 pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 
 pub mod gameerror;
-pub use gameerror::{DiceError, GameError};
+pub use gameerror::{
+    CardError, DiceError, DominoError, GameError, RefillingPoolError, SpinnerError, ValueError,
+};
 pub type GameResult<T> = Result<T, GameError>;
 
 pub mod ordering;
