@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-use crate::{GameError, GameResult};
+use crate::{DominoError, GameResult};
 
 /// The maximum number of pips allowed on each side of a domino.
 pub const MAX_PIPS: u8 = 18;
@@ -261,7 +261,7 @@ impl Train {
 
     fn ensure_player_can_play(&self, player: &str) -> GameResult<()> {
         if !self.open && self.player != player {
-            return Err(GameError::TrainClosed);
+            return Err(DominoError::TrainClosed.into());
         }
         Ok(())
     }
@@ -270,7 +270,7 @@ impl Train {
         match tile {
             _ if tile.left == tail => Ok(tile),
             _ if tile.right == tail => Ok(tile.flipped()),
-            _ => Err(GameError::TileUnconnected),
+            _ => Err(DominoError::TileUnconnected.into()),
         }
     }
 }
@@ -312,7 +312,7 @@ impl DominoHand {
                 tiles: starting_tiles,
             })
         } else {
-            Err(GameError::InsufficientTiles)
+            Err(DominoError::InsufficientTiles.into())
         }
     }
 
@@ -402,7 +402,7 @@ impl DominoHand {
             let pos = remaining_tiles
                 .iter()
                 .position(|&t| t.id == *domino_id)
-                .ok_or(GameError::TileNotFound(*domino_id))?;
+                .ok_or(DominoError::TileNotFound(*domino_id))?;
             let tile = remaining_tiles.swap_remove(pos);
             let tile = Train::oriented_for_tail(tile, tail)?;
             tail = tile.right;
@@ -637,7 +637,7 @@ mod domino_tests {
         let invalid_sequence = vec![0, 1, 2];
         assert_eq!(
             hand.play_line(&invalid_sequence, &mut train),
-            Err(GameError::TileUnconnected)
+            Err(DominoError::TileUnconnected.into())
         );
         assert_eq!(hand.tiles.len(), 3);
         assert!(train.tiles.is_empty());
@@ -652,7 +652,7 @@ mod domino_tests {
 
         assert_eq!(
             hand.play_line(&[0], &mut train),
-            Err(GameError::TrainClosed)
+            Err(DominoError::TrainClosed.into())
         );
         assert_eq!(hand.tiles.len(), 1);
         assert!(train.tiles.is_empty());

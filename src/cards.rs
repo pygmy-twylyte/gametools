@@ -89,7 +89,7 @@ pub use hand::{Hand, Hand as CardHand};
 pub use pile::Pile;
 pub use std_playing_cards::{Rank, StandardCard, Suit};
 
-use crate::GameError;
+use crate::{CardError, GameResult};
 
 /// Shared behaviors for card containers such as [`Deck`], [`Hand`], and [`Pile`].
 pub trait CardCollection {
@@ -183,8 +183,8 @@ pub trait TakeCard<T: CardFaces> {
 /// The sender must implement `TakeCard` and the receiver, `AddCard`.
 ///
 /// # Errors
-/// - `GameError::CardNotFound` if the specified `Card` does not belong to the `sender`.
-pub fn transfer_card<C, S, R>(card: &Card<C>, sender: &mut S, recv: &mut R) -> Result<(), GameError>
+/// - [`CardError::CardNotFound`] if the specified `Card` does not belong to the `sender`.
+pub fn transfer_card<C, S, R>(card: &Card<C>, sender: &mut S, recv: &mut R) -> GameResult<()>
 where
     C: CardFaces,
     S: TakeCard<C>,
@@ -194,7 +194,7 @@ where
         recv.add_card(mover);
         Ok(())
     } else {
-        Err(GameError::CardNotFound)
+        Err(CardError::CardNotFound.into())
     }
 }
 
