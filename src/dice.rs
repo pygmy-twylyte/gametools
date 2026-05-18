@@ -53,10 +53,14 @@ impl Die {
         })
     }
 
-    /// Create a non-exploding `Die` with specified number of sides, unchecked for
-    /// validity. Can be used in `const` contexts.
+    /// `Die` constructor that can be used in `const` contexts.
+    ///
+    /// # Panics
+    /// - compile time error to define a `Die` with zero sides
+    /// - panics if called with zero sides at runtime
     #[must_use]
-    pub const fn new_unchecked(sides: u64) -> Self {
+    pub const fn new_const(sides: u64) -> Self {
+        assert!(sides > 0, "a die with zero sides cannot be created");
         Self {
             sides,
             explode_on: None,
@@ -84,10 +88,24 @@ impl Die {
         })
     }
 
-    /// Create a exploding `Die` with specified number of sides, unchecked for
-    /// validity. Can be used in `const` contexts.
+    /// Create an exploding `Die` with spcified number of sides and trigger value.
+    ///
+    /// # Panics
+    /// - (or compile-time errors in const/static contexts)
+    /// - if attempt is made to create a die with < 2 sides
+    /// - if the explode trigger is not within the die's range
     #[must_use]
-    pub const fn exploding_unchecked(sides: u64, explode_on: u64) -> Self {
+    pub fn exploding_const(sides: u64, explode_on: u64) -> Self {
+        assert!(sides > 0, "a die with zero sides cannot be created");
+        assert!(
+            sides > 1,
+            "a die with one side would explode in an infinite loop"
+        );
+        assert!(
+            explode_on >= 1 && explode_on <= sides,
+            "explode trigger must be in range (1..=sides)"
+        );
+
         Self {
             sides,
             explode_on: Some(explode_on),
