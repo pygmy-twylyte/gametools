@@ -237,17 +237,26 @@ impl Train {
     /// # Errors
     /// - if it isn't a valid play or if the train is closed and doesn't belong to the calling player.
     pub fn play(&mut self, tile: Domino, player: &str) -> GameResult<()> {
-        if !self.open && self.player != player {
-            return Err(GameError::TrainClosed);
-        }
-        let new_tile = match tile {
-            _ if tile.left == self.tail => tile,
-            _ if tile.right == self.tail => tile.flipped(),
-            _ => return Err(GameError::TileUnconnected),
-        };
+        self.ensure_player_can_play(player)?;
+        let new_tile = Self::oriented_for_tail(tile, self.tail)?;
         self.tail = new_tile.right;
         self.tiles.push(new_tile);
         Ok(())
+    }
+
+    fn ensure_player_can_play(&self, player: &str) -> GameResult<()> {
+        if !self.open && self.player != player {
+            return Err(GameError::TrainClosed);
+        }
+        Ok(())
+    }
+
+    fn oriented_for_tail(tile: Domino, tail: u8) -> GameResult<Domino> {
+        match tile {
+            _ if tile.left == tail => Ok(tile),
+            _ if tile.right == tail => Ok(tile.flipped()),
+            _ => Err(GameError::TileUnconnected),
+        }
     }
 }
 
@@ -351,22 +360,54 @@ impl DominoHand {
         }
     }
 
-    /// Takes a sequence of domino ids and attempt to play them on a train.
+    /// Takes a sequence of domino ids and attempts to play them on a train.
+    ///
+    /// The line is validated before either the hand or train is mutated. If any
+    /// tile is missing, does not connect, or cannot be played on the target train,
+    /// both objects are left unchanged.
     ///
     /// # Errors
     /// - if a tile in the sequence doesn't fit in the train
     /// - if the player doesn't have permission to play on the train
     /// - if one of the tiles in the sequence is missing from the hand
     pub fn play_line(&mut self, id_sequence: &[usize], train: &mut Train) -> GameResult<()> {
+        if id_sequence.is_empty() {
+            return Ok(());
+        }
+
+        train.ensure_player_can_play(&self.player)?;
+
+        // attempt to play the line using a copy of the hand's tiles first,
+        // in case the play is aborted by an error midway through the id_sequence
+        let mut remaining_tiles = self.tiles.clone();
+        let mut planned_tiles = Vec::with_capacity(id_sequence.len());
+        let mut tail = train.tail;
+
+        for domino_id in id_sequence {
+            let pos = remaining_tiles
+                .iter()
+                .position(|&t| t.id == *domino_id)
+                .ok_or(GameError::TileNotFound(*domino_id))?;
+            let tile = remaining_tiles.swap_remove(pos);
+            let tile = Train::oriented_for_tail(tile, tail)?;
+            tail = tile.right;
+            planned_tiles.push(tile);
+        }
+
+        // no errors -- proceed with transaction:
+        // remove needed dominos from the hand
         for domino_id in id_sequence {
             let pos = self
                 .tiles
                 .iter()
                 .position(|&t| t.id == *domino_id)
-                .ok_or(GameError::TileNotFound(*domino_id))?;
-            let tile = self.tiles.swap_remove(pos);
-            train.play(tile, &self.player)?;
+                .expect("validated tile must remain present during commit");
+            self.tiles.swap_remove(pos);
         }
+
+        // then extend the train with the planned tiles
+        train.tail = tail;
+        train.tiles.extend(planned_tiles);
         Ok(())
     }
 }
@@ -563,6 +604,44 @@ mod domino_tests {
 
         let bad_sequence = vec![9, 8, 9, 8]; // these domino ids aren't in the hand
         assert!(hand.play_line(&bad_sequence, &mut train).is_err());
+        assert_eq!(hand.tiles.len(), 3);
+        assert!(train.tiles.is_empty());
+        assert_eq!(train.tail, 1);
+    }
+
+    #[test]
+    fn hand_play_line_is_transactional_if_later_tile_does_not_connect() {
+        let mut hand = DominoHand::new("test");
+        hand.tiles = vec![
+            Domino::new(1, 2, 0),
+            Domino::new(9, 9, 1),
+            Domino::new(2, 3, 2),
+        ];
+        let mut train = Train::new("open", true, 1);
+
+        let invalid_sequence = vec![0, 1, 2];
+        assert_eq!(
+            hand.play_line(&invalid_sequence, &mut train),
+            Err(GameError::TileUnconnected)
+        );
+        assert_eq!(hand.tiles.len(), 3);
+        assert!(train.tiles.is_empty());
+        assert_eq!(train.tail, 1);
+    }
+
+    #[test]
+    fn hand_play_line_is_transactional_on_closed_train() {
+        let mut hand = DominoHand::new("guest");
+        hand.tiles = vec![Domino::new(1, 2, 0)];
+        let mut train = Train::new("owner", false, 1);
+
+        assert_eq!(
+            hand.play_line(&[0], &mut train),
+            Err(GameError::TrainClosed)
+        );
+        assert_eq!(hand.tiles.len(), 1);
+        assert!(train.tiles.is_empty());
+        assert_eq!(train.tail, 1);
     }
 
     #[test]
