@@ -244,6 +244,21 @@ impl Train {
         Ok(())
     }
 
+    /// Opens the train, allowing it to be played on.
+    pub fn open(&mut self) {
+        self.open = true;
+    }
+
+    /// Closes the train, preventing it from being played on.
+    pub fn close(&mut self) {
+        self.open = false;
+    }
+
+    /// Returns whether the train is open and can be played on.
+    pub fn is_open(&self) -> bool {
+        self.open
+    }
+
     fn ensure_player_can_play(&self, player: &str) -> GameResult<()> {
         if !self.open && self.player != player {
             return Err(GameError::TrainClosed);
