@@ -95,7 +95,7 @@ impl Die {
     /// - if attempt is made to create a die with < 2 sides
     /// - if the explode trigger is not within the die's range
     #[must_use]
-    pub fn exploding_const(sides: u64, explode_on: u64) -> Self {
+    pub const fn exploding_const(sides: u64, explode_on: u64) -> Self {
         assert!(sides > 0, "a die with zero sides cannot be created");
         assert!(
             sides > 1,
