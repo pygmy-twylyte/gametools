@@ -38,10 +38,22 @@ pub mod gameerror;
 pub use gameerror::{
     CardError, DiceError, DominoError, GameError, RefillingPoolError, SpinnerError, ValueError,
 };
-pub type GameResult<T> = Result<T, GameError>;
+
+pub mod grid;
+pub use grid::Grid;
 
 pub mod ordering;
 pub use ordering::{
     AscendingOrder, DescendingOrder, Max, MaxPriorityQ, Min, MinPriorityQ, PriorityQueue,
     RankedOrder,
 };
+pub type GameResult<T> = Result<T, GameError>;
+
+#[macro_export]
+macro_rules! ensure {
+    ($cond:expr, $err:expr) => {
+        if !$cond {
+            return Err($err);
+        }
+    };
+}
