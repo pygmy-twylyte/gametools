@@ -70,7 +70,7 @@ impl PointDelta {
         Self::new(-self.dc, -self.dr)
     }
 
-    /// Returns the Pythagorean distance covered by a delta.
+    /// Returns the Euclidean distance covered by a delta.
     ///
     /// Uses the Pythagorean theorem to calculate the distance.
     ///
@@ -80,11 +80,38 @@ impl PointDelta {
     /// use gametools::PointDelta;
     ///
     /// let delta = PointDelta::new(3, 4);
-    /// assert_eq!(delta.distance(), 5.0);
+    /// assert_eq!(delta.distance_euclid(), 5.0);
     /// ```
-    pub fn distance(&self) -> f64 {
-        let distance_squared = (self.dc.pow(2) + self.dr.pow(2)) as f64;
-        distance_squared.sqrt()
+    pub fn distance_euclid(&self) -> f64 {
+        f64::from(self.dc).hypot(f64::from(self.dr))
+    }
+
+    /// Returns the taxicab distance covered by a delta.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::PointDelta;
+    ///
+    /// let delta = PointDelta::new(3, 4);
+    /// assert_eq!(delta.distance_taxicab(), 7);
+    /// ```
+    pub fn distance_taxicab(&self) -> i32 {
+        (self.dc.abs() + self.dr.abs()) as i32
+    }
+
+    /// Returns the Chebyshev distance covered by a delta.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::PointDelta;
+    ///
+    /// let delta = PointDelta::new(3, 4);
+    /// assert_eq!(delta.distance_chebyshev(), 4);
+    /// ```
+    pub fn distance_chebyshev(&self) -> i32 {
+        self.dc.abs().max(self.dr.abs()) as i32
     }
 
     /// One row up.
@@ -115,10 +142,10 @@ impl PointDelta {
     /// assert!(PointDelta::DIAGONALS.contains(&PointDelta::NORTH_EAST));
     /// ```
     pub const DIAGONALS: [Self; 4] = [
-        Self::NORTH_EAST,
         Self::NORTH_WEST,
-        Self::SOUTH_EAST,
+        Self::NORTH_EAST,
         Self::SOUTH_WEST,
+        Self::SOUTH_EAST,
     ];
 
     /// The four orthogonal directions.
@@ -131,7 +158,7 @@ impl PointDelta {
     /// assert_eq!(PointDelta::CARDINALS.len(), 4);
     /// assert!(PointDelta::CARDINALS.contains(&PointDelta::WEST));
     /// ```
-    pub const CARDINALS: [Self; 4] = [Self::NORTH, Self::SOUTH, Self::EAST, Self::WEST];
+    pub const CARDINALS: [Self; 4] = [Self::NORTH, Self::WEST, Self::EAST, Self::SOUTH];
 
     /// All eight surrounding directions.
     ///
@@ -144,14 +171,14 @@ impl PointDelta {
     /// assert!(PointDelta::ALL_DIRECTIONS.contains(&PointDelta::SOUTH_WEST));
     /// ```
     pub const ALL_DIRECTIONS: [Self; 8] = [
-        Self::NORTH,
-        Self::SOUTH,
-        Self::EAST,
-        Self::WEST,
-        Self::NORTH_EAST,
         Self::NORTH_WEST,
-        Self::SOUTH_EAST,
+        Self::NORTH,
+        Self::NORTH_EAST,
+        Self::WEST,
+        Self::EAST,
         Self::SOUTH_WEST,
+        Self::SOUTH,
+        Self::SOUTH_EAST,
     ];
 }
 
