@@ -389,6 +389,11 @@ impl<T> Grid<T> {
         self.point_to_index(point).is_some()
     }
 
+    /// Alias for [`Grid::is_in_bounds()`], returns true if the grid contains the point.
+    pub fn contains_point(&self, point: Point) -> bool {
+        self.is_in_bounds(point)
+    }
+
     /// Converts a point to an index, returning `None` if the point is out of bounds.
     fn point_to_index(&self, point: Point) -> Option<usize> {
         let row = usize::try_from(point.row).ok()?;
