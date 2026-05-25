@@ -51,6 +51,49 @@ impl Point {
     pub const fn new(col: i32, row: i32) -> Self {
         Self { col, row }
     }
+
+    /// Returns whether the point is in the same row as another point.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::Point;
+    ///
+    /// let point = Point::new(1, -2);
+    /// assert!(point.same_row(Point::new(3, -2)));
+    /// ```
+    pub fn same_row(&self, other: Point) -> bool {
+        self.row == other.row
+    }
+
+    /// Returns whether the point is in the same column as another point.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::Point;
+    ///
+    /// let point = Point::new(1, -2);
+    /// assert!(point.same_col(Point::new(1, 3)));
+    /// ```
+    pub fn same_col(&self, other: Point) -> bool {
+        self.col == other.col
+    }
+
+    /// Returns whether the point is on the same diagonal as another point.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::Point;
+    ///
+    /// let point = Point::new(1, -2);
+    /// assert!(point.same_diagonal(Point::new(3, 1)));
+    /// ```
+    pub fn same_diagonal(&self, other: Point) -> bool {
+        let delta = *self - other;
+        delta.dc.abs() == delta.dr.abs()
+    }
 }
 
 impl Add<PointDelta> for Point {
