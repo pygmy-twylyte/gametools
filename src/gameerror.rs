@@ -16,12 +16,25 @@ pub enum GameError {
     DominoError(#[from] DominoError),
     #[error("dice error: {0}")]
     DiceError(#[from] DiceError),
+    #[error("grid error: {0}")]
+    GridError(#[from] GridError),
     #[error("refilling pool error: {0}")]
     RefillingPoolError(#[from] RefillingPoolError),
     #[error("spinner error: {0}")]
     SpinnerError(#[from] SpinnerError),
     #[error("value error: {0}")]
     ValueError(#[from] ValueError),
+}
+
+/// Errors specific to the grid module.
+#[derive(Debug, Clone, Error, PartialEq)]
+pub enum GridError {
+    #[error("both grid dimensions must be > 0, got ({0},{1})")]
+    InvalidSize(usize, usize),
+    #[error("grid area overflows maximum integer value")]
+    AreaOverflow,
+    #[error("actual cell count {actual} did not match expected size {expected}")]
+    CellCountMismatch { actual: usize, expected: usize },
 }
 
 /// Errors specific to card collections and card transfer helpers.
@@ -87,7 +100,8 @@ pub enum ValueError {
 #[cfg(test)]
 mod tests {
     use super::{
-        CardError, DiceError, DominoError, GameError, RefillingPoolError, SpinnerError, ValueError,
+        CardError, DiceError, DominoError, GameError, GridError, RefillingPoolError, SpinnerError,
+        ValueError,
     };
     use std::error::Error;
 
@@ -129,6 +143,10 @@ mod tests {
             (
                 DiceError::DieWithNoSides.into(),
                 "dice error: a die with zero sides cannot be created",
+            ),
+            (
+                GridError::InvalidSize(0, 2).into(),
+                "grid error: both grid dimensions must be > 0, got (0,2)",
             ),
             (
                 ValueError::OutOfRange.into(),

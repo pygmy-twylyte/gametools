@@ -36,11 +36,12 @@ pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 
 pub mod gameerror;
 pub use gameerror::{
-    CardError, DiceError, DominoError, GameError, RefillingPoolError, SpinnerError, ValueError,
+    CardError, DiceError, DominoError, GameError, GridError, RefillingPoolError, SpinnerError,
+    ValueError,
 };
 
 pub mod grid;
-pub use grid::Grid;
+pub use grid::{Grid, GridSize, Point, PointDelta};
 
 pub mod ordering;
 pub use ordering::{
@@ -53,7 +54,7 @@ pub type GameResult<T> = Result<T, GameError>;
 macro_rules! ensure {
     ($cond:expr, $err:expr) => {
         if !$cond {
-            return Err($err);
+            return Err($err.into());
         }
     };
 }

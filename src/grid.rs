@@ -3,28 +3,46 @@
 //! A generic grid data structure.
 
 pub mod point;
+pub use point::Point;
 
-use std::ops::{Deref, Index, IndexMut};
+pub mod pointdelta;
+pub use pointdelta::PointDelta;
 
-use crate::grid::point::Point;
+use std::ops::{Index, IndexMut};
 
-/// A wrapper around `usize` representing the width of a grid.
+use crate::GameResult;
+use crate::GridError;
+use crate::ensure;
+
+/// Dimensions used to create a Grid<T>.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Width(usize);
-impl Deref for Width {
-    type Target = usize;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+pub struct GridSize {
+    width: usize,
+    height: usize,
 }
 
-/// A wrapper around `usize` representing the height of a grid.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Height(usize);
-impl Deref for Height {
-    type Target = usize;
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl GridSize {
+    pub fn new(width: usize, height: usize) -> GameResult<Self> {
+        ensure!(
+            width > 0 && height > 0,
+            GridError::InvalidSize(width, height)
+        );
+        ensure!(width.checked_mul(height).is_some(), GridError::AreaOverflow);
+        Ok(Self { width, height })
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn area(&self) -> GameResult<usize> {
+        self.width
+            .checked_mul(self.height)
+            .ok_or(GridError::AreaOverflow.into())
     }
 }
 
@@ -32,35 +50,65 @@ impl Deref for Height {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Grid<T> {
     cells: Vec<T>,
-    cols: Width,
-    rows: Height,
+    size: GridSize,
 }
 
 impl<T: Clone> Grid<T> {
     /// Creates a new grid with the specified width, height, and filler value.
-    pub fn new(cols: Width, rows: Height, filler: &T) -> Self {
-        Self {
-            cells: vec![filler.clone(); *cols * *rows],
-            cols,
-            rows,
-        }
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the area of the grid exceeds `usize::MAX`.
+    pub fn new(size: GridSize, filler: T) -> GameResult<Self> {
+        Ok(Self {
+            cells: vec![filler; size.area()?],
+            size,
+        })
+    }
+}
+
+impl<T> Grid<T> {
+    /// Creates a new grid from an existing vector.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the area of the grid exceeds `usize::MAX` or the vector does not match the grid size.
+    pub fn from_vec(size: GridSize, cells: Vec<T>) -> GameResult<Self> {
+        let area = size.area()?;
+        ensure!(
+            cells.len() == area,
+            GridError::CellCountMismatch {
+                actual: cells.len(),
+                expected: area
+            }
+        );
+        Ok(Self { cells, size })
     }
 
     /// Creates a new grid, filling the cells using a supplied function to determine initial values.
-    pub fn new_with_fn<F>(cols: Width, rows: Height, mut filler: F) -> Self
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the area of the grid exceeds `usize::MAX`.
+    pub fn new_with_fn<F>(size: GridSize, mut filler: F) -> GameResult<Self>
     where
         F: FnMut(Point) -> T,
     {
-        let mut cells: Vec<T> = Vec::with_capacity(*cols * *rows);
-        for row in 0..*rows {
-            for col in 0..*cols {
+        let mut cells: Vec<T> = Vec::with_capacity(size.area()?);
+        for row in 0..size.height {
+            for col in 0..size.width {
                 cells.push(filler(Point {
                     col: col as i32,
                     row: row as i32,
                 }));
             }
         }
-        Self { cells, cols, rows }
+        Ok(Self { cells, size })
+    }
+
+    /// Returns the `GridSize` (dimensions) of the grid.
+    pub fn size(&self) -> GridSize {
+        self.size
     }
 
     /// Returns a reference to the cell at the specified point, if it is within the grid's bounds.
@@ -73,36 +121,117 @@ impl<T: Clone> Grid<T> {
         self.point_to_index(cell)
             .map(|index| &mut self.cells[index])
     }
-}
 
-impl<T> Grid<T> {
+    /// Returns an iterator over all the points in the grid.
+    pub fn points(&self) -> impl Iterator<Item = Point> {
+        let width = self.size.width;
+        (0..self.cells.len()).map(move |index| index_to_point(index, width))
+    }
+
+    /// Returns an iterator over all the cells in the grid, with their corresponding points.
+    pub fn iter(&self) -> impl Iterator<Item = (Point, &T)> {
+        let width = self.size.width;
+        self.cells
+            .iter()
+            .enumerate()
+            .map(move |(idx, cell)| (index_to_point(idx, width), cell))
+    }
+
+    /// Returns an iterator over all the points in the grid with mutable references to the cells.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
+        let width = self.size.width;
+        self.cells
+            .iter_mut()
+            .enumerate()
+            .map(move |(idx, cell)| (index_to_point(idx, width), cell))
+    }
+
     /// Returns `true` if the point is within the grid's bounds.
     pub fn is_in_bounds(&self, point: Point) -> bool {
         self.point_to_index(point).is_some()
-    }
-
-    /// Converts an index to a point, returning `None` if the index is out of bounds.
-    fn index_to_point(&self, index: usize) -> Option<Point> {
-        if index >= self.cells.len() {
-            return None;
-        }
-        let row = index / *self.cols;
-        let col = index % *self.cols;
-        Some(Point {
-            col: i32::try_from(col).ok()?,
-            row: i32::try_from(row).ok()?,
-        })
     }
 
     /// Converts a point to an index, returning `None` if the point is out of bounds.
     fn point_to_index(&self, point: Point) -> Option<usize> {
         let row = usize::try_from(point.row).ok()?;
         let col = usize::try_from(point.col).ok()?;
-        let index = *self.cols * row + col;
+        if row >= self.size.height || col >= self.size.width {
+            return None;
+        }
+
+        let index = self.size.width * row + col;
         if index >= self.cells.len() {
             return None;
         }
+
         Some(index)
+    }
+
+    fn neighbors_inner(
+        &self,
+        center: Point,
+        deltas: &[PointDelta],
+    ) -> impl Iterator<Item = (Point, &T)> {
+        deltas.iter().filter_map(move |delta| {
+            let point = center + *delta;
+            self.get(point).map(|value| (point, value))
+        })
+    }
+
+    fn neighbors_inner_mut(
+        &mut self,
+        center: Point,
+        deltas: &[PointDelta],
+    ) -> impl Iterator<Item = (Point, &mut T)> {
+        let neighbors: Vec<(Point, usize)> = deltas
+            .iter()
+            .filter_map(|delta| {
+                let point = center + *delta;
+                self.point_to_index(point).map(|index| (point, index))
+            })
+            .collect();
+
+        self.cells
+            .iter_mut()
+            .enumerate()
+            .filter_map(move |(index, value)| {
+                neighbors
+                    .iter()
+                    .find_map(|(point, neighbor_index)| {
+                        (*neighbor_index == index).then_some(*point)
+                    })
+                    .map(|point| (point, value))
+            })
+    }
+
+    pub fn cardinal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+        self.neighbors_inner(center, &PointDelta::CARDINALS)
+    }
+
+    pub fn cardinal_neighbors_mut(
+        &mut self,
+        center: Point,
+    ) -> impl Iterator<Item = (Point, &mut T)> {
+        self.neighbors_inner_mut(center, &PointDelta::CARDINALS)
+    }
+
+    pub fn diagonal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+        self.neighbors_inner(center, &PointDelta::DIAGONALS)
+    }
+
+    pub fn diagonal_neighbors_mut(
+        &mut self,
+        center: Point,
+    ) -> impl Iterator<Item = (Point, &mut T)> {
+        self.neighbors_inner_mut(center, &PointDelta::DIAGONALS)
+    }
+
+    pub fn all_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+        self.neighbors_inner(center, &PointDelta::ALL_DIRECTIONS)
+    }
+
+    pub fn all_neighbors_mut(&mut self, center: Point) -> impl Iterator<Item = (Point, &mut T)> {
+        self.neighbors_inner_mut(center, &PointDelta::ALL_DIRECTIONS)
     }
 }
 
@@ -119,5 +248,276 @@ impl<T> IndexMut<Point> for Grid<T> {
             .point_to_index(point)
             .expect("point index out of bounds");
         &mut self.cells[idx]
+    }
+}
+
+fn index_to_point(index: usize, width: usize) -> Point {
+    Point {
+        col: (index % width) as i32,
+        row: (index / width) as i32,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Grid, GridSize, Point};
+    use crate::{GameError, GridError};
+    use std::collections::BTreeMap;
+
+    fn size(width: usize, height: usize) -> GridSize {
+        GridSize::new(width, height).expect("valid grid size")
+    }
+
+    fn sample_grid() -> Grid<i32> {
+        Grid::from_vec(size(3, 3), (0..9).collect()).expect("valid grid")
+    }
+
+    fn collect_neighbor_values<'a>(
+        neighbors: impl Iterator<Item = (Point, &'a i32)>,
+    ) -> Vec<(Point, i32)> {
+        neighbors.map(|(point, value)| (point, *value)).collect()
+    }
+
+    #[test]
+    fn grid_size_new_accepts_positive_dimensions() {
+        let size = GridSize::new(4, 7).expect("positive dimensions are valid");
+
+        assert_eq!(size.width(), 4);
+        assert_eq!(size.height(), 7);
+        assert_eq!(size.area().expect("area fits"), 28);
+    }
+
+    #[test]
+    fn grid_size_new_rejects_zero_dimensions() {
+        assert_eq!(
+            GridSize::new(0, 2),
+            Err(GameError::GridError(GridError::InvalidSize(0, 2)))
+        );
+        assert_eq!(
+            GridSize::new(2, 0),
+            Err(GameError::GridError(GridError::InvalidSize(2, 0)))
+        );
+    }
+
+    #[test]
+    fn grid_size_new_rejects_overflowing_area() {
+        assert_eq!(
+            GridSize::new(usize::MAX, 2),
+            Err(GameError::GridError(GridError::AreaOverflow))
+        );
+    }
+
+    #[test]
+    fn new_fills_every_cell() {
+        let grid = Grid::new(size(3, 2), "x").expect("valid grid");
+
+        assert_eq!(grid.size(), size(3, 2));
+        assert!(grid.iter().all(|(_, value)| *value == "x"));
+        assert_eq!(grid.iter().count(), 6);
+    }
+
+    #[test]
+    fn from_vec_preserves_row_major_cells() {
+        let grid = Grid::from_vec(size(3, 2), vec![10, 11, 12, 20, 21, 22]).expect("valid grid");
+
+        assert_eq!(grid[Point::new(0, 0)], 10);
+        assert_eq!(grid[Point::new(2, 0)], 12);
+        assert_eq!(grid[Point::new(0, 1)], 20);
+        assert_eq!(grid[Point::new(2, 1)], 22);
+    }
+
+    #[test]
+    fn from_vec_rejects_cell_count_mismatch() {
+        assert_eq!(
+            Grid::from_vec(size(2, 3), vec![1, 2, 3]),
+            Err(GameError::GridError(GridError::CellCountMismatch {
+                actual: 3,
+                expected: 6
+            }))
+        );
+    }
+
+    #[test]
+    fn new_with_fn_receives_points_in_row_major_order() {
+        let mut visited = Vec::new();
+        let grid = Grid::new_with_fn(size(3, 2), |point| {
+            visited.push(point);
+            point.row * 10 + point.col
+        })
+        .expect("valid grid");
+
+        assert_eq!(
+            visited,
+            vec![
+                Point::new(0, 0),
+                Point::new(1, 0),
+                Point::new(2, 0),
+                Point::new(0, 1),
+                Point::new(1, 1),
+                Point::new(2, 1),
+            ]
+        );
+        assert_eq!(grid[Point::new(2, 1)], 12);
+    }
+
+    #[test]
+    fn get_and_bounds_check_reject_negative_and_oversized_points() {
+        let grid = sample_grid();
+
+        assert_eq!(grid.get(Point::new(1, 1)), Some(&4));
+        assert!(grid.is_in_bounds(Point::new(2, 2)));
+        assert!(!grid.is_in_bounds(Point::new(-1, 0)));
+        assert!(!grid.is_in_bounds(Point::new(0, -1)));
+        assert!(!grid.is_in_bounds(Point::new(3, 0)));
+        assert!(!grid.is_in_bounds(Point::new(0, 3)));
+        assert_eq!(grid.get(Point::new(4, 0)), None);
+    }
+
+    #[test]
+    fn get_mut_updates_in_bounds_cells_only() {
+        let mut grid = sample_grid();
+
+        *grid.get_mut(Point::new(1, 1)).expect("cell exists") = 99;
+
+        assert_eq!(grid.get(Point::new(1, 1)), Some(&99));
+        assert_eq!(grid.get_mut(Point::new(3, 1)), None);
+    }
+
+    #[test]
+    fn points_iterates_in_row_major_order() {
+        let grid = Grid::new(size(2, 2), ()).expect("valid grid");
+
+        assert_eq!(
+            grid.points().collect::<Vec<_>>(),
+            vec![
+                Point::new(0, 0),
+                Point::new(1, 0),
+                Point::new(0, 1),
+                Point::new(1, 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn iter_pairs_points_with_values() {
+        let grid = Grid::from_vec(size(2, 2), vec!['a', 'b', 'c', 'd']).expect("valid grid");
+
+        assert_eq!(
+            grid.iter()
+                .map(|(point, value)| (point, *value))
+                .collect::<Vec<_>>(),
+            vec![
+                (Point::new(0, 0), 'a'),
+                (Point::new(1, 0), 'b'),
+                (Point::new(0, 1), 'c'),
+                (Point::new(1, 1), 'd'),
+            ]
+        );
+    }
+
+    #[test]
+    fn iter_mut_pairs_points_with_mutable_values() {
+        let mut grid =
+            Grid::new_with_fn(size(2, 2), |point| point.row * 10 + point.col).expect("valid grid");
+
+        for (point, value) in grid.iter_mut() {
+            *value += point.col + point.row;
+        }
+
+        assert_eq!(grid[Point::new(0, 0)], 0);
+        assert_eq!(grid[Point::new(1, 0)], 2);
+        assert_eq!(grid[Point::new(0, 1)], 11);
+        assert_eq!(grid[Point::new(1, 1)], 13);
+    }
+
+    #[test]
+    fn index_mut_updates_cell() {
+        let mut grid = sample_grid();
+
+        grid[Point::new(2, 2)] = 42;
+
+        assert_eq!(grid[Point::new(2, 2)], 42);
+    }
+
+    #[test]
+    fn cardinal_neighbors_filters_to_in_bounds_cells() {
+        let grid = sample_grid();
+
+        assert_eq!(
+            collect_neighbor_values(grid.cardinal_neighbors(Point::new(1, 1))),
+            vec![
+                (Point::new(1, 0), 1),
+                (Point::new(1, 2), 7),
+                (Point::new(2, 1), 5),
+                (Point::new(0, 1), 3),
+            ]
+        );
+        assert_eq!(
+            collect_neighbor_values(grid.cardinal_neighbors(Point::new(0, 0))),
+            vec![(Point::new(0, 1), 3), (Point::new(1, 0), 1)]
+        );
+    }
+
+    #[test]
+    fn diagonal_neighbors_filters_to_in_bounds_cells() {
+        let grid = sample_grid();
+
+        assert_eq!(
+            collect_neighbor_values(grid.diagonal_neighbors(Point::new(1, 1))),
+            vec![
+                (Point::new(2, 0), 2),
+                (Point::new(0, 0), 0),
+                (Point::new(2, 2), 8),
+                (Point::new(0, 2), 6),
+            ]
+        );
+        assert_eq!(
+            collect_neighbor_values(grid.diagonal_neighbors(Point::new(0, 0))),
+            vec![(Point::new(1, 1), 4)]
+        );
+    }
+
+    #[test]
+    fn all_neighbors_filters_to_in_bounds_cells() {
+        let grid = sample_grid();
+
+        assert_eq!(grid.all_neighbors(Point::new(1, 1)).count(), 8);
+        assert_eq!(
+            collect_neighbor_values(grid.all_neighbors(Point::new(0, 0))),
+            vec![
+                (Point::new(0, 1), 3),
+                (Point::new(1, 0), 1),
+                (Point::new(1, 1), 4),
+            ]
+        );
+    }
+
+    #[test]
+    fn mutable_neighbor_iterators_update_only_neighbors() {
+        let mut grid = Grid::new(size(3, 3), 0).expect("valid grid");
+
+        for (_, value) in grid.cardinal_neighbors_mut(Point::new(1, 1)) {
+            *value += 1;
+        }
+        for (_, value) in grid.diagonal_neighbors_mut(Point::new(1, 1)) {
+            *value += 10;
+        }
+        for (_, value) in grid.all_neighbors_mut(Point::new(0, 0)) {
+            *value += 100;
+        }
+
+        let values = grid
+            .iter()
+            .map(|(point, value)| (point, *value))
+            .collect::<BTreeMap<_, _>>();
+        assert_eq!(values[&Point::new(0, 0)], 10);
+        assert_eq!(values[&Point::new(1, 0)], 101);
+        assert_eq!(values[&Point::new(2, 0)], 10);
+        assert_eq!(values[&Point::new(0, 1)], 101);
+        assert_eq!(values[&Point::new(1, 1)], 100);
+        assert_eq!(values[&Point::new(2, 1)], 1);
+        assert_eq!(values[&Point::new(0, 2)], 10);
+        assert_eq!(values[&Point::new(1, 2)], 1);
+        assert_eq!(values[&Point::new(2, 2)], 10);
     }
 }
