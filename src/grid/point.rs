@@ -1,16 +1,53 @@
 //! # `Point`
+//!
+//! A location on a [`Grid`](crate::Grid), expressed as a column and row.
+//!
+//! # Examples
+//!
+//! ```
+//! use gametools::{Point, PointDelta};
+//!
+//! let point = Point::new(2, 3);
+//! assert_eq!(point + PointDelta::NORTH, Point::new(2, 2));
+//! assert_eq!(Point::new(5, 1) - point, PointDelta::new(3, -2));
+//! ```
 
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use crate::PointDelta;
 
+/// A grid location.
+///
+/// `col` is the horizontal coordinate and `row` is the vertical coordinate.
+/// Grid APIs treat `(0, 0)` as the top-left cell.
+///
+/// # Examples
+///
+/// ```
+/// use gametools::Point;
+///
+/// let point = Point::new(4, 2);
+/// assert_eq!(point.col, 4);
+/// assert_eq!(point.row, 2);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash, PartialOrd, Ord)]
 pub struct Point {
+    /// Horizontal grid coordinate.
     pub col: i32,
+    /// Vertical grid coordinate.
     pub row: i32,
 }
 
 impl Point {
+    /// Creates a point from a column and row.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::Point;
+    ///
+    /// assert_eq!(Point::new(1, -2), Point { col: 1, row: -2 });
+    /// ```
     pub const fn new(col: i32, row: i32) -> Self {
         Self { col, row }
     }

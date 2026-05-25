@@ -175,6 +175,47 @@ mod tests {
 
         assert_eq!(pile.cards.len(), 1);
         assert_eq!(pile.cards[0].faces.id, 10);
+        assert_eq!(pile.cards().len(), 1);
+        assert_eq!(pile.size(), 1);
+        assert_eq!(pile.check_top_card().map(|card| card.faces.id), Some(10));
+    }
+
+    #[test]
+    fn check_top_card_returns_none_for_empty_pile() {
+        let pile = Pile::<StubFaces>::new_pile("discard");
+
+        assert!(pile.check_top_card().is_none());
+    }
+
+    #[test]
+    fn show_faces_and_backs_flip_all_cards() {
+        let mut pile = Pile::<StubFaces>::new_pile("discard");
+        pile.add_card(make_card(1));
+        pile.add_card(make_card(2));
+
+        pile.show_backs();
+        assert!(pile.cards().iter().all(|card| !card.face_up));
+
+        pile.show_faces();
+        assert!(pile.cards().iter().all(|card| card.face_up));
+    }
+
+    #[test]
+    fn shuffle_preserves_all_cards() {
+        let mut pile = Pile::<StubFaces>::new_pile("discard");
+        for id in 0..8 {
+            pile.add_card(make_card(id));
+        }
+
+        pile.shuffle();
+
+        let mut ids = pile
+            .cards()
+            .iter()
+            .map(|card| card.faces.id)
+            .collect::<Vec<_>>();
+        ids.sort();
+        assert_eq!(ids, (0..8).collect::<Vec<_>>());
     }
 
     #[test]
@@ -201,5 +242,16 @@ mod tests {
         assert_eq!(taken.faces.id, 2);
         let ids: Vec<u8> = pile.cards.iter().map(|c| c.faces.id).collect();
         assert_eq!(ids, vec![1, 3]);
+    }
+
+    #[test]
+    fn take_match_returns_none_when_card_missing() {
+        let mut pile = Pile::<StubFaces>::new_pile("discard");
+        pile.add_card(make_card(1));
+        pile.add_card(make_card(3));
+        let search = Card::new_card(StubFaces { id: 2 });
+
+        assert!(pile.take_match(&search).is_none());
+        assert_eq!(pile.cards().len(), 2);
     }
 }

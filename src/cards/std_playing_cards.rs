@@ -600,6 +600,31 @@ mod tests {
     }
 
     #[test]
+    fn deck_modifier_remove_suits_add_cards_and_duplicate_work() {
+        let without_red = standard_52().remove_suits(&[Suit::Hearts, Suit::Diamonds]);
+        assert_eq!(without_red.len(), 26);
+        assert!(
+            without_red
+                .iter()
+                .all(|card| matches!(card.suit, Suit::Clubs | Suit::Spades))
+        );
+
+        let extras = [
+            StandardCard::new_card(Rank::Joker, Suit::Wild),
+            StandardCard::new_card(Rank::Ace, Suit::Spades),
+        ];
+        let custom = Vec::new().add_cards(extras.into_iter()).duplicate(2);
+        assert_eq!(custom.len(), 8);
+        assert_eq!(
+            custom
+                .iter()
+                .filter(|card| card.rank == Rank::Joker && card.suit == Suit::Wild)
+                .count(),
+            4
+        );
+    }
+
+    #[test]
     fn add_jokers_adds_expected_cards() {
         let joker_deck: Vec<StandardCard> = Vec::new().add_jokers(10);
         assert_eq!(joker_deck.len(), 10);
@@ -635,6 +660,51 @@ mod tests {
 
         assert_eq!(card.display_front(), "10.♥");
         assert!(card.display_back().is_none());
+    }
+
+    #[test]
+    fn rank_and_suit_display_cover_all_variants() {
+        assert_eq!(
+            Rank::all_ranks()
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            vec![
+                "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "*",
+            ]
+        );
+        assert_eq!(
+            Suit::all_suits()
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            vec!["♣", "♥", "♦", "♠", "?"]
+        );
+    }
+
+    #[test]
+    fn from_value_maps_all_supported_ranks() {
+        let expected = [
+            (1, Some(Rank::Ace)),
+            (2, Some(Rank::Two)),
+            (3, Some(Rank::Three)),
+            (4, Some(Rank::Four)),
+            (5, Some(Rank::Five)),
+            (6, Some(Rank::Six)),
+            (7, Some(Rank::Seven)),
+            (8, Some(Rank::Eight)),
+            (9, Some(Rank::Nine)),
+            (10, Some(Rank::Ten)),
+            (11, Some(Rank::Jack)),
+            (12, Some(Rank::Queen)),
+            (13, Some(Rank::King)),
+            (14, Some(Rank::Ace)),
+            (15, None),
+        ];
+
+        for (value, rank) in expected {
+            assert_eq!(Rank::from_value(value), rank);
+        }
     }
 
     #[test]
@@ -799,6 +869,65 @@ mod tests {
         }
 
         assert!(hand.is_flush());
+    }
+
+    #[test]
+    fn hand_counts_suits_and_rejects_non_flushes() {
+        let mut hand = Hand::new("player");
+        for (rank, suit) in [
+            (Rank::Two, Suit::Hearts),
+            (Rank::Four, Suit::Hearts),
+            (Rank::Six, Suit::Spades),
+        ] {
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
+        }
+
+        assert_eq!(hand.count_suit(Suit::Hearts), 2);
+        assert_eq!(hand.count_suit(Suit::Spades), 1);
+        assert_eq!(hand.suit_map().get(&Suit::Hearts), Some(&2));
+        assert!(!hand.is_flush());
+        assert!(!Hand::<StandardCard>::new("empty").is_flush());
+    }
+
+    #[test]
+    fn n_of_a_kind_handles_zero_too_few_natural_and_missing_cases() {
+        let mut hand = Hand::new("player");
+        for (rank, suit) in [
+            (Rank::Queen, Suit::Hearts),
+            (Rank::Queen, Suit::Clubs),
+            (Rank::Seven, Suit::Spades),
+        ] {
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
+        }
+
+        assert_eq!(hand.find_n_of_a_kind(0), Some(Vec::new()));
+        assert!(hand.find_n_of_a_kind(4).is_none());
+        let pair = hand.find_n_of_a_kind(2).expect("pair should be found");
+        assert_eq!(pair.len(), 2);
+        assert!(pair.iter().all(|card| card.rank == Rank::Queen));
+        assert!(hand.find_n_of_a_kind(3).is_none());
+    }
+
+    #[test]
+    fn straight_handles_zero_too_large_all_jokers_and_missing_cases() {
+        let mut jokers = Hand::new("wild");
+        for _ in 0..2 {
+            jokers.add_card(Card::new_card(StandardCard::new_card(
+                Rank::Joker,
+                Suit::Wild,
+            )));
+        }
+
+        assert_eq!(jokers.find_n_straight(0), Some(Vec::new()));
+        assert!(jokers.find_n_straight(15).is_none());
+        assert_eq!(jokers.find_n_straight(2).expect("wild straight").len(), 2);
+        assert!(jokers.find_n_straight(3).is_none());
+
+        let mut hand = Hand::new("player");
+        for (rank, suit) in [(Rank::Two, Suit::Hearts), (Rank::Five, Suit::Clubs)] {
+            hand.add_card(Card::new_card(StandardCard::new_card(rank, suit)));
+        }
+        assert!(hand.find_n_straight(3).is_none());
     }
 
     #[test]

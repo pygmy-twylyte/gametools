@@ -341,6 +341,34 @@ mod tests {
     }
 
     #[test]
+    fn new_and_default_create_empty_named_decks() {
+        let new_deck = Deck::<StubFaces>::new();
+        let default_deck = Deck::<StubFaces>::default();
+
+        assert_eq!(new_deck.name, "");
+        assert!(new_deck.cards().is_empty());
+        assert_eq!(new_deck.size(), 0);
+        assert_eq!(default_deck.name, "");
+        assert!(default_deck.cards().is_empty());
+        assert_ne!(new_deck.deck_id(), default_deck.deck_id());
+    }
+
+    #[test]
+    fn from_faces_wraps_faces_and_assigns_deck_id() {
+        let deck = Deck::from_faces("faces", [StubFaces { id: 7 }, StubFaces { id: 8 }]);
+
+        assert_eq!(deck.name, "faces");
+        assert_eq!(
+            deck.cards()
+                .iter()
+                .map(|card| card.faces.id)
+                .collect::<Vec<_>>(),
+            vec![7, 8]
+        );
+        assert!(deck.cards().iter().all(|card| deck.owns_card(card)));
+    }
+
+    #[test]
     fn new_from_faces_builds_deck_with_expected_cards() {
         let faces = vec![StubFaces { id: 1 }, StubFaces { id: 2 }];
 
@@ -371,6 +399,32 @@ mod tests {
     }
 
     #[test]
+    fn show_faces_and_backs_flip_all_cards() {
+        let mut deck = Deck::from_cards("test", [make_card(1), make_card(2)]);
+
+        deck.show_backs();
+        assert!(deck.cards().iter().all(|card| !card.face_up));
+
+        deck.show_faces();
+        assert!(deck.cards().iter().all(|card| card.face_up));
+    }
+
+    #[test]
+    fn shuffle_preserves_all_cards() {
+        let mut deck = Deck::from_faces("test", (0..8).map(|id| StubFaces { id }));
+
+        deck.shuffle();
+
+        let mut ids = deck
+            .cards()
+            .iter()
+            .map(|card| card.faces.id)
+            .collect::<Vec<_>>();
+        ids.sort();
+        assert_eq!(ids, (0..8).collect::<Vec<_>>());
+    }
+
+    #[test]
     fn take_card_removes_last_card() {
         let mut deck = Deck::from_cards("test", [make_card(1), make_card(2)]);
 
@@ -390,6 +444,15 @@ mod tests {
         assert_eq!(taken.faces.id, 2);
         let remaining: Vec<u8> = deck.cards.iter().map(|c| c.faces.id).collect();
         assert_eq!(remaining, vec![1, 3]);
+    }
+
+    #[test]
+    fn take_match_returns_none_when_missing() {
+        let mut deck = Deck::from_cards("test", [make_card(1), make_card(3)]);
+        let search = Card::new_card(StubFaces { id: 2 });
+
+        assert!(deck.take_match(&search).is_none());
+        assert_eq!(deck.size(), 2);
     }
 
     #[test]
@@ -440,5 +503,6 @@ mod tests {
 
         assert!(deck.owns_card(&deck_card));
         assert!(!deck.owns_card(&other_card));
+        assert!(!deck.owns_card(&Card::new_card(StubFaces { id: 1 })));
     }
 }

@@ -1,6 +1,26 @@
-//! 'Grid<T>`
+//! # `Grid<T>`
 //!
-//! A generic grid data structure.
+//! A rectangular, row-major grid for game boards, maps, pathfinding fields, and
+//! other two-dimensional data.
+//!
+//! Cells are addressed with [`Point`] values rather than raw row/column pairs.
+//! Points use `col` for the horizontal coordinate and `row` for the vertical
+//! coordinate, with `(0, 0)` at the top-left corner.
+//!
+//! # Examples
+//!
+//! ```
+//! use gametools::{GameResult, Grid, GridSize, Point};
+//!
+//! # fn main() -> GameResult<()> {
+//! let size = GridSize::new(3, 2)?;
+//! let grid = Grid::new_with_fn(size, |point| point.row * 10 + point.col)?;
+//!
+//! assert_eq!(grid[Point::new(0, 0)], 0);
+//! assert_eq!(grid[Point::new(2, 1)], 12);
+//! assert_eq!(grid.get(Point::new(3, 0)), None);
+//! # Ok(()) }
+//! ```
 
 pub mod point;
 pub use point::Point;
@@ -14,7 +34,23 @@ use crate::GameResult;
 use crate::GridError;
 use crate::ensure;
 
-/// Dimensions used to create a Grid<T>.
+/// Non-zero dimensions used to create a [`Grid`].
+///
+/// `GridSize` validates that both dimensions are positive and that their area
+/// fits in `usize`, so a constructed [`Grid`] can rely on those invariants.
+///
+/// # Examples
+///
+/// ```
+/// use gametools::{GameResult, GridSize};
+///
+/// # fn main() -> GameResult<()> {
+/// let size = GridSize::new(4, 3)?;
+/// assert_eq!(size.width(), 4);
+/// assert_eq!(size.height(), 3);
+/// assert_eq!(size.area()?, 12);
+/// # Ok(()) }
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GridSize {
     width: usize,
@@ -22,6 +58,25 @@ pub struct GridSize {
 }
 
 impl GridSize {
+    /// Creates a validated grid size.
+    ///
+    /// # Errors
+    /// - [`GridError::InvalidSize`] if either dimension is zero.
+    /// - [`GridError::AreaOverflow`] if `width * height` overflows `usize`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameError, GridError, GridSize};
+    ///
+    /// let size = GridSize::new(2, 5).expect("valid size");
+    /// assert_eq!(size.area().unwrap(), 10);
+    ///
+    /// assert_eq!(
+    ///     GridSize::new(0, 5),
+    ///     Err(GameError::GridError(GridError::InvalidSize(0, 5)))
+    /// );
+    /// ```
     pub fn new(width: usize, height: usize) -> GameResult<Self> {
         ensure!(
             width > 0 && height > 0,
@@ -31,14 +86,51 @@ impl GridSize {
         Ok(Self { width, height })
     }
 
+    /// Returns the number of columns in the grid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::GridSize;
+    ///
+    /// let size = GridSize::new(8, 6).unwrap();
+    /// assert_eq!(size.width(), 8);
+    /// ```
     pub fn width(&self) -> usize {
         self.width
     }
 
+    /// Returns the number of rows in the grid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::GridSize;
+    ///
+    /// let size = GridSize::new(8, 6).unwrap();
+    /// assert_eq!(size.height(), 6);
+    /// ```
     pub fn height(&self) -> usize {
         self.height
     }
 
+    /// Returns the total number of cells represented by this size.
+    ///
+    /// # Errors
+    /// Returns [`GridError::AreaOverflow`] if the dimensions overflow when
+    /// multiplied. Values created with [`GridSize::new`] have already passed
+    /// this check.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, GridSize};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let size = GridSize::new(3, 4)?;
+    /// assert_eq!(size.area()?, 12);
+    /// # Ok(()) }
+    /// ```
     pub fn area(&self) -> GameResult<usize> {
         self.width
             .checked_mul(self.height)
@@ -46,7 +138,11 @@ impl GridSize {
     }
 }
 
-/// A generic grid data structure.
+/// A generic rectangular grid addressed by [`Point`].
+///
+/// Values are stored in row-major order: all cells in row 0, then all cells in
+/// row 1, and so on. This matters for [`Grid::from_vec`], [`Grid::points`],
+/// [`Grid::iter`], and [`Grid::iter_mut`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct Grid<T> {
     cells: Vec<T>,
@@ -54,11 +150,23 @@ pub struct Grid<T> {
 }
 
 impl<T: Clone> Grid<T> {
-    /// Creates a new grid with the specified width, height, and filler value.
+    /// Creates a grid where every cell is initialized with `filler`.
     ///
     /// # Errors
-    ///
     /// Returns an error if the area of the grid exceeds `usize::MAX`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::new(GridSize::new(2, 2)?, false)?;
+    ///
+    /// assert_eq!(grid[Point::new(0, 0)], false);
+    /// assert_eq!(grid[Point::new(1, 1)], false);
+    /// # Ok(()) }
+    /// ```
     pub fn new(size: GridSize, filler: T) -> GameResult<Self> {
         Ok(Self {
             cells: vec![filler; size.area()?],
@@ -68,11 +176,24 @@ impl<T: Clone> Grid<T> {
 }
 
 impl<T> Grid<T> {
-    /// Creates a new grid from an existing vector.
+    /// Creates a grid from row-major cell data.
     ///
     /// # Errors
+    /// Returns an error if the vector length does not match `size.area()`.
     ///
-    /// Returns an error if the area of the grid exceeds `usize::MAX` or the vector does not match the grid size.
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::from_vec(GridSize::new(3, 2)?, vec![1, 2, 3, 4, 5, 6])?;
+    ///
+    /// assert_eq!(grid[Point::new(0, 0)], 1);
+    /// assert_eq!(grid[Point::new(2, 0)], 3);
+    /// assert_eq!(grid[Point::new(0, 1)], 4);
+    /// # Ok(()) }
+    /// ```
     pub fn from_vec(size: GridSize, cells: Vec<T>) -> GameResult<Self> {
         let area = size.area()?;
         ensure!(
@@ -85,11 +206,26 @@ impl<T> Grid<T> {
         Ok(Self { cells, size })
     }
 
-    /// Creates a new grid, filling the cells using a supplied function to determine initial values.
+    /// Creates a grid by calling `filler` once for each point.
+    ///
+    /// Points are supplied in row-major order.
     ///
     /// # Errors
-    ///
     /// Returns an error if the area of the grid exceeds `usize::MAX`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::new_with_fn(GridSize::new(3, 2)?, |point| {
+    ///     point.row * 10 + point.col
+    /// })?;
+    ///
+    /// assert_eq!(grid[Point::new(2, 1)], 12);
+    /// # Ok(()) }
+    /// ```
     pub fn new_with_fn<F>(size: GridSize, mut filler: F) -> GameResult<Self>
     where
         F: FnMut(Point) -> T,
@@ -106,29 +242,102 @@ impl<T> Grid<T> {
         Ok(Self { cells, size })
     }
 
-    /// Returns the `GridSize` (dimensions) of the grid.
+    /// Returns the dimensions of the grid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let size = GridSize::new(5, 4)?;
+    /// let grid = Grid::new(size, 0)?;
+    ///
+    /// assert_eq!(grid.size(), size);
+    /// # Ok(()) }
+    /// ```
     pub fn size(&self) -> GridSize {
         self.size
     }
 
     /// Returns a reference to the cell at the specified point, if it is within the grid's bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::from_vec(GridSize::new(2, 1)?, vec!["left", "right"])?;
+    ///
+    /// assert_eq!(grid.get(Point::new(1, 0)), Some(&"right"));
+    /// assert_eq!(grid.get(Point::new(2, 0)), None);
+    /// # Ok(()) }
+    /// ```
     pub fn get(&self, cell: Point) -> Option<&T> {
         self.point_to_index(cell).map(|index| &self.cells[index])
     }
 
     /// Returns a mutable reference to the cell at the specified point, if it is within the grid's bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let mut grid = Grid::new(GridSize::new(2, 1)?, 0)?;
+    /// *grid.get_mut(Point::new(1, 0)).unwrap() = 7;
+    ///
+    /// assert_eq!(grid[Point::new(1, 0)], 7);
+    /// assert!(grid.get_mut(Point::new(-1, 0)).is_none());
+    /// # Ok(()) }
+    /// ```
     pub fn get_mut(&mut self, cell: Point) -> Option<&mut T> {
         self.point_to_index(cell)
             .map(|index| &mut self.cells[index])
     }
 
-    /// Returns an iterator over all the points in the grid.
+    /// Returns all valid grid points in row-major order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::new(GridSize::new(2, 2)?, ())?;
+    ///
+    /// assert_eq!(
+    ///     grid.points().collect::<Vec<_>>(),
+    ///     vec![
+    ///         Point::new(0, 0),
+    ///         Point::new(1, 0),
+    ///         Point::new(0, 1),
+    ///         Point::new(1, 1),
+    ///     ]
+    /// );
+    /// # Ok(()) }
+    /// ```
     pub fn points(&self) -> impl Iterator<Item = Point> {
         let width = self.size.width;
         (0..self.cells.len()).map(move |index| index_to_point(index, width))
     }
 
     /// Returns an iterator over all the cells in the grid, with their corresponding points.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::from_vec(GridSize::new(2, 1)?, vec!["a", "b"])?;
+    /// let cells = grid.iter().map(|(point, value)| (point, *value)).collect::<Vec<_>>();
+    ///
+    /// assert_eq!(cells, vec![(Point::new(0, 0), "a"), (Point::new(1, 0), "b")]);
+    /// # Ok(()) }
+    /// ```
     pub fn iter(&self) -> impl Iterator<Item = (Point, &T)> {
         let width = self.size.width;
         self.cells
@@ -137,7 +346,22 @@ impl<T> Grid<T> {
             .map(move |(idx, cell)| (index_to_point(idx, width), cell))
     }
 
-    /// Returns an iterator over all the points in the grid with mutable references to the cells.
+    /// Returns an iterator over all points and mutable cell references.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let mut grid = Grid::new(GridSize::new(2, 2)?, 0)?;
+    /// for (point, value) in grid.iter_mut() {
+    ///     *value = point.col + point.row;
+    /// }
+    ///
+    /// assert_eq!(grid[Point::new(1, 1)], 2);
+    /// # Ok(()) }
+    /// ```
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
         let width = self.size.width;
         self.cells
@@ -147,6 +371,20 @@ impl<T> Grid<T> {
     }
 
     /// Returns `true` if the point is within the grid's bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::new(GridSize::new(2, 2)?, ())?;
+    ///
+    /// assert!(grid.is_in_bounds(Point::new(1, 1)));
+    /// assert!(!grid.is_in_bounds(Point::new(2, 1)));
+    /// assert!(!grid.is_in_bounds(Point::new(-1, 0)));
+    /// # Ok(()) }
+    /// ```
     pub fn is_in_bounds(&self, point: Point) -> bool {
         self.point_to_index(point).is_some()
     }
@@ -204,10 +442,60 @@ impl<T> Grid<T> {
             })
     }
 
+    /// Returns the in-bounds north, south, east, and west neighbors of `center`.
+    ///
+    /// Neighbors are returned in [`PointDelta::CARDINALS`] order with
+    /// out-of-bounds points skipped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::from_vec(GridSize::new(3, 3)?, (0..9).collect())?;
+    /// let neighbors = grid
+    ///     .cardinal_neighbors(Point::new(1, 1))
+    ///     .map(|(point, value)| (point, *value))
+    ///     .collect::<Vec<_>>();
+    ///
+    /// assert_eq!(
+    ///     neighbors,
+    ///     vec![
+    ///         (Point::new(1, 0), 1),
+    ///         (Point::new(1, 2), 7),
+    ///         (Point::new(2, 1), 5),
+    ///         (Point::new(0, 1), 3),
+    ///     ]
+    /// );
+    /// # Ok(()) }
+    /// ```
     pub fn cardinal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::CARDINALS)
     }
 
+    /// Returns mutable references to the in-bounds cardinal neighbors of `center`.
+    ///
+    /// Mutable neighbors are yielded in backing storage order, not delta order.
+    /// This keeps the implementation safe while still guaranteeing each yielded
+    /// `&mut T` refers to a distinct cell.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let mut grid = Grid::new(GridSize::new(3, 3)?, 0)?;
+    /// for (_, value) in grid.cardinal_neighbors_mut(Point::new(1, 1)) {
+    ///     *value = 1;
+    /// }
+    ///
+    /// assert_eq!(grid[Point::new(1, 0)], 1);
+    /// assert_eq!(grid[Point::new(1, 1)], 0);
+    /// assert_eq!(grid[Point::new(1, 2)], 1);
+    /// # Ok(()) }
+    /// ```
     pub fn cardinal_neighbors_mut(
         &mut self,
         center: Point,
@@ -215,10 +503,50 @@ impl<T> Grid<T> {
         self.neighbors_inner_mut(center, &PointDelta::CARDINALS)
     }
 
+    /// Returns the in-bounds diagonal neighbors of `center`.
+    ///
+    /// Neighbors are returned in [`PointDelta::DIAGONALS`] order with
+    /// out-of-bounds points skipped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::from_vec(GridSize::new(3, 3)?, (0..9).collect())?;
+    /// let neighbors = grid
+    ///     .diagonal_neighbors(Point::new(0, 0))
+    ///     .map(|(point, value)| (point, *value))
+    ///     .collect::<Vec<_>>();
+    ///
+    /// assert_eq!(neighbors, vec![(Point::new(1, 1), 4)]);
+    /// # Ok(()) }
+    /// ```
     pub fn diagonal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::DIAGONALS)
     }
 
+    /// Returns mutable references to the in-bounds diagonal neighbors of `center`.
+    ///
+    /// Mutable neighbors are yielded in backing storage order, not delta order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let mut grid = Grid::new(GridSize::new(3, 3)?, 0)?;
+    /// for (_, value) in grid.diagonal_neighbors_mut(Point::new(1, 1)) {
+    ///     *value = 2;
+    /// }
+    ///
+    /// assert_eq!(grid[Point::new(0, 0)], 2);
+    /// assert_eq!(grid[Point::new(1, 1)], 0);
+    /// assert_eq!(grid[Point::new(2, 2)], 2);
+    /// # Ok(()) }
+    /// ```
     pub fn diagonal_neighbors_mut(
         &mut self,
         center: Point,
@@ -226,10 +554,48 @@ impl<T> Grid<T> {
         self.neighbors_inner_mut(center, &PointDelta::DIAGONALS)
     }
 
+    /// Returns all in-bounds cardinal and diagonal neighbors of `center`.
+    ///
+    /// Neighbors are returned in [`PointDelta::ALL_DIRECTIONS`] order with
+    /// out-of-bounds points skipped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let grid = Grid::new(GridSize::new(3, 3)?, '.')?;
+    ///
+    /// assert_eq!(grid.all_neighbors(Point::new(1, 1)).count(), 8);
+    /// assert_eq!(grid.all_neighbors(Point::new(0, 0)).count(), 3);
+    /// # Ok(()) }
+    /// ```
     pub fn all_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::ALL_DIRECTIONS)
     }
 
+    /// Returns mutable references to all in-bounds neighbors of `center`.
+    ///
+    /// Mutable neighbors are yielded in backing storage order, not delta order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let mut grid = Grid::new(GridSize::new(3, 3)?, 0)?;
+    /// for (_, value) in grid.all_neighbors_mut(Point::new(0, 0)) {
+    ///     *value += 1;
+    /// }
+    ///
+    /// assert_eq!(grid[Point::new(0, 0)], 0);
+    /// assert_eq!(grid[Point::new(1, 0)], 1);
+    /// assert_eq!(grid[Point::new(0, 1)], 1);
+    /// assert_eq!(grid[Point::new(1, 1)], 1);
+    /// # Ok(()) }
+    /// ```
     pub fn all_neighbors_mut(&mut self, center: Point) -> impl Iterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::ALL_DIRECTIONS)
     }

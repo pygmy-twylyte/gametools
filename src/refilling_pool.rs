@@ -397,6 +397,28 @@ mod tests {
     }
 
     #[test]
+    fn try_from_slice_clones_items_into_pool() -> GameResult<()> {
+        let source = [1, 2, 3];
+        let mut pool = RefillingPool::try_from(source.as_slice())?;
+
+        assert_eq!(pool.full_size(), 3);
+        assert!((0..3).all(|_| source.contains(&pool.draw())));
+        Ok(())
+    }
+
+    #[test]
+    fn remove_index_rejects_out_of_range_indices() {
+        let mut pool = RefillingPool::new([1, 2, 3]).unwrap();
+
+        assert_eq!(
+            pool.remove_index(9),
+            Err(GameError::RefillingPoolError(
+                RefillingPoolError::InvalidPoolIndex(9, 3)
+            ))
+        );
+    }
+
+    #[test]
     fn removing_last_item_is_error() {
         let mut pool = RefillingPool::new([1]).unwrap();
         assert!(pool.remove_index(0).is_err_and(|e| {
@@ -464,5 +486,39 @@ mod tests {
         assert_eq!(pool.full_size(), 2);
         assert_eq!(pool.current_size(), 2);
         assert!(pool.take(500).all(|item| item != 1));
+    }
+
+    #[test]
+    fn remove_returns_none_when_item_is_missing() {
+        let mut pool = RefillingPool::new([1, 2, 3]).unwrap();
+
+        assert_eq!(pool.remove(&4), None);
+        assert_eq!(pool.full_size(), 3);
+    }
+
+    #[test]
+    fn filtered_draws_refill_when_empty_and_return_none_without_match() {
+        let mut pool = RefillingPool::new([1, 2]).unwrap();
+        pool.draw();
+        pool.draw();
+        assert_eq!(pool.current_size(), 0);
+
+        assert_eq!(pool.draw_where(|item| *item == 2), Some(2));
+        assert_eq!(pool.draw_where(|item| *item == 2), None);
+    }
+
+    #[test]
+    fn context_draws_refill_when_empty_and_can_fall_back_to_any() {
+        let mut pool = RefillingPool::new([1, 2]).unwrap();
+        pool.draw();
+        pool.draw();
+        assert_eq!(pool.current_size(), 0);
+
+        let even = |modulus: &i32, item: &i32| item % modulus == 0;
+        assert_eq!(pool.draw_with_context(&2, even), Some(2));
+        assert_eq!(pool.draw_with_context(&2, even), None);
+
+        let fallback = pool.draw_with_context_or_any(&99, even);
+        assert!([1, 2].contains(&fallback));
     }
 }

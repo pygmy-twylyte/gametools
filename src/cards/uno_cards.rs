@@ -27,9 +27,9 @@ impl CardFaces for UnoCard {
     }
 
     fn compare(&self, other: &Self) -> std::cmp::Ordering {
-        if self.kind.is_wild() {
+        if self.kind.is_wild() && !other.kind.is_wild() {
             std::cmp::Ordering::Greater
-        } else if other.kind.is_wild() {
+        } else if !self.kind.is_wild() && other.kind.is_wild() {
             std::cmp::Ordering::Less
         } else {
             self.kind.cmp(&other.kind)
@@ -262,6 +262,50 @@ mod tests {
     }
 
     #[test]
+    fn display_and_cardfaces_cover_all_variants() {
+        assert_eq!(UnoColor::Red.to_string(), "Red");
+        assert_eq!(UnoColor::Blue.to_string(), "Blue");
+        assert_eq!(UnoColor::Green.to_string(), "Green");
+        assert_eq!(UnoColor::Yellow.to_string(), "Yellow");
+        assert_eq!(UnoColor::Black.to_string(), "Black");
+
+        assert_eq!(UnoCardKind::Number(7).to_string(), "#7");
+        assert_eq!(
+            UnoCardKind::Action(UnoAction::DrawTwo).to_string(),
+            "Draw Two"
+        );
+        assert_eq!(UnoCardKind::Action(UnoAction::Skip).to_string(), "Skip");
+        assert_eq!(
+            UnoCardKind::Action(UnoAction::Reverse).to_string(),
+            "Reverse"
+        );
+        assert_eq!(UnoCardKind::Wild.to_string(), "Wild");
+        assert_eq!(UnoCardKind::WildDrawFour.to_string(), "Wild + Draw 4");
+
+        let card = face(UnoColor::Red, UnoCardKind::Number(7));
+        assert_eq!(card.display_front(), "Red (#7)");
+        assert!(card.display_back().is_none());
+        assert!(card.matches(&face(UnoColor::Red, UnoCardKind::Number(7))));
+        assert!(!card.matches(&face(UnoColor::Blue, UnoCardKind::Number(7))));
+    }
+
+    #[test]
+    fn compare_prioritizes_wilds_then_kind_then_color() {
+        let red_three = face(UnoColor::Red, UnoCardKind::Number(3));
+        let blue_five = face(UnoColor::Blue, UnoCardKind::Number(5));
+        let wild = face(UnoColor::Black, UnoCardKind::Wild);
+        let draw_four = face(UnoColor::Black, UnoCardKind::WildDrawFour);
+
+        assert_eq!(red_three.compare(&blue_five), std::cmp::Ordering::Less);
+        assert_eq!(wild.compare(&red_three), std::cmp::Ordering::Greater);
+        assert_eq!(red_three.compare(&wild), std::cmp::Ordering::Less);
+        assert_eq!(wild.compare(&draw_four), std::cmp::Ordering::Less);
+        assert!(UnoCardKind::Wild.is_wild());
+        assert!(UnoCardKind::WildDrawFour.is_wild());
+        assert!(!UnoCardKind::Number(1).is_wild());
+    }
+
+    #[test]
     fn plays_on_honors_color_number_action_and_declared_color() {
         let red_three = face(UnoColor::Red, UnoCardKind::Number(3));
         let red_five = face(UnoColor::Red, UnoCardKind::Number(5));
@@ -296,6 +340,10 @@ mod tests {
             !green_four.plays_on(&wild, Some(UnoColor::Blue)),
             "mismatched declaration"
         );
+
+        let red_draw_two = face(UnoColor::Red, UnoCardKind::Action(UnoAction::DrawTwo));
+        let green_reverse = face(UnoColor::Green, UnoCardKind::Action(UnoAction::Reverse));
+        assert!(!red_draw_two.plays_on(&green_reverse, None));
     }
 
     #[test]
@@ -454,5 +502,20 @@ mod tests {
             "Found unexpected extra cards in full Uno set: {:?}",
             seen
         );
+    }
+
+    #[test]
+    fn hand_points_scores_numbers_actions_and_wilds() {
+        let mut hand = Hand::<UnoCard>::new("bot");
+        for card in [
+            card(UnoColor::Red, UnoCardKind::Number(9)),
+            card(UnoColor::Blue, UnoCardKind::Action(UnoAction::Skip)),
+            card(UnoColor::Black, UnoCardKind::Wild),
+            card(UnoColor::Black, UnoCardKind::WildDrawFour),
+        ] {
+            hand.add_card(card);
+        }
+
+        assert_eq!(hand.points(), 129);
     }
 }
