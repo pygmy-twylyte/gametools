@@ -35,6 +35,8 @@ pub enum GridError {
     AreaOverflow,
     #[error("actual cell count {actual} did not match expected size {expected}")]
     CellCountMismatch { actual: usize, expected: usize },
+    #[error("very large {0} dimension truncated on conversion to i32::MAX")]
+    DimensionTruncated(&'static str),
 }
 
 /// Errors specific to card collections and card transfer helpers.
