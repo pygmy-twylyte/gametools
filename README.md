@@ -12,6 +12,7 @@
 - `dice`: `Die` and `Rolls` support plain and exploding dice plus common roll analysis helpers like `histogram`, `highest`, `lowest`, and `count_where`.
 - `cards`: extensible card/deck/hand/pile toolkit for custom face types, plus ready-made standard 52-card and Uno helpers.
 - `dominos`: domino set creation, trains, hands, and longest-train solving.
+- `grid`: point-addressed rectangular grids with row, column, and neighbor traversal helpers for boards, maps, pathfinding, and line-of-sight style algorithms.
 - `metered_resource`: bounded unsigned counters for resources such as health, mana, stamina, or ammunition.
 - `spinners`: weighted wedges with optional covering/blocking and chainable updates.
 - `refilling_pool`: a randomized pool of any clonable type that refills itself when empty, with conditional and contextual draw helpers.
@@ -37,12 +38,31 @@ let runes = "FUTHARK".chars()
     .map(|glyph| Card::new_card(Rune(glyph)))
     .collect::<Vec<_>>();
 
-let mut deck = Deck::new("runes", runes);
+let mut deck = Deck::from_cards("runes", runes);
 deck.shuffle();
 
 let mut hand = Hand::<Rune>::new("sage");
 hand.add_cards(deck.take_cards(3));
 assert_eq!(hand.size(), 3);
+```
+
+## Example: Grid
+
+```rust
+use gametools::{GameResult, Grid, GridSize, Point};
+
+fn main() -> GameResult<()> {
+    let size = GridSize::new(3, 3)?;
+    let mut board = Grid::new_with_fn(size, |point| point.row * 10 + point.col)?;
+
+    for (_, cell) in board.cardinal_neighbors_mut(Point::new(1, 1)) {
+        *cell = 99;
+    }
+
+    assert_eq!(board[Point::new(1, 1)], 11);
+    assert_eq!(board[Point::new(1, 0)], 99);
+    Ok(())
+}
 ```
 
 ## Example: Dice
@@ -76,7 +96,7 @@ if let Some(result) = spinner.spin() {
 
 ## The Idea
 
-This crate avoids hardcoding game rules. Instead, it provides flexible, composable abstractions to make building games easier — whether you're making a tabletop simulator, card game engine, or randomizer tool.
+This crate avoids hardcoding game rules. Instead, it provides flexible, composable abstractions to make building games easier, whether you're making a tabletop simulator, card game engine, board/map tool, or randomizer.
 
 ## Documentation
 
@@ -89,12 +109,14 @@ See additional usage examples in the module docs:
 - [Cards module](https://docs.rs/gametools/latest/gametools/cards/index.html): custom faces, deck/hand/pile traits, shuffling, drawing
 - [Dice module](https://docs.rs/gametools/latest/gametools/dice/index.html): regular and exploding dice plus `Rolls` helpers
 - [Dominos module](https://docs.rs/gametools/latest/gametools/dominos/index.html): longest-train solver
+- [Grid module](https://docs.rs/gametools/latest/gametools/grid/index.html): point-addressed grids, neighbors, and row/column traversal
 - [MeteredResource module](https://docs.rs/gametools/latest/gametools/metered_resource/index.html): bounded resources with saturating increase and reduction helpers
 - [Ordering module](https://docs.rs/gametools/latest/gametools/ordering/index.html): ranked lists and priority queues
 - [RefillingPool module](https://docs.rs/gametools/latest/gametools/refilling_pool/index.html): self-refilling random pools with contextual draws
 - [Spinners module](https://docs.rs/gametools/latest/gametools/spinners/index.html): weighted wedges with optional blocking
 - `cargo run --example cards`: ties the standard playing cards and Uno helpers together for a mini showdown
 - `cargo run --example dice`: basic roll analysis, exploding dice, and poker-style histogram checks
+- `cargo run --example grid`: point-addressed board traversal and chess-like attack maps
 - `cargo run --example metered_resource`: bounded depletion, refill, and fraction-full behavior
 - `cargo run --example refilling_pool`: an "infinite chest" that prefers loot based on character context
 - `cargo run --example priority_queue`: ship attack ordering with `MinPriorityQ`
