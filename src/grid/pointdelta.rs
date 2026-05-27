@@ -1,4 +1,4 @@
-//! # PointDelta
+//! # `PointDelta`
 //!
 //! Directional offsets that can be added to or subtracted from a
 //! [`Point`](crate::Point).
@@ -52,6 +52,7 @@ impl PointDelta {
     ///
     /// assert_eq!(PointDelta::new(2, -1), PointDelta { dc: 2, dr: -1 });
     /// ```
+    #[must_use]
     pub const fn new(dc: i32, dr: i32) -> Self {
         Self { dc, dr }
     }
@@ -66,6 +67,7 @@ impl PointDelta {
     /// assert_eq!(PointDelta::NORTH.inverted(), PointDelta::SOUTH);
     /// assert_eq!(PointDelta::new(2, -3).inverted(), PointDelta::new(-2, 3));
     /// ```
+    #[must_use]
     pub const fn inverted(self) -> Self {
         Self::new(-self.dc, -self.dr)
     }
@@ -82,6 +84,7 @@ impl PointDelta {
     /// let delta = PointDelta::new(3, 4);
     /// assert_eq!(delta.distance_euclid(), 5.0);
     /// ```
+    #[must_use]
     pub fn distance_euclid(&self) -> f64 {
         f64::from(self.dc).hypot(f64::from(self.dr))
     }
@@ -96,8 +99,9 @@ impl PointDelta {
     /// let delta = PointDelta::new(3, 4);
     /// assert_eq!(delta.distance_taxicab(), 7);
     /// ```
+    #[must_use]
     pub fn distance_taxicab(&self) -> i32 {
-        (self.dc.abs() + self.dr.abs()) as i32
+        self.dc.abs() + self.dr.abs()
     }
 
     /// Returns the Chebyshev distance covered by a delta.
@@ -110,8 +114,9 @@ impl PointDelta {
     /// let delta = PointDelta::new(3, 4);
     /// assert_eq!(delta.distance_chebyshev(), 4);
     /// ```
+    #[must_use]
     pub fn distance_chebyshev(&self) -> i32 {
-        self.dc.abs().max(self.dr.abs()) as i32
+        self.dc.abs().max(self.dr.abs())
     }
 
     /// One row up.
@@ -234,31 +239,31 @@ mod tests {
             PointDelta::CARDINALS,
             [
                 PointDelta::NORTH,
-                PointDelta::SOUTH,
-                PointDelta::EAST,
                 PointDelta::WEST,
+                PointDelta::EAST,
+                PointDelta::SOUTH,
             ]
         );
         assert_eq!(
             PointDelta::DIAGONALS,
             [
-                PointDelta::NORTH_EAST,
                 PointDelta::NORTH_WEST,
-                PointDelta::SOUTH_EAST,
+                PointDelta::NORTH_EAST,
                 PointDelta::SOUTH_WEST,
+                PointDelta::SOUTH_EAST,
             ]
         );
         assert_eq!(
             PointDelta::ALL_DIRECTIONS,
             [
-                PointDelta::NORTH,
-                PointDelta::SOUTH,
-                PointDelta::EAST,
-                PointDelta::WEST,
-                PointDelta::NORTH_EAST,
                 PointDelta::NORTH_WEST,
-                PointDelta::SOUTH_EAST,
+                PointDelta::NORTH,
+                PointDelta::NORTH_EAST,
+                PointDelta::WEST,
+                PointDelta::EAST,
                 PointDelta::SOUTH_WEST,
+                PointDelta::SOUTH,
+                PointDelta::SOUTH_EAST,
             ]
         );
     }
@@ -286,5 +291,26 @@ mod tests {
 
         delta -= PointDelta::new(4, 4);
         assert_eq!(delta, PointDelta::new(-1, -6));
+    }
+
+    #[test]
+    fn delta_distance_euclid_is_correct() {
+        assert_eq!(PointDelta::new(3, 4).distance_euclid(), 5.0);
+        assert_eq!(PointDelta::new(-3, -4).distance_euclid(), 5.0);
+        assert_eq!(PointDelta::new(0, 0).distance_euclid(), 0.0);
+    }
+
+    #[test]
+    fn delta_distance_taxicab_is_correct() {
+        assert_eq!(PointDelta::new(3, 4).distance_taxicab(), 7);
+        assert_eq!(PointDelta::new(-3, -4).distance_taxicab(), 7);
+        assert_eq!(PointDelta::new(0, 0).distance_taxicab(), 0);
+    }
+
+    #[test]
+    fn delta_distance_chebyshev_is_correct() {
+        assert_eq!(PointDelta::new(3, 4).distance_chebyshev(), 4);
+        assert_eq!(PointDelta::new(-3, -4).distance_chebyshev(), 4);
+        assert_eq!(PointDelta::new(0, 0).distance_chebyshev(), 0);
     }
 }

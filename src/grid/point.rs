@@ -48,6 +48,7 @@ impl Point {
     ///
     /// assert_eq!(Point::new(1, -2), Point { col: 1, row: -2 });
     /// ```
+    #[must_use]
     pub const fn new(col: i32, row: i32) -> Self {
         Self { col, row }
     }
@@ -62,6 +63,7 @@ impl Point {
     /// let point = Point::new(1, -2);
     /// assert!(point.same_row(Point::new(3, -2)));
     /// ```
+    #[must_use]
     pub fn same_row(&self, other: Point) -> bool {
         self.row == other.row
     }
@@ -76,6 +78,7 @@ impl Point {
     /// let point = Point::new(1, -2);
     /// assert!(point.same_col(Point::new(1, 3)));
     /// ```
+    #[must_use]
     pub fn same_col(&self, other: Point) -> bool {
         self.col == other.col
     }
@@ -87,9 +90,12 @@ impl Point {
     /// ```
     /// use gametools::Point;
     ///
-    /// let point = Point::new(1, -2);
-    /// assert!(point.same_diagonal(Point::new(3, 1)));
+    /// let point = Point::new(0, -2);
+    /// assert!(point.same_diagonal(Point::new(2, 0)));
+    /// assert!(point.same_diagonal(Point::new(-3, 1)));
+    /// assert!(!point.same_diagonal(Point::new(0, 0)));
     /// ```
+    #[must_use]
     pub fn same_diagonal(&self, other: Point) -> bool {
         let delta = *self - other;
         delta.dc.abs() == delta.dr.abs()
@@ -167,5 +173,23 @@ mod tests {
     #[test]
     fn subtracting_points_returns_delta_between_them() {
         assert_eq!(Point::new(7, 2) - Point::new(3, 5), PointDelta::new(4, -3));
+    }
+
+    #[test]
+    fn point_same_row_detection_is_correct() {
+        assert!(Point::new(3, 2).same_row(Point::new(5, 2)));
+        assert!(!Point::new(3, 2).same_row(Point::new(5, 3)));
+    }
+
+    #[test]
+    fn point_same_col_detection_is_correct() {
+        assert!(Point::new(3, 2).same_col(Point::new(3, 5)));
+        assert!(!Point::new(3, 2).same_col(Point::new(5, 3)));
+    }
+
+    #[test]
+    fn point_same_diagonal_detection_is_correct() {
+        assert!(Point::new(3, 2).same_diagonal(Point::new(5, 4)));
+        assert!(!Point::new(3, 2).same_diagonal(Point::new(4, 5)));
     }
 }
