@@ -96,6 +96,7 @@ impl GridSize {
     /// let size = GridSize::new(8, 6).unwrap();
     /// assert_eq!(size.width(), 8);
     /// ```
+    #[must_use]
     pub fn width(&self) -> usize {
         self.width
     }
@@ -110,6 +111,7 @@ impl GridSize {
     /// let size = GridSize::new(8, 6).unwrap();
     /// assert_eq!(size.height(), 6);
     /// ```
+    #[must_use]
     pub fn height(&self) -> usize {
         self.height
     }
@@ -234,8 +236,8 @@ impl<T> Grid<T> {
         for row in 0..size.height {
             for col in 0..size.width {
                 cells.push(filler(Point {
-                    col: col as i32,
-                    row: row as i32,
+                    col: i32::try_from(col).map_err(|_| GridError::DimensionTruncated("width"))?,
+                    row: i32::try_from(row).map_err(|_| GridError::DimensionTruncated("height"))?,
                 }));
             }
         }
@@ -256,6 +258,7 @@ impl<T> Grid<T> {
     /// assert_eq!(grid.size(), size);
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn size(&self) -> GridSize {
         self.size
     }
@@ -274,6 +277,7 @@ impl<T> Grid<T> {
     /// assert_eq!(grid.get(Point::new(2, 0)), None);
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn get(&self, cell: Point) -> Option<&T> {
         self.point_to_index(cell).map(|index| &self.cells[index])
     }
@@ -385,11 +389,13 @@ impl<T> Grid<T> {
     /// assert!(!grid.is_in_bounds(Point::new(-1, 0)));
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn is_in_bounds(&self, point: Point) -> bool {
         self.point_to_index(point).is_some()
     }
 
     /// Alias for [`Grid::is_in_bounds()`], returns true if the grid contains the point.
+    #[must_use]
     pub fn contains_point(&self, point: Point) -> bool {
         self.is_in_bounds(point)
     }
@@ -468,9 +474,9 @@ impl<T> Grid<T> {
     ///     neighbors,
     ///     vec![
     ///         (Point::new(1, 0), 1),
-    ///         (Point::new(1, 2), 7),
-    ///         (Point::new(2, 1), 5),
     ///         (Point::new(0, 1), 3),
+    ///         (Point::new(2, 1), 5),
+    ///         (Point::new(1, 2), 7),
     ///     ]
     /// );
     /// # Ok(()) }
@@ -604,6 +610,75 @@ impl<T> Grid<T> {
     pub fn all_neighbors_mut(&mut self, center: Point) -> impl Iterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::ALL_DIRECTIONS)
     }
+
+    /// Returns an iterator over the cells in the row of the given point.
+    pub fn row_at(&self, cell: Point) -> impl Iterator<Item = (Point, &T)> {
+        let desired = cell.row;
+        let width = self.size.width;
+        self.cells
+            .iter()
+            .enumerate()
+            .filter_map(move |(idx, cell)| {
+                let point = index_to_point(idx, width);
+                if point.row == desired {
+                    Some((point, cell))
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Returns an iterator over the cells in the row of the given point.
+    pub fn row_at_mut(&mut self, cell: Point) -> impl Iterator<Item = (Point, &mut T)> {
+        let desired = cell.row;
+        let width = self.size.width;
+        self.cells
+            .iter_mut()
+            .enumerate()
+            .filter_map(move |(idx, cell)| {
+                let point = index_to_point(idx, width);
+                if point.row == desired {
+                    Some((point, cell))
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Returns an iterator over the cells of the column containing the given point.
+    pub fn col_at(&self, cell: Point) -> impl Iterator<Item = (Point, &T)> {
+        let desired = cell.col;
+        let width = self.size.width;
+        self.cells
+            .iter()
+            .enumerate()
+            .filter_map(move |(idx, cell)| {
+                let point = index_to_point(idx, width);
+                if point.col == desired {
+                    Some((point, cell))
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Returns an iterator over the cells of the column containing the given point with
+    /// mutable access to each cell.
+    pub fn col_at_mut(&mut self, cell: Point) -> impl Iterator<Item = (Point, &mut T)> {
+        let desired = cell.col;
+        let width = self.size.width;
+        self.cells
+            .iter_mut()
+            .enumerate()
+            .filter_map(move |(idx, cell)| {
+                let point = index_to_point(idx, width);
+                if point.col == desired {
+                    Some((point, cell))
+                } else {
+                    None
+                }
+            })
+    }
 }
 
 impl<T> Index<Point> for Grid<T> {
@@ -622,6 +697,9 @@ impl<T> IndexMut<Point> for Grid<T> {
     }
 }
 
+/// Convert a vector index value to a Point, given the width of a grid.
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_wrap)]
 fn index_to_point(index: usize, width: usize) -> Point {
     Point {
         col: (index % width) as i32,
@@ -634,6 +712,7 @@ mod tests {
     use super::{Grid, GridSize, Point};
     use crate::{GameError, GridError};
     use std::collections::BTreeMap;
+    use std::ops::IndexMut;
 
     fn size(width: usize, height: usize) -> GridSize {
         GridSize::new(width, height).expect("valid grid size")
@@ -737,7 +816,9 @@ mod tests {
 
         assert_eq!(grid.get(Point::new(1, 1)), Some(&4));
         assert!(grid.is_in_bounds(Point::new(2, 2)));
+        assert!(grid.contains_point(Point::new(2, 2)));
         assert!(!grid.is_in_bounds(Point::new(-1, 0)));
+        assert!(!grid.contains_point(Point::new(-1, 0)));
         assert!(!grid.is_in_bounds(Point::new(0, -1)));
         assert!(!grid.is_in_bounds(Point::new(3, 0)));
         assert!(!grid.is_in_bounds(Point::new(0, 3)));
@@ -752,6 +833,17 @@ mod tests {
 
         assert_eq!(grid.get(Point::new(1, 1)), Some(&99));
         assert_eq!(grid.get_mut(Point::new(3, 1)), None);
+    }
+
+    #[test]
+    fn point_to_index_rejects_points_beyond_backing_storage() {
+        let grid = Grid {
+            cells: vec![1],
+            size: size(2, 2),
+        };
+
+        assert_eq!(grid.point_to_index(Point::new(0, 0)), Some(0));
+        assert_eq!(grid.point_to_index(Point::new(1, 0)), None);
     }
 
     #[test]
@@ -806,8 +898,10 @@ mod tests {
         let mut grid = sample_grid();
 
         grid[Point::new(2, 2)] = 42;
+        *grid.index_mut(Point::new(0, 0)) = 24;
 
         assert_eq!(grid[Point::new(2, 2)], 42);
+        assert_eq!(grid[Point::new(0, 0)], 24);
     }
 
     #[test]
@@ -818,14 +912,14 @@ mod tests {
             collect_neighbor_values(grid.cardinal_neighbors(Point::new(1, 1))),
             vec![
                 (Point::new(1, 0), 1),
-                (Point::new(1, 2), 7),
-                (Point::new(2, 1), 5),
                 (Point::new(0, 1), 3),
+                (Point::new(2, 1), 5),
+                (Point::new(1, 2), 7),
             ]
         );
         assert_eq!(
             collect_neighbor_values(grid.cardinal_neighbors(Point::new(0, 0))),
-            vec![(Point::new(0, 1), 3), (Point::new(1, 0), 1)]
+            vec![(Point::new(1, 0), 1), (Point::new(0, 1), 3),]
         );
     }
 
@@ -836,10 +930,10 @@ mod tests {
         assert_eq!(
             collect_neighbor_values(grid.diagonal_neighbors(Point::new(1, 1))),
             vec![
-                (Point::new(2, 0), 2),
                 (Point::new(0, 0), 0),
-                (Point::new(2, 2), 8),
+                (Point::new(2, 0), 2),
                 (Point::new(0, 2), 6),
+                (Point::new(2, 2), 8),
             ]
         );
         assert_eq!(
@@ -856,8 +950,8 @@ mod tests {
         assert_eq!(
             collect_neighbor_values(grid.all_neighbors(Point::new(0, 0))),
             vec![
-                (Point::new(0, 1), 3),
                 (Point::new(1, 0), 1),
+                (Point::new(0, 1), 3),
                 (Point::new(1, 1), 4),
             ]
         );
@@ -890,5 +984,73 @@ mod tests {
         assert_eq!(values[&Point::new(0, 2)], 10);
         assert_eq!(values[&Point::new(1, 2)], 1);
         assert_eq!(values[&Point::new(2, 2)], 10);
+    }
+
+    #[test]
+    fn row_at_returns_matching_row_cells() {
+        let grid = sample_grid();
+
+        assert_eq!(
+            collect_neighbor_values(grid.row_at(Point::new(1, 1))),
+            vec![
+                (Point::new(0, 1), 3),
+                (Point::new(1, 1), 4),
+                (Point::new(2, 1), 5),
+            ]
+        );
+        assert!(grid.row_at(Point::new(1, -1)).next().is_none());
+        assert!(grid.row_at(Point::new(1, 3)).next().is_none());
+    }
+
+    #[test]
+    fn row_at_mut_updates_matching_row_cells() {
+        let mut grid = sample_grid();
+
+        for (point, value) in grid.row_at_mut(Point::new(99, 1)) {
+            *value += point.col;
+        }
+
+        assert_eq!(grid[Point::new(0, 0)], 0);
+        assert_eq!(grid[Point::new(0, 1)], 3);
+        assert_eq!(grid[Point::new(1, 1)], 5);
+        assert_eq!(grid[Point::new(2, 1)], 7);
+        assert_eq!(grid[Point::new(2, 2)], 8);
+
+        assert!(grid.row_at_mut(Point::new(0, -1)).next().is_none());
+        assert!(grid.row_at_mut(Point::new(0, 3)).next().is_none());
+    }
+
+    #[test]
+    fn col_at_returns_matching_column_cells() {
+        let grid = sample_grid();
+
+        assert_eq!(
+            collect_neighbor_values(grid.col_at(Point::new(1, 99))),
+            vec![
+                (Point::new(1, 0), 1),
+                (Point::new(1, 1), 4),
+                (Point::new(1, 2), 7),
+            ]
+        );
+        assert!(grid.col_at(Point::new(-1, 1)).next().is_none());
+        assert!(grid.col_at(Point::new(3, 1)).next().is_none());
+    }
+
+    #[test]
+    fn col_at_mut_updates_matching_column_cells() {
+        let mut grid = sample_grid();
+
+        for (point, value) in grid.col_at_mut(Point::new(1, 99)) {
+            *value += point.row;
+        }
+
+        assert_eq!(grid[Point::new(0, 0)], 0);
+        assert_eq!(grid[Point::new(1, 0)], 1);
+        assert_eq!(grid[Point::new(1, 1)], 5);
+        assert_eq!(grid[Point::new(1, 2)], 9);
+        assert_eq!(grid[Point::new(2, 2)], 8);
+
+        assert!(grid.col_at_mut(Point::new(-1, 0)).next().is_none());
+        assert!(grid.col_at_mut(Point::new(3, 0)).next().is_none());
     }
 }
