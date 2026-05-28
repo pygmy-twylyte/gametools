@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
-## [0.10.0] - Unreleased
+## [0.10.0] - 2026-05-27
 
 ### Added
 - New `grid` module with `Grid<T>`, `GridSize`, `Point`, and `PointDelta` for point-addressed rectangular grids.
