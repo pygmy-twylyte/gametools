@@ -61,7 +61,7 @@ impl GridSize {
     /// Creates a validated grid size.
     ///
     /// # Errors
-    /// - [`GridError::InvalidSize`] if either dimension is zero.
+    /// - [`GridError::InvalidSize`] if either dimension is zero or greater than `i32::MAX`
     /// - [`GridError::AreaOverflow`] if `width * height` overflows `usize`.
     ///
     /// # Examples
@@ -78,8 +78,9 @@ impl GridSize {
     /// );
     /// ```
     pub fn new(width: usize, height: usize) -> GameResult<Self> {
+        const MAX_DIM: usize = i32::MAX as usize;
         ensure!(
-            width > 0 && height > 0,
+            width > 0 && width < MAX_DIM && height > 0 && height < MAX_DIM,
             GridError::InvalidSize(width, height)
         );
         ensure!(width.checked_mul(height).is_some(), GridError::AreaOverflow);
