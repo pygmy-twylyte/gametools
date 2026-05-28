@@ -61,7 +61,7 @@ impl GridSize {
     /// Creates a validated grid size.
     ///
     /// # Errors
-    /// - [`GridError::InvalidSize`] if either dimension is zero or greater than `i32::MAX`
+    /// - [`GridError::InvalidSize`] if either dimension is zero or greater than or equal to `i32::MAX`
     /// - [`GridError::AreaOverflow`] if `width * height` overflows `usize`.
     ///
     /// # Examples
@@ -751,11 +751,37 @@ mod tests {
     }
 
     #[test]
-    fn grid_size_new_rejects_overflowing_area() {
+    fn grid_size_new_rejects_dimensions_that_reach_i32_max() {
+        let max = i32::MAX as usize;
+
         assert_eq!(
-            GridSize::new(usize::MAX, 2),
+            GridSize::new(max, 2),
+            Err(GameError::GridError(GridError::InvalidSize(max, 2)))
+        );
+        assert_eq!(
+            GridSize::new(2, max),
+            Err(GameError::GridError(GridError::InvalidSize(2, max)))
+        );
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "32")]
+    fn grid_size_new_rejects_overflowing_area_on_32_bit_targets() {
+        assert_eq!(
+            GridSize::new(65_536, 65_536),
             Err(GameError::GridError(GridError::AreaOverflow))
         );
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn grid_size_new_accepts_largest_allowed_dimensions_on_64_bit_targets() {
+        let max_allowed = (i32::MAX - 1) as usize;
+        let size = GridSize::new(max_allowed, max_allowed).expect("area fits in 64-bit usize");
+
+        assert_eq!(size.width(), max_allowed);
+        assert_eq!(size.height(), max_allowed);
+        assert_eq!(size.area().expect("area fits"), max_allowed * max_allowed);
     }
 
     #[test]
