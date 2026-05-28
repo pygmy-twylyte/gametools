@@ -1,12 +1,13 @@
 //! # gametools
 //!
-//! `gametools` provides utilities for working with common table game apparatus such as card decks,
-//! dice, spinners, and dominos. The goal is to provide flexible, modular tools to simplify prototyping and building
-//! games and simulations.
+//! `gametools` provides reusable utilities for common game-building needs such as card decks,
+//! dice, spinners, dominos, grids, ranked ordering, and bounded resources. The goal is to
+//! provide flexible, modular tools to simplify prototyping and building games and simulations.
 //!
 //! ## Features
 //! - `cards`: generic card faces plus deck, hand, and pile abstractions, with standard 52-card and Uno helpers.
 //! - `dice`: `Die` and `Rolls` support for regular and exploding dice along with common roll-analysis helpers.
+//! - `grid`: point-addressed rectangular grids with row, column, and neighbor traversal helpers.
 //! - `ordering`: stable ranked lists (`RankedOrder`) and heap-backed queues (`PriorityQueue`) for turn order and scheduling.
 //! - `metered_resource`: bounded unsigned counters with saturating increase and reduction helpers.
 //! - `refilling_pool`: infinitely reusable random pools with conditional and contextual draw helpers.
@@ -36,12 +37,25 @@ pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 
 pub mod gameerror;
 pub use gameerror::{
-    CardError, DiceError, DominoError, GameError, RefillingPoolError, SpinnerError, ValueError,
+    CardError, DiceError, DominoError, GameError, GridError, RefillingPoolError, SpinnerError,
+    ValueError,
 };
-pub type GameResult<T> = Result<T, GameError>;
+
+pub mod grid;
+pub use grid::{Grid, GridSize, Point, PointDelta};
 
 pub mod ordering;
 pub use ordering::{
     AscendingOrder, DescendingOrder, Max, MaxPriorityQ, Min, MinPriorityQ, PriorityQueue,
     RankedOrder,
 };
+pub type GameResult<T> = Result<T, GameError>;
+
+#[macro_export]
+macro_rules! ensure {
+    ($cond:expr, $err:expr) => {
+        if !$cond {
+            return Err($err.into());
+        }
+    };
+}

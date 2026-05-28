@@ -497,6 +497,43 @@ mod tests {
     }
 
     #[test]
+    fn peek_len_is_empty_and_rank_range_report_collection_state() {
+        let mut order = AscendingOrder::new();
+
+        assert!(order.is_empty());
+        assert_eq!(order.len(), 0);
+        assert_eq!(order.peek(), None);
+        assert_eq!(order.rank_range(), None);
+
+        order.push('c', 3);
+        order.push('a', 1);
+        order.push('b', 2);
+
+        assert!(!order.is_empty());
+        assert_eq!(order.len(), 3);
+        assert_eq!(order.rank_range(), Some((1, 3)));
+        assert_eq!(order.peek(), Some((&'a', &1)));
+        assert_eq!(order.peek(), Some((&'a', &1)));
+    }
+
+    #[test]
+    fn rerank_all_by_marks_collection_dirty() {
+        let mut order = AscendingOrder::new();
+        order.push('a', 3);
+        order.push('b', 2);
+        order.push('c', 1);
+
+        assert_eq!(order.peek(), Some((&'c', &1)));
+
+        order.rerank_all_by(|item| *item as u8);
+
+        assert_eq!(
+            order.into_sorted_vec(),
+            vec![('a', 97), ('b', 98), ('c', 99)]
+        );
+    }
+
+    #[test]
     fn pop_returns_none_when_empty() {
         let mut descender: DescendingOrder<i32, char> = DescendingOrder::new();
         let mut ascender: AscendingOrder<i32, char> = AscendingOrder::new();

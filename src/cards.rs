@@ -289,4 +289,43 @@ mod tests {
         assert_eq!(taken.len(), 1);
         assert!(collection.cards.is_empty());
     }
+
+    #[test]
+    fn transfer_card_moves_matching_card_to_receiver() -> GameResult<()> {
+        let card = make_card(2);
+        let mut sender = StubCollection {
+            cards: vec![make_card(1), card.clone(), make_card(3)],
+        };
+        let mut receiver = StubCollection::default();
+
+        transfer_card(&card, &mut sender, &mut receiver)?;
+
+        assert_eq!(
+            sender
+                .cards
+                .iter()
+                .map(|card| card.faces.id)
+                .collect::<Vec<_>>(),
+            vec![1, 3]
+        );
+        assert_eq!(receiver.cards.len(), 1);
+        assert_eq!(receiver.cards[0].faces.id, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn transfer_card_errors_when_sender_lacks_match() {
+        let card = make_card(2);
+        let mut sender = StubCollection {
+            cards: vec![make_card(1), make_card(3)],
+        };
+        let mut receiver = StubCollection::default();
+
+        assert_eq!(
+            transfer_card(&card, &mut sender, &mut receiver),
+            Err(crate::GameError::CardError(CardError::CardNotFound))
+        );
+        assert_eq!(sender.cards.len(), 2);
+        assert!(receiver.cards.is_empty());
+    }
 }

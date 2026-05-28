@@ -255,6 +255,7 @@ impl Train {
     }
 
     /// Returns whether the train is open and can be played on.
+    #[must_use]
     pub fn is_open(&self) -> bool {
         self.open
     }
@@ -385,6 +386,10 @@ impl DominoHand {
     /// - if a tile in the sequence doesn't fit in the train
     /// - if the player doesn't have permission to play on the train
     /// - if one of the tiles in the sequence is missing from the hand
+    #[allow(
+        clippy::missing_panics_doc,
+        reason = "bad domino id would return Err before encountering possible panic"
+    )]
     pub fn play_line(&mut self, id_sequence: &[usize], train: &mut Train) -> GameResult<()> {
         if id_sequence.is_empty() {
             return Ok(());
@@ -416,7 +421,7 @@ impl DominoHand {
                 .tiles
                 .iter()
                 .position(|&t| t.id == *domino_id)
-                .expect("validated tile must remain present during commit");
+                .expect("domino_ids already validated at this point");
             self.tiles.swap_remove(pos);
         }
 

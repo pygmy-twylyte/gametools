@@ -165,6 +165,21 @@ mod tests {
 
         assert_eq!(hand.cards.len(), 1);
         assert_eq!(hand.cards[0].faces.id, 1);
+        assert_eq!(hand.cards().len(), 1);
+        assert_eq!(hand.size(), 1);
+    }
+
+    #[test]
+    fn show_faces_and_backs_flip_all_cards() {
+        let mut hand = Hand::<StubFaces>::new("bob");
+        hand.add_card(make_card(1));
+        hand.add_card(make_card(2));
+
+        hand.show_backs();
+        assert!(hand.cards().iter().all(|card| !card.face_up));
+
+        hand.show_faces();
+        assert!(hand.cards().iter().all(|card| card.face_up));
     }
 
     #[test]
@@ -191,5 +206,16 @@ mod tests {
         assert_eq!(taken.faces.id, 2);
         let ids: Vec<u8> = hand.cards.iter().map(|c| c.faces.id).collect();
         assert_eq!(ids, vec![1, 3]);
+    }
+
+    #[test]
+    fn take_match_returns_none_when_card_missing() {
+        let mut hand = Hand::<StubFaces>::new("bob");
+        hand.add_card(make_card(1));
+        hand.add_card(make_card(3));
+        let search = Card::new_card(StubFaces { id: 2 });
+
+        assert!(hand.take_match(&search).is_none());
+        assert_eq!(hand.cards().len(), 2);
     }
 }

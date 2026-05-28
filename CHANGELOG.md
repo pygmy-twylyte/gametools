@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
+## [0.10.0] - Unreleased
+
+### Added
+- New `grid` module with `Grid<T>`, `GridSize`, `Point`, and `PointDelta` for point-addressed rectangular grids.
+- Grid construction helpers including `Grid::new`, `Grid::from_vec`, and `Grid::new_with_fn`.
+- Point-based grid access and traversal APIs including `get`, `get_mut`, `points`, `iter`, `iter_mut`, `Index<Point>`, and `IndexMut<Point>`.
+- Neighbor traversal helpers for cardinal, diagonal, and all adjacent cells, including mutable variants.
+- Row and column traversal helpers with immutable and mutable variants.
+- `Point` row, column, and diagonal relation helpers, plus `PointDelta` direction constants and common distance helpers.
+- `GridError` variants integrated into `GameError` / `GameResult`.
+- New `examples/grid` demo covering point-addressed grid traversal.
+
+### Changed
+- README and crate-level rustdoc now include the `grid` module.
+- Expanded grid documentation, doctests, and test coverage.
+
+---
+## [0.9.1] - 2026-05-17
+
+### Fixed
+- Restored a missing `const` marker in the dice constructor API.
+- Updated `Cargo.lock` for the patch release.
+
+---
+## [0.9.0] - 2026-05-17
+
+### Added
+- New `metered_resource` module for bounded unsigned resources such as health, mana, stamina, or ammunition.
+- Unchecked `Die` constructors for const contexts where the caller can guarantee validity.
+- Public API for opening and closing `Train` values in the dominos module.
+
+### Changed
+- Improved const constructor support across dice APIs.
+- Restructured module-specific errors and aggregate `GameError` integration.
+- `DominoHand::play_line` is now transactional and avoids partially mutating a hand on failed play attempts.
+- `Spinner::replace_value` now preserves the original wedge active state.
+- Addressed clippy and doctest issues.
+
+---
 ## [0.8.0] - 2026-04-18
 
 ### Added
