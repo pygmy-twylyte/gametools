@@ -49,6 +49,10 @@ pub use ordering::{
     AscendingOrder, DescendingOrder, Max, MaxPriorityQ, Min, MinPriorityQ, PriorityQueue,
     RankedOrder,
 };
+
+pub mod pathfinding;
+pub use pathfinding::{MoveSet, Path, SearchMap, dijkstra_map};
+
 pub type GameResult<T> = Result<T, GameError>;
 
 #[macro_export]

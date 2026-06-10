@@ -13,7 +13,7 @@
 //! assert_eq!(PointDelta::SOUTH.inverted(), PointDelta::NORTH);
 //! ```
 
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// A change in grid position.
 ///
@@ -212,6 +212,20 @@ impl AddAssign<PointDelta> for PointDelta {
 impl SubAssign<PointDelta> for PointDelta {
     fn sub_assign(&mut self, rhs: PointDelta) {
         *self = *self - rhs;
+    }
+}
+
+impl Mul<u32> for PointDelta {
+    type Output = PointDelta;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        PointDelta::new(self.dc * rhs.cast_signed(), self.dr * rhs.cast_signed())
+    }
+}
+
+impl MulAssign<u32> for PointDelta {
+    fn mul_assign(&mut self, rhs: u32) {
+        *self = *self * rhs;
     }
 }
 

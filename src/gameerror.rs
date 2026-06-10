@@ -24,6 +24,8 @@ pub enum GameError {
     SpinnerError(#[from] SpinnerError),
     #[error("value error: {0}")]
     ValueError(#[from] ValueError),
+    #[error("pathfinding error: {0}")]
+    PathfindingError(#[from] PathfindingError),
 }
 
 /// Errors specific to the grid module.
@@ -90,6 +92,14 @@ pub enum DiceError {
     InfiniteExplosion,
 }
 
+#[derive(Debug, Clone, Error, PartialEq)]
+pub enum PathfindingError {
+    #[error("A* dynamic weight must be 1.0-2.0, got {0:.1}")]
+    InvalidDynamicWeight(f32),
+    #[error("A* static weight must be 0.0-2.0, got {0:.1}")]
+    InvalidStaticWeight(f32),
+}
+
 /// Errors deriving from invalid values.
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ValueError {
@@ -102,8 +112,8 @@ pub enum ValueError {
 #[cfg(test)]
 mod tests {
     use super::{
-        CardError, DiceError, DominoError, GameError, GridError, RefillingPoolError, SpinnerError,
-        ValueError,
+        CardError, DiceError, DominoError, GameError, GridError, PathfindingError,
+        RefillingPoolError, SpinnerError, ValueError,
     };
     use std::error::Error;
 
@@ -153,6 +163,14 @@ mod tests {
             (
                 ValueError::OutOfRange.into(),
                 "value error: value outside valid range",
+            ),
+            (
+                PathfindingError::InvalidDynamicWeight(0.0).into(),
+                "pathfinding error: A* dynamic weight must be 1.0-2.0, got 0.0",
+            ),
+            (
+                PathfindingError::InvalidStaticWeight(8.0).into(),
+                "pathfinding error: A* static weight must be 0.0-2.0, got 8.0",
             ),
         ];
 

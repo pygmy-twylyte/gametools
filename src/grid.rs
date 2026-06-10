@@ -421,7 +421,7 @@ impl<T> Grid<T> {
         &self,
         center: Point,
         deltas: &[PointDelta],
-    ) -> impl Iterator<Item = (Point, &T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         deltas.iter().filter_map(move |delta| {
             let point = center + *delta;
             self.get(point).map(|value| (point, value))
@@ -432,7 +432,7 @@ impl<T> Grid<T> {
         &mut self,
         center: Point,
         deltas: &[PointDelta],
-    ) -> impl Iterator<Item = (Point, &mut T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         let neighbors: Vec<(Point, usize)> = deltas
             .iter()
             .filter_map(|delta| {
@@ -482,7 +482,10 @@ impl<T> Grid<T> {
     /// );
     /// # Ok(()) }
     /// ```
-    pub fn cardinal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+    pub fn cardinal_neighbors(
+        &self,
+        center: Point,
+    ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::CARDINALS)
     }
 
@@ -511,7 +514,7 @@ impl<T> Grid<T> {
     pub fn cardinal_neighbors_mut(
         &mut self,
         center: Point,
-    ) -> impl Iterator<Item = (Point, &mut T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::CARDINALS)
     }
 
@@ -535,7 +538,10 @@ impl<T> Grid<T> {
     /// assert_eq!(neighbors, vec![(Point::new(1, 1), 4)]);
     /// # Ok(()) }
     /// ```
-    pub fn diagonal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+    pub fn diagonal_neighbors(
+        &self,
+        center: Point,
+    ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::DIAGONALS)
     }
 
@@ -562,7 +568,7 @@ impl<T> Grid<T> {
     pub fn diagonal_neighbors_mut(
         &mut self,
         center: Point,
-    ) -> impl Iterator<Item = (Point, &mut T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::DIAGONALS)
     }
 
@@ -583,7 +589,7 @@ impl<T> Grid<T> {
     /// assert_eq!(grid.all_neighbors(Point::new(0, 0)).count(), 3);
     /// # Ok(()) }
     /// ```
-    pub fn all_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+    pub fn all_neighbors(&self, center: Point) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::ALL_DIRECTIONS)
     }
 
@@ -608,7 +614,10 @@ impl<T> Grid<T> {
     /// assert_eq!(grid[Point::new(1, 1)], 1);
     /// # Ok(()) }
     /// ```
-    pub fn all_neighbors_mut(&mut self, center: Point) -> impl Iterator<Item = (Point, &mut T)> {
+    pub fn all_neighbors_mut(
+        &mut self,
+        center: Point,
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::ALL_DIRECTIONS)
     }
 
