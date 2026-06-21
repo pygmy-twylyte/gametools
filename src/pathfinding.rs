@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{collections::VecDeque, fmt::Debug};
 
 use smallvec::SmallVec;
 
@@ -17,9 +17,9 @@ pub struct SearchMap {
 }
 
 /// A constructed path from one point to another.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Path {
-    pub points: Vec<Point>,
+    pub points: VecDeque<Point>,
     pub total_cost: Cost,
 }
 
@@ -138,19 +138,12 @@ fn collect_neighbors<T>(map: &Grid<T>, move_set: &MoveSet, point: Point) -> Smal
 /// Takes a result from dijkstra map and returns a best path from start to the
 /// goal set by the search map.
 pub fn path_from_search_map(search_map: &SearchMap, start: Point) -> Option<Path> {
-    let nodes_searched = search_map
-        .reached_from
-        .iter()
-        .filter(|(_, v)| v.is_some())
-        .count();
-    dbg!(nodes_searched);
-
     search_map.reached_from[start]?;
 
-    let mut path = vec![start];
+    let mut path = VecDeque::from([start]);
     let mut current = start;
     while let Some(parent) = search_map.reached_from[current] {
-        path.push(parent);
+        path.push_back(parent);
         current = parent;
     }
     Some(Path {
@@ -291,7 +284,7 @@ fn path_from_forward_search(
 ) -> Option<Path> {
     if start == goal {
         return Some(Path {
-            points: vec![start],
+            points: VecDeque::from([start]),
             total_cost: 0,
         });
     }
@@ -299,13 +292,12 @@ fn path_from_forward_search(
     costs[goal]?;
     reached_from[goal]?;
 
-    let mut path = vec![goal];
+    let mut path = VecDeque::from([goal]);
     let mut current = goal;
     while current != start {
         current = reached_from[current]?;
-        path.push(current);
+        path.push_front(current);
     }
-    path.reverse();
 
     Some(Path {
         points: path,
