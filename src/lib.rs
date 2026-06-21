@@ -8,6 +8,7 @@
 //! - `cards`: generic card faces plus deck, hand, and pile abstractions, with standard 52-card and Uno helpers.
 //! - `dice`: `Die` and `Rolls` support for regular and exploding dice along with common roll-analysis helpers.
 //! - `grid`: point-addressed rectangular grids with row, column, and neighbor traversal helpers.
+//! - `fov`: field-of-view maps with raycasting, shadowcasting, and rectangle-based algorithms.
 //! - `ordering`: stable ranked lists (`RankedOrder`) and heap-backed queues (`PriorityQueue`) for turn order and scheduling.
 //! - `metered_resource`: bounded unsigned counters with saturating increase and reduction helpers.
 //! - `refilling_pool`: infinitely reusable random pools with conditional and contextual draw helpers.
@@ -43,6 +44,13 @@ pub use gameerror::{
 
 pub mod grid;
 pub use grid::{Grid, GridSize, Point, PointDelta};
+
+pub mod fov;
+pub use fov::{
+    BlockingRect, FovMap, RectangleFov, perimeter_raycasting, perimeter_raycasting_into,
+    rectangle_based_fov, rectangle_based_fov_into, recursive_shadowcasting,
+    recursive_shadowcasting_into,
+};
 
 pub mod ordering;
 pub use ordering::{
