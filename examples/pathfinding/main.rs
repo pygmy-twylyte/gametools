@@ -152,7 +152,7 @@ fn build_edge_cost_function<T: Hash + Eq>(
 ) -> impl Fn(Point, Point) -> Option<u32> {
     let terrain_cost = HashMap::<T, Option<u32>>::from_iter(terrain_costs);
 
-    let edge_cost_fn = move |src: Point, dest: Point| -> Option<u32> {
+    move |src: Point, dest: Point| -> Option<u32> {
         let movement_cost = if is_cardinal_step(src - dest) {
             CARDINAL_COST
         } else {
@@ -160,6 +160,5 @@ fn build_edge_cost_function<T: Hash + Eq>(
         };
         let t_cost = terrain_cost[&map[src]];
         t_cost.map(|c| c * movement_cost)
-    };
-    edge_cost_fn
+    }
 }
