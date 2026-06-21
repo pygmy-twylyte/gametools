@@ -401,8 +401,8 @@ impl<T> Grid<T> {
         self.is_in_bounds(point)
     }
 
-    /// Converts a point to an index, returning `None` if the point is out of bounds.
-    fn point_to_index(&self, point: Point) -> Option<usize> {
+    /// Converts a point to an index for a corresponding flat vector representation, returning `None` if the point is out of bounds.
+    pub fn point_to_index(&self, point: Point) -> Option<usize> {
         let row = usize::try_from(point.row).ok()?;
         let col = usize::try_from(point.col).ok()?;
         if row >= self.size.height || col >= self.size.width {
