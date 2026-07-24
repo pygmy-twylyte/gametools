@@ -17,7 +17,7 @@ pub struct SearchMap {
 }
 
 /// A constructed path from one point to another.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Eq)]
 pub struct Path {
     pub points: VecDeque<Point>,
     pub total_cost: Cost,
