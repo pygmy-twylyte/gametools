@@ -64,7 +64,7 @@ pub struct Min;
 /// assert_eq!(queue.pop(), Some(("minion", 1)));
 /// assert_eq!(queue.pop(), Some(("boss", 10)));
 /// ```
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct PriorityQueue<P, T, O = Max>
 where
     P: Ord,
@@ -72,7 +72,14 @@ where
     heap: BinaryHeap<RankedItem<P, T, O>>,
     seq: u64,
 }
-impl<P: Ord, T, O> PriorityQueue<P, T, O> {
+
+impl<P: Ord, T, O: QueueOrder> Default for PriorityQueue<P, T, O> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<P: Ord, T, O: QueueOrder> PriorityQueue<P, T, O> {
     /// Creates an empty `PriorityQueue`.
     ///
     /// # Examples
@@ -202,7 +209,7 @@ impl<P: Ord, T> PriorityQueue<P, T, Min> {
 
 /// Ordering strategy used internally by [`PriorityQueue`] to support max-heap
 /// and min-heap behavior with the same underlying `BinaryHeap`.
-trait QueueOrder {
+pub trait QueueOrder {
     /// Compares two `(priority, insertion-sequence)` pairs.
     fn cmp<P: Ord>(lhs_priority: &P, lhs_seq: u64, rhs_priority: &P, rhs_seq: u64) -> Ordering;
 }

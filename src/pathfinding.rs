@@ -63,7 +63,7 @@ where
         }
 
         for neighbor in collect_neighbors(map, &move_set, current_point) {
-            let Some(edge_cost) = edge_cost(current_point, neighbor) else {
+            let Some(edge_cost) = edge_cost(neighbor, current_point) else {
                 continue;
             };
             let new_cost = path_cost + edge_cost;
@@ -138,7 +138,7 @@ fn collect_neighbors<T>(map: &Grid<T>, move_set: &MoveSet, point: Point) -> Smal
 /// Takes a result from dijkstra map and returns a best path from start to the
 /// goal set by the search map.
 pub fn path_from_search_map(search_map: &SearchMap, start: Point) -> Option<Path> {
-    search_map.reached_from[start]?;
+    search_map.costs[start]?;
 
     let mut path = VecDeque::from([start]);
     let mut current = start;
@@ -233,7 +233,7 @@ where
     let mut reached_from =
         Grid::<Option<Point>>::new(map.size(), None).expect("map.size() must be valid");
 
-    frontier.push((start, 0), 0);
+    frontier.push((start, 0), (0, 0));
     costs[start] = Some(0);
 
     while let Some(((point, path_cost), _priority)) = frontier.pop() {
@@ -262,8 +262,7 @@ where
                 }
             };
 
-            // tiebreaker applied to priority
-            let priority: u64 = u64::from(priority) * 1000 + u64::from(estimated_cost_left);
+            let priority = (priority, estimated_cost_left);
 
             if costs[neighbor].is_none_or(|old_cost| new_cost < old_cost) {
                 costs[neighbor] = Some(new_cost);
@@ -333,8 +332,79 @@ pub enum HeuristicWeight {
 
 #[cfg(test)]
 mod tests {
-    use super::{Cost, HeuristicWeight, MoveSet, a_star, a_star_weighted};
-    use crate::{GameResult, Grid, GridSize, Point};
+    use super::{
+        Cost, HeuristicWeight, MoveSet, a_star, a_star_weighted, dijkstra_map, path_from_search_map,
+    };
+    use crate::{GameResult, Grid, GridSize, Point, PointDelta};
+
+    #[test]
+    fn dijkstra_passes_edges_in_forward_direction() -> GameResult<()> {
+        let map = Grid::new(GridSize::new(3, 1)?, ())?;
+        let start = Point::new(0, 0);
+        let goal = Point::new(2, 0);
+
+        let search_map = dijkstra_map(&map, &[goal], MoveSet::Cardinal, |src, dst| {
+            if dst.col == src.col + 1 {
+                Some(1)
+            } else {
+                None
+            }
+        });
+        let path =
+            path_from_search_map(&search_map, start).expect("directed forward path should exist");
+
+        assert_eq!(path.points, vec![start, Point::new(1, 0), goal]);
+        assert_eq!(path.total_cost, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn dijkstra_returns_zero_length_path_at_goal() -> GameResult<()> {
+        let map = Grid::new(GridSize::new(3, 1)?, ())?;
+        let goal = Point::new(2, 0);
+
+        let search_map = dijkstra_map(&map, &[goal], MoveSet::Cardinal, |_, _| Some(1));
+        let path = path_from_search_map(&search_map, goal)
+            .expect("goal should have a zero-length path to itself");
+
+        assert_eq!(path.points, vec![goal]);
+        assert_eq!(path.total_cost, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn a_star_tie_breaker_does_not_outweigh_f_cost() -> GameResult<()> {
+        let map = Grid::new(GridSize::new(3, 2)?, ())?;
+        let start = Point::new(0, 0);
+        let goal = Point::new(2, 0);
+        let detour = Point::new(0, 1);
+
+        const MOVES: &[PointDelta] = &[
+            PointDelta::new(0, 1),
+            PointDelta::new(1, 0),
+            PointDelta::new(2, 0),
+            PointDelta::new(2, -1),
+        ];
+
+        let path = a_star(
+            &map,
+            start,
+            goal,
+            MoveSet::Custom(MOVES),
+            |src, dst| match (src, dst) {
+                (p, q) if p == start && q == detour => Some(1),
+                (p, q) if p == detour && q == goal => Some(2_000),
+                (p, q) if p == start && q == goal => Some(2_002),
+                _ => None,
+            },
+            |src, _| if src == detour { 2_000 } else { 0 },
+        )
+        .expect("path should exist");
+
+        assert_eq!(path.points, vec![start, detour, goal]);
+        assert_eq!(path.total_cost, 2_001);
+        Ok(())
+    }
 
     #[test]
     fn a_star_passes_edges_in_forward_direction() -> GameResult<()> {
