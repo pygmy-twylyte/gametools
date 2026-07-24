@@ -303,6 +303,27 @@ impl<T> Grid<T> {
             .map(|index| &mut self.cells[index])
     }
 
+    /// Sets a cell to a given value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let mut grid = Grid::new(GridSize::new(2, 2)?, 0)?;
+    /// grid.set(Point::new(1, 0), 7);
+    ///
+    /// assert_eq!(grid[Point::new(1, 0)], 7);
+    /// assert!(grid.get_mut(Point::new(-1, 0)).is_none());
+    /// # Ok(()) }
+    /// ```
+    pub fn set(&mut self, cell: Point, value: T) {
+        if let Some(index) = self.point_to_index(cell) {
+            self.cells[index] = value;
+        }
+    }
+
     /// Returns all valid grid points in row-major order.
     ///
     /// # Examples
