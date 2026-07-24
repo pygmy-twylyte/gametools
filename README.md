@@ -119,6 +119,7 @@ See additional usage examples in the module docs:
 - `cargo run --example cards`: ties the standard playing cards and Uno helpers together for a mini showdown
 - `cargo run --example dice`: basic roll analysis, exploding dice, and poker-style histogram checks
 - `cargo run --example grid`: point-addressed board traversal and chess-like attack maps
+- `cargo run --example fov --features fov-egui`: interactive egui field-of-view visualization
 - `cargo run --example metered_resource`: bounded depletion, refill, and fraction-full behavior
 - `cargo run --example refilling_pool`: an "infinite chest" that prefers loot based on character context
 - `cargo run --example priority_queue`: ship attack ordering with `MinPriorityQ`
