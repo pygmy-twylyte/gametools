@@ -18,6 +18,8 @@ strum_macros = "0.27.1"
 serde = { version = "1.0", features = ["derive"], optional = true }
 thiserror = "2.0.18"
 bytecount = "0.6.9"
+smallvec = "1.15.1"
+eframe = { version = "0.34.3", optional = true }
 
 [dependencies.uuid]
 version = "1.18.1"
@@ -29,7 +31,16 @@ features = [
 
 [features]
 serde = ["dep:serde"]
+fov-egui = ["dep:eframe"]
 default = []
+
+[[example]]
+name = "fov"
+path = "examples/fov/main.rs"
+required-features = ["fov-egui"]
 
 [package.metadata.tarpaulin]
 exclude-files = ["src/bin/scratch.rs"]
+
+[dev-dependencies]
+colored = "3"

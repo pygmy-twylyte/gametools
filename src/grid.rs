@@ -303,6 +303,27 @@ impl<T> Grid<T> {
             .map(|index| &mut self.cells[index])
     }
 
+    /// Sets a cell to a given value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{GameResult, Grid, GridSize, Point};
+    ///
+    /// # fn main() -> GameResult<()> {
+    /// let mut grid = Grid::new(GridSize::new(2, 2)?, 0)?;
+    /// grid.set(Point::new(1, 0), 7);
+    ///
+    /// assert_eq!(grid[Point::new(1, 0)], 7);
+    /// assert!(grid.get_mut(Point::new(-1, 0)).is_none());
+    /// # Ok(()) }
+    /// ```
+    pub fn set(&mut self, cell: Point, value: T) {
+        if let Some(index) = self.point_to_index(cell) {
+            self.cells[index] = value;
+        }
+    }
+
     /// Returns all valid grid points in row-major order.
     ///
     /// # Examples
@@ -401,8 +422,8 @@ impl<T> Grid<T> {
         self.is_in_bounds(point)
     }
 
-    /// Converts a point to an index, returning `None` if the point is out of bounds.
-    fn point_to_index(&self, point: Point) -> Option<usize> {
+    /// Converts a point to an index for a corresponding flat vector representation, returning `None` if the point is out of bounds.
+    pub fn point_to_index(&self, point: Point) -> Option<usize> {
         let row = usize::try_from(point.row).ok()?;
         let col = usize::try_from(point.col).ok()?;
         if row >= self.size.height || col >= self.size.width {
@@ -421,7 +442,7 @@ impl<T> Grid<T> {
         &self,
         center: Point,
         deltas: &[PointDelta],
-    ) -> impl Iterator<Item = (Point, &T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         deltas.iter().filter_map(move |delta| {
             let point = center + *delta;
             self.get(point).map(|value| (point, value))
@@ -432,7 +453,7 @@ impl<T> Grid<T> {
         &mut self,
         center: Point,
         deltas: &[PointDelta],
-    ) -> impl Iterator<Item = (Point, &mut T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         let neighbors: Vec<(Point, usize)> = deltas
             .iter()
             .filter_map(|delta| {
@@ -482,7 +503,10 @@ impl<T> Grid<T> {
     /// );
     /// # Ok(()) }
     /// ```
-    pub fn cardinal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+    pub fn cardinal_neighbors(
+        &self,
+        center: Point,
+    ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::CARDINALS)
     }
 
@@ -511,7 +535,7 @@ impl<T> Grid<T> {
     pub fn cardinal_neighbors_mut(
         &mut self,
         center: Point,
-    ) -> impl Iterator<Item = (Point, &mut T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::CARDINALS)
     }
 
@@ -535,7 +559,10 @@ impl<T> Grid<T> {
     /// assert_eq!(neighbors, vec![(Point::new(1, 1), 4)]);
     /// # Ok(()) }
     /// ```
-    pub fn diagonal_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+    pub fn diagonal_neighbors(
+        &self,
+        center: Point,
+    ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::DIAGONALS)
     }
 
@@ -562,7 +589,7 @@ impl<T> Grid<T> {
     pub fn diagonal_neighbors_mut(
         &mut self,
         center: Point,
-    ) -> impl Iterator<Item = (Point, &mut T)> {
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::DIAGONALS)
     }
 
@@ -583,7 +610,7 @@ impl<T> Grid<T> {
     /// assert_eq!(grid.all_neighbors(Point::new(0, 0)).count(), 3);
     /// # Ok(()) }
     /// ```
-    pub fn all_neighbors(&self, center: Point) -> impl Iterator<Item = (Point, &T)> {
+    pub fn all_neighbors(&self, center: Point) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         self.neighbors_inner(center, &PointDelta::ALL_DIRECTIONS)
     }
 
@@ -608,7 +635,10 @@ impl<T> Grid<T> {
     /// assert_eq!(grid[Point::new(1, 1)], 1);
     /// # Ok(()) }
     /// ```
-    pub fn all_neighbors_mut(&mut self, center: Point) -> impl Iterator<Item = (Point, &mut T)> {
+    pub fn all_neighbors_mut(
+        &mut self,
+        center: Point,
+    ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         self.neighbors_inner_mut(center, &PointDelta::ALL_DIRECTIONS)
     }
 
