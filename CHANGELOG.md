@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
+## [Unreleased]
+
+### Added
+- `GridTopology` plus topology-aware `Grid` point resolution, stepping, and neighbor traversal, including toroidal wrapping.
+- Topology-aware Dijkstra and A* entry points for wrapped pathfinding.
+
+---
 ## [0.10.0] - 2026-05-27
 
 ### Added

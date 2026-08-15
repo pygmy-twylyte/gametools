@@ -12,7 +12,7 @@
 - `dice`: `Die` and `Rolls` support plain and exploding dice plus common roll analysis helpers like `histogram`, `highest`, `lowest`, and `count_where`.
 - `cards`: extensible card/deck/hand/pile toolkit for custom face types, plus ready-made standard 52-card and Uno helpers.
 - `dominos`: domino set creation, trains, hands, and longest-train solving.
-- `grid`: point-addressed rectangular grids with row, column, and neighbor traversal helpers for boards, maps, pathfinding, and line-of-sight style algorithms.
+- `grid`: point-addressed rectangular grids with bounded or toroidal neighbor traversal, row, and column helpers for boards, maps, pathfinding, and line-of-sight style algorithms.
 - `fov`: field-of-view maps over `Grid<T>` using perimeter raycasting, recursive shadowcasting, and a reusable rectangle-based blocker cache.
 - `metered_resource`: bounded unsigned counters for resources such as health, mana, stamina, or ammunition.
 - `spinners`: weighted wedges with optional covering/blocking and chainable updates.
@@ -50,7 +50,7 @@ assert_eq!(hand.size(), 3);
 ## Example: Grid
 
 ```rust
-use gametools::{GameResult, Grid, GridSize, Point};
+use gametools::{GameResult, Grid, GridSize, GridTopology, Point, PointDelta};
 
 fn main() -> GameResult<()> {
     let size = GridSize::new(3, 3)?;
@@ -62,6 +62,11 @@ fn main() -> GameResult<()> {
 
     assert_eq!(board[Point::new(1, 1)], 11);
     assert_eq!(board[Point::new(1, 0)], 99);
+
+    let wrapped_west = board
+        .step(Point::new(0, 0), PointDelta::WEST, GridTopology::Toroidal)
+        .expect("a toroidal grid always resolves a step");
+    assert_eq!(wrapped_west, Point::new(2, 0));
     Ok(())
 }
 ```

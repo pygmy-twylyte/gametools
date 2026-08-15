@@ -57,6 +57,20 @@ pub struct GridSize {
     height: usize,
 }
 
+/// The topology used when traversing beyond a grid's edge.
+///
+/// This affects traversal only. A [`Grid`] always stores a finite rectangular
+/// set of cells, so direct access methods such as [`Grid::get`] and
+/// [`Grid::is_in_bounds`] always use bounded coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum GridTopology {
+    /// Points beyond an edge have no corresponding cell.
+    #[default]
+    Bounded,
+    /// Opposite edges connect, forming a two-dimensional torus.
+    Toroidal,
+}
+
 impl GridSize {
     /// Creates a validated grid size.
     ///
@@ -422,6 +436,60 @@ impl<T> Grid<T> {
         self.is_in_bounds(point)
     }
 
+    /// Resolves `point` to a canonical grid point using `topology`.
+    ///
+    /// [`GridTopology::Bounded`] returns `None` for an out-of-bounds point.
+    /// [`GridTopology::Toroidal`] wraps both coordinates, so every [`Point`]
+    /// resolves to a cell in the grid.
+    ///
+    /// This does not change the behavior of direct access methods such as
+    /// [`Grid::get`]; use the returned point with those methods when wrapped
+    /// access is intended.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use gametools::{Grid, GridSize, GridTopology, Point};
+    ///
+    /// let grid = Grid::new(GridSize::new(3, 2).unwrap(), ()).unwrap();
+    /// assert_eq!(
+    ///     grid.resolve_point(Point::new(-1, 2), GridTopology::Toroidal),
+    ///     Some(Point::new(2, 0)),
+    /// );
+    /// ```
+    #[must_use]
+    pub fn resolve_point(&self, point: Point, topology: GridTopology) -> Option<Point> {
+        self.resolve_coordinates(i64::from(point.col), i64::from(point.row), topology)
+    }
+
+    /// Steps once from `origin` by `delta`, resolving the destination with
+    /// `topology`.
+    ///
+    /// The calculation uses widened arithmetic before resolving the point, so
+    /// stepping from an extreme [`Point`] cannot overflow.
+    #[must_use]
+    pub fn step(&self, origin: Point, delta: PointDelta, topology: GridTopology) -> Option<Point> {
+        self.step_by(origin, delta, 1, topology)
+    }
+
+    /// Steps `distance` times from `origin` in `delta`'s direction, resolving
+    /// the destination with `topology`.
+    #[must_use]
+    pub fn step_by(
+        &self,
+        origin: Point,
+        delta: PointDelta,
+        distance: u32,
+        topology: GridTopology,
+    ) -> Option<Point> {
+        let distance = i64::from(distance);
+        self.resolve_coordinates(
+            i64::from(origin.col) + i64::from(delta.dc) * distance,
+            i64::from(origin.row) + i64::from(delta.dr) * distance,
+            topology,
+        )
+    }
+
     /// Converts a point to an index for a corresponding flat vector representation, returning `None` if the point is out of bounds.
     pub fn point_to_index(&self, point: Point) -> Option<usize> {
         let row = usize::try_from(point.row).ok()?;
@@ -438,27 +506,70 @@ impl<T> Grid<T> {
         Some(index)
     }
 
-    fn neighbors_inner(
-        &self,
+    fn resolve_coordinates(&self, col: i64, row: i64, topology: GridTopology) -> Option<Point> {
+        match topology {
+            GridTopology::Bounded => {
+                let point = Point::new(i32::try_from(col).ok()?, i32::try_from(row).ok()?);
+                self.is_in_bounds(point).then_some(point)
+            }
+            GridTopology::Toroidal => {
+                let width = i64::try_from(self.size.width).expect("grid width fits in i64");
+                let height = i64::try_from(self.size.height).expect("grid height fits in i64");
+                Some(Point::new(
+                    col.rem_euclid(width) as i32,
+                    row.rem_euclid(height) as i32,
+                ))
+            }
+        }
+    }
+
+    /// Returns the neighbors reached from `center` by `deltas` under
+    /// `topology`.
+    ///
+    /// Results follow `deltas` order. Toroidal traversal is directional: on a
+    /// narrow grid, multiple deltas may resolve to the same point and are each
+    /// yielded. This is useful for cellular automata whose rules count each
+    /// directional neighbor.
+    pub fn neighbors<'a>(
+        &'a self,
         center: Point,
-        deltas: &[PointDelta],
-    ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
+        deltas: &'a [PointDelta],
+        topology: GridTopology,
+    ) -> impl DoubleEndedIterator<Item = (Point, &'a T)> + 'a {
         deltas.iter().filter_map(move |delta| {
-            let point = center + *delta;
-            self.get(point).map(|value| (point, value))
+            self.step(center, *delta, topology).map(|point| {
+                (
+                    point,
+                    &self.cells[self
+                        .point_to_index(point)
+                        .expect("resolved point is in bounds")],
+                )
+            })
         })
     }
 
-    fn neighbors_inner_mut(
+    /// Returns mutable neighbors reached from `center` by `deltas` under
+    /// `topology`.
+    ///
+    /// The iterator yields each cell at most once, because it cannot safely
+    /// yield multiple mutable references to an aliased wrapped destination.
+    /// Results are yielded in backing storage order rather than delta order.
+    pub fn neighbors_mut(
         &mut self,
         center: Point,
         deltas: &[PointDelta],
+        topology: GridTopology,
     ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
         let neighbors: Vec<(Point, usize)> = deltas
             .iter()
             .filter_map(|delta| {
-                let point = center + *delta;
-                self.point_to_index(point).map(|index| (point, index))
+                self.step(center, *delta, topology).map(|point| {
+                    (
+                        point,
+                        self.point_to_index(point)
+                            .expect("resolved point is in bounds"),
+                    )
+                })
             })
             .collect();
 
@@ -507,7 +618,7 @@ impl<T> Grid<T> {
         &self,
         center: Point,
     ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
-        self.neighbors_inner(center, &PointDelta::CARDINALS)
+        self.neighbors(center, &PointDelta::CARDINALS, GridTopology::Bounded)
     }
 
     /// Returns mutable references to the in-bounds cardinal neighbors of `center`.
@@ -536,7 +647,7 @@ impl<T> Grid<T> {
         &mut self,
         center: Point,
     ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
-        self.neighbors_inner_mut(center, &PointDelta::CARDINALS)
+        self.neighbors_mut(center, &PointDelta::CARDINALS, GridTopology::Bounded)
     }
 
     /// Returns the in-bounds diagonal neighbors of `center`.
@@ -563,7 +674,7 @@ impl<T> Grid<T> {
         &self,
         center: Point,
     ) -> impl DoubleEndedIterator<Item = (Point, &T)> {
-        self.neighbors_inner(center, &PointDelta::DIAGONALS)
+        self.neighbors(center, &PointDelta::DIAGONALS, GridTopology::Bounded)
     }
 
     /// Returns mutable references to the in-bounds diagonal neighbors of `center`.
@@ -590,7 +701,7 @@ impl<T> Grid<T> {
         &mut self,
         center: Point,
     ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
-        self.neighbors_inner_mut(center, &PointDelta::DIAGONALS)
+        self.neighbors_mut(center, &PointDelta::DIAGONALS, GridTopology::Bounded)
     }
 
     /// Returns all in-bounds cardinal and diagonal neighbors of `center`.
@@ -611,7 +722,7 @@ impl<T> Grid<T> {
     /// # Ok(()) }
     /// ```
     pub fn all_neighbors(&self, center: Point) -> impl DoubleEndedIterator<Item = (Point, &T)> {
-        self.neighbors_inner(center, &PointDelta::ALL_DIRECTIONS)
+        self.neighbors(center, &PointDelta::ALL_DIRECTIONS, GridTopology::Bounded)
     }
 
     /// Returns mutable references to all in-bounds neighbors of `center`.
@@ -639,7 +750,7 @@ impl<T> Grid<T> {
         &mut self,
         center: Point,
     ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
-        self.neighbors_inner_mut(center, &PointDelta::ALL_DIRECTIONS)
+        self.neighbors_mut(center, &PointDelta::ALL_DIRECTIONS, GridTopology::Bounded)
     }
 
     /// Returns an iterator over the cells in the row of the given point.
@@ -740,8 +851,8 @@ fn index_to_point(index: usize, width: usize) -> Point {
 
 #[cfg(test)]
 mod tests {
-    use super::{Grid, GridSize, Point};
-    use crate::{GameError, GridError};
+    use super::{Grid, GridSize, GridTopology, Point};
+    use crate::{GameError, GridError, PointDelta};
     use std::collections::BTreeMap;
     use std::ops::IndexMut;
 
@@ -893,6 +1004,42 @@ mod tests {
     }
 
     #[test]
+    fn topology_resolution_and_steps_preserve_bounded_access() {
+        let grid = sample_grid();
+
+        assert_eq!(
+            grid.resolve_point(Point::new(-1, 3), GridTopology::Bounded),
+            None
+        );
+        assert_eq!(
+            grid.resolve_point(Point::new(-1, 3), GridTopology::Toroidal),
+            Some(Point::new(2, 0))
+        );
+        assert_eq!(
+            grid.step(
+                Point::new(0, 0),
+                PointDelta::NORTH_WEST,
+                GridTopology::Toroidal
+            ),
+            Some(Point::new(2, 2))
+        );
+        assert_eq!(
+            grid.step_by(
+                Point::new(0, 0),
+                PointDelta::EAST,
+                7,
+                GridTopology::Toroidal
+            ),
+            Some(Point::new(1, 0))
+        );
+        assert_eq!(
+            grid.step(Point::new(0, 0), PointDelta::NORTH, GridTopology::Bounded),
+            None
+        );
+        assert_eq!(grid.get(Point::new(-1, 0)), None);
+    }
+
+    #[test]
     fn point_to_index_rejects_points_beyond_backing_storage() {
         let grid = Grid {
             cells: vec![1],
@@ -1015,6 +1162,39 @@ mod tests {
     }
 
     #[test]
+    fn toroidal_neighbors_wrap_in_direction_order() {
+        let grid = sample_grid();
+
+        assert_eq!(
+            collect_neighbor_values(grid.neighbors(
+                Point::new(0, 0),
+                &PointDelta::CARDINALS,
+                GridTopology::Toroidal,
+            )),
+            vec![
+                (Point::new(0, 2), 6),
+                (Point::new(2, 0), 2),
+                (Point::new(1, 0), 1),
+                (Point::new(0, 1), 3),
+            ]
+        );
+    }
+
+    #[test]
+    fn toroidal_immutable_neighbors_keep_directional_aliases() {
+        let grid = Grid::new(size(1, 1), 7).expect("valid grid");
+
+        assert_eq!(
+            collect_neighbor_values(grid.neighbors(
+                Point::new(0, 0),
+                &PointDelta::ALL_DIRECTIONS,
+                GridTopology::Toroidal,
+            )),
+            vec![(Point::new(0, 0), 7); 8]
+        );
+    }
+
+    #[test]
     fn mutable_neighbor_iterators_update_only_neighbors() {
         let mut grid = Grid::new(size(3, 3), 0).expect("valid grid");
 
@@ -1041,6 +1221,21 @@ mod tests {
         assert_eq!(values[&Point::new(0, 2)], 10);
         assert_eq!(values[&Point::new(1, 2)], 1);
         assert_eq!(values[&Point::new(2, 2)], 10);
+    }
+
+    #[test]
+    fn toroidal_mutable_neighbors_deduplicate_aliased_cells() {
+        let mut grid = Grid::new(size(1, 1), 0).expect("valid grid");
+
+        for (_, value) in grid.neighbors_mut(
+            Point::new(0, 0),
+            &PointDelta::ALL_DIRECTIONS,
+            GridTopology::Toroidal,
+        ) {
+            *value += 1;
+        }
+
+        assert_eq!(grid[Point::new(0, 0)], 1);
     }
 
     #[test]
