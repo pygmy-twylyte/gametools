@@ -43,7 +43,7 @@ pub use gameerror::{
 };
 
 pub mod grid;
-pub use grid::{Grid, GridSize, Point, PointDelta};
+pub use grid::{Grid, GridSize, GridTopology, Point, PointDelta};
 
 pub mod fov;
 pub use fov::{
@@ -59,7 +59,10 @@ pub use ordering::{
 };
 
 pub mod pathfinding;
-pub use pathfinding::{MoveSet, Path, SearchMap, dijkstra_map};
+pub use pathfinding::{
+    MoveSet, Path, SearchMap, a_star, a_star_weighted, a_star_weighted_with_topology,
+    a_star_with_topology, dijkstra_map, dijkstra_map_with_topology,
+};
 
 pub type GameResult<T> = Result<T, GameError>;
 

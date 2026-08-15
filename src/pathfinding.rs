@@ -3,7 +3,8 @@ use std::{collections::VecDeque, fmt::Debug};
 use smallvec::SmallVec;
 
 use crate::{
-    GameResult, Grid, MinPriorityQ, Point, PointDelta, ensure, gameerror::PathfindingError,
+    GameResult, Grid, GridTopology, MinPriorityQ, Point, PointDelta, ensure,
+    gameerror::PathfindingError,
 };
 
 /// The relative cost of movement along a path.
@@ -43,14 +44,32 @@ pub fn dijkstra_map<T, F>(
 where
     F: Fn(Point, Point) -> Option<Cost>,
 {
+    dijkstra_map_with_topology(map, goals, move_set, GridTopology::Bounded, edge_cost)
+}
+
+/// Builds a Dijkstra search map using `topology` to resolve movement beyond
+/// the map edges.
+pub fn dijkstra_map_with_topology<T, F>(
+    map: &Grid<T>,
+    goals: &[Point],
+    move_set: MoveSet,
+    topology: GridTopology,
+    edge_cost: F,
+) -> SearchMap
+where
+    F: Fn(Point, Point) -> Option<Cost>,
+{
     let mut frontier = MinPriorityQ::new();
     let mut costs: Grid<Option<Cost>> =
         Grid::new(map.size(), None).expect("inherited map size must be valid");
     let mut reached_from = Grid::new(map.size(), None).expect("inherited map size must be valid");
 
-    for goal in goals {
-        frontier.push(*goal, 0);
-        costs[*goal] = Some(0);
+    for &goal in goals {
+        let goal = map
+            .resolve_point(goal, topology)
+            .expect("goal point must be in bounds for bounded pathfinding");
+        frontier.push(goal, 0);
+        costs[goal] = Some(0);
     }
 
     while let Some((current_point, path_cost)) = frontier.pop() {
@@ -62,7 +81,7 @@ where
             continue;
         }
 
-        for neighbor in collect_neighbors(map, &move_set, current_point) {
+        for neighbor in collect_neighbors(map, &move_set, topology, current_point) {
             let Some(edge_cost) = edge_cost(neighbor, current_point) else {
                 continue;
             };
@@ -81,56 +100,59 @@ where
     }
 }
 
-fn collect_neighbors<T>(map: &Grid<T>, move_set: &MoveSet, point: Point) -> SmallVec<[Point; 8]> {
+fn collect_neighbors<T>(
+    map: &Grid<T>,
+    move_set: &MoveSet,
+    topology: GridTopology,
+    point: Point,
+) -> SmallVec<[Point; 8]> {
     let order_toggle = rand::random_bool(0.6);
     match (move_set, order_toggle) {
-        (MoveSet::Cardinal, true) => map.cardinal_neighbors(point).map(|(p, _)| p).collect(),
-        (MoveSet::Diagonal, true) => map.diagonal_neighbors(point).map(|(p, _)| p).collect(),
+        (MoveSet::Cardinal, true) => map
+            .neighbors(point, &PointDelta::CARDINALS, topology)
+            .map(|(p, _)| p)
+            .collect(),
+        (MoveSet::Diagonal, true) => map
+            .neighbors(point, &PointDelta::DIAGONALS, topology)
+            .map(|(p, _)| p)
+            .collect(),
         (MoveSet::EightWay, true) => map
-            .diagonal_neighbors(point)
-            .chain(map.cardinal_neighbors(point))
+            .neighbors(point, &PointDelta::DIAGONALS, topology)
+            .chain(map.neighbors(point, &PointDelta::CARDINALS, topology))
             .map(|(p, _)| p)
             .collect(),
         (MoveSet::Cardinal, false) => map
-            .cardinal_neighbors(point)
+            .neighbors(point, &PointDelta::CARDINALS, topology)
             .map(|(p, _)| p)
             .rev()
             .collect(),
         (MoveSet::Diagonal, false) => map
-            .diagonal_neighbors(point)
+            .neighbors(point, &PointDelta::DIAGONALS, topology)
             .map(|(p, _)| p)
             .rev()
             .collect(),
         (MoveSet::EightWay, false) => map
-            .cardinal_neighbors(point)
-            .chain(map.diagonal_neighbors(point))
+            .neighbors(point, &PointDelta::CARDINALS, topology)
+            .chain(map.neighbors(point, &PointDelta::DIAGONALS, topology))
             .map(|(p, _)| p)
             .rev()
             .collect(),
-        (MoveSet::Custom(deltas), false) => deltas
-            .iter()
-            .filter_map(|d| {
-                let neighbor = point + *d;
-                map.contains_point(neighbor).then_some(neighbor)
-            })
+        (MoveSet::Custom(deltas), false) => map
+            .neighbors(point, deltas, topology)
+            .map(|(p, _)| p)
             .collect(),
-        (MoveSet::Custom(deltas), true) => deltas
-            .iter()
+        (MoveSet::Custom(deltas), true) => map
+            .neighbors(point, deltas, topology)
+            .map(|(p, _)| p)
             .rev()
-            .filter_map(|d| {
-                let neighbor = point + *d;
-                map.contains_point(neighbor).then_some(neighbor)
-            })
             .collect(),
         (MoveSet::CardinalJump { distance }, _) => PointDelta::CARDINALS
             .iter()
-            .map(|delta| point + *delta * *distance)
-            .filter(|neighbor| map.contains_point(*neighbor))
+            .filter_map(|delta| map.step_by(point, *delta, *distance, topology))
             .collect(),
         (MoveSet::DiagonalJump { distance }, _) => PointDelta::DIAGONALS
             .iter()
-            .map(|delta| point + *delta * *distance)
-            .filter(|neighbor| map.contains_point(*neighbor))
+            .filter_map(|delta| map.step_by(point, *delta, *distance, topology))
             .collect(),
     }
 }
@@ -167,11 +189,42 @@ where
     G: Fn(Point, Point) -> Option<Cost>,
     H: Fn(Point, Point) -> Cost,
 {
-    a_star_weighted(
+    a_star_with_topology(
         map,
         start,
         goal,
         move_set,
+        GridTopology::Bounded,
+        edge_cost,
+        heuristic,
+    )
+}
+
+/// Returns a near-optimal path using `topology` to resolve movement beyond
+/// the map edges.
+///
+/// For toroidal maps, supply a heuristic that accounts for wrapped distances
+/// to retain A*'s usual efficiency. The start and goal are normalized with
+/// `topology` before searching.
+pub fn a_star_with_topology<T, G, H>(
+    map: &Grid<T>,
+    start: Point,
+    goal: Point,
+    move_set: MoveSet,
+    topology: GridTopology,
+    edge_cost: G,
+    heuristic: H,
+) -> Option<Path>
+where
+    G: Fn(Point, Point) -> Option<Cost>,
+    H: Fn(Point, Point) -> Cost,
+{
+    a_star_weighted_with_topology(
+        map,
+        start,
+        goal,
+        move_set,
+        topology,
         edge_cost,
         heuristic,
         HeuristicWeight::Static(1.0),
@@ -213,6 +266,39 @@ where
     G: Fn(Point, Point) -> Option<Cost>,
     H: Fn(Point, Point) -> Cost,
 {
+    a_star_weighted_with_topology(
+        map,
+        start,
+        goal,
+        move_set,
+        GridTopology::Bounded,
+        edge_cost,
+        heuristic,
+        weight,
+    )
+}
+
+/// Returns a weighted A* path using `topology` to resolve movement beyond the
+/// map edges.
+///
+/// For toroidal maps, supply a heuristic that accounts for wrapped distances
+/// to retain A*'s usual efficiency. The start and goal are normalized with
+/// `topology` before searching.
+#[allow(clippy::too_many_arguments)] // Mirrors `a_star_weighted` with explicit topology.
+pub fn a_star_weighted_with_topology<T, G, H>(
+    map: &Grid<T>,
+    start: Point,
+    goal: Point,
+    move_set: MoveSet,
+    topology: GridTopology,
+    edge_cost: G,
+    heuristic: H,
+    weight: HeuristicWeight,
+) -> GameResult<Option<Path>>
+where
+    G: Fn(Point, Point) -> Option<Cost>,
+    H: Fn(Point, Point) -> Cost,
+{
     match weight {
         HeuristicWeight::Static(w) => {
             ensure!(
@@ -233,6 +319,13 @@ where
     let mut reached_from =
         Grid::<Option<Point>>::new(map.size(), None).expect("map.size() must be valid");
 
+    let start = map
+        .resolve_point(start, topology)
+        .expect("start point must be in bounds for bounded pathfinding");
+    let goal = map
+        .resolve_point(goal, topology)
+        .expect("goal point must be in bounds for bounded pathfinding");
+
     frontier.push((start, 0), (0, 0));
     costs[start] = Some(0);
 
@@ -247,7 +340,7 @@ where
             break; /* path complete */
         }
 
-        for neighbor in collect_neighbors(map, &move_set, point) {
+        for neighbor in collect_neighbors(map, &move_set, topology, point) {
             let Some(edge_cost) = edge_cost(point, neighbor) else {
                 continue;
             };
@@ -333,9 +426,10 @@ pub enum HeuristicWeight {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cost, HeuristicWeight, MoveSet, a_star, a_star_weighted, dijkstra_map, path_from_search_map,
+        Cost, HeuristicWeight, MoveSet, a_star, a_star_weighted, a_star_with_topology,
+        dijkstra_map, dijkstra_map_with_topology, path_from_search_map,
     };
-    use crate::{GameResult, Grid, GridSize, Point, PointDelta};
+    use crate::{GameResult, Grid, GridSize, GridTopology, Point, PointDelta};
 
     #[test]
     fn dijkstra_passes_edges_in_forward_direction() -> GameResult<()> {
@@ -369,6 +463,26 @@ mod tests {
 
         assert_eq!(path.points, vec![goal]);
         assert_eq!(path.total_cost, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn dijkstra_uses_toroidal_neighbors() -> GameResult<()> {
+        let map = Grid::new(GridSize::new(3, 1)?, ())?;
+        let start = Point::new(0, 0);
+        let goal = Point::new(2, 0);
+
+        let search_map = dijkstra_map_with_topology(
+            &map,
+            &[goal],
+            MoveSet::Cardinal,
+            GridTopology::Toroidal,
+            |_, _| Some(1),
+        );
+        let path = path_from_search_map(&search_map, start).expect("wrapped path should exist");
+
+        assert_eq!(path.points, vec![start, goal]);
+        assert_eq!(path.total_cost, 1);
         Ok(())
     }
 
@@ -430,6 +544,28 @@ mod tests {
 
         assert_eq!(path.points, vec![start, Point::new(1, 0), goal]);
         assert_eq!(path.total_cost, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn a_star_uses_toroidal_neighbors() -> GameResult<()> {
+        let map = Grid::new(GridSize::new(3, 1)?, ())?;
+        let start = Point::new(0, 0);
+        let goal = Point::new(2, 0);
+
+        let path = a_star_with_topology(
+            &map,
+            start,
+            goal,
+            MoveSet::Cardinal,
+            GridTopology::Toroidal,
+            |_, _| Some(1),
+            |_, _| 0,
+        )
+        .expect("wrapped path should exist");
+
+        assert_eq!(path.points, vec![start, goal]);
+        assert_eq!(path.total_cost, 1);
         Ok(())
     }
 
