@@ -605,8 +605,8 @@ mod tests {
             },
             |src, dst| (dst - src).distance_taxicab(),
             HeuristicWeight::Static(1.0),
-        )?
-        .expect("occupied start should not block leaving the start");
+        )
+        .unwrap();
 
         assert_eq!(path.points, vec![start, Point::new(1, 0), goal]);
         assert_eq!(path.total_cost, 2);
