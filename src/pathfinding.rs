@@ -49,6 +49,7 @@ where
 
 /// Builds a Dijkstra search map using `topology` to resolve movement beyond
 /// the map edges.
+#[allow(clippy::missing_panics_doc)]
 pub fn dijkstra_map_with_topology<T, F>(
     map: &Grid<T>,
     goals: &[Point],
@@ -60,6 +61,7 @@ where
     F: Fn(Point, Point) -> Option<Cost>,
 {
     let mut frontier = MinPriorityQ::new();
+    // note: GridSize already validated during `map` construction, so it cannot panic here
     let mut costs: Grid<Option<Cost>> =
         Grid::new(map.size(), None).expect("inherited map size must be valid");
     let mut reached_from = Grid::new(map.size(), None).expect("inherited map size must be valid");
@@ -73,7 +75,7 @@ where
     }
 
     while let Some((current_point, path_cost)) = frontier.pop() {
-        // prevent re-queueing of previously visited neighbors unless
+        // prevents re-queueing of previously visited neighbors unless
         // this may be a better path through them
         if let Some(known_cost) = costs[current_point]
             && path_cost > known_cost
@@ -159,6 +161,7 @@ fn collect_neighbors<T>(
 
 /// Takes a result from dijkstra map and returns a best path from start to the
 /// goal set by the search map.
+#[must_use]
 pub fn path_from_search_map(search_map: &SearchMap, start: Point) -> Option<Path> {
     search_map.costs[start]?;
 
@@ -175,8 +178,8 @@ pub fn path_from_search_map(search_map: &SearchMap, start: Point) -> Option<Path
 }
 
 /// Returns a near-optimal path from start to goal using the original A* algorithm.
-/// - 'edge_cost' is a function that returns the cost (distance, turns, etc.) to move from one point to another
-/// - 'heuristic' is a function that estimates the cost to reach the goal from a given point
+/// - `edge_cost` is a function that returns the cost (distance, turns, etc.) to move from one point to another
+/// - `heuristic` is a function that estimates the cost to reach the goal from a given point
 pub fn a_star<T, G, H>(
     map: &Grid<T>,
     start: Point,
@@ -261,7 +264,7 @@ pub fn a_star_weighted<T, G, H>(
     edge_cost: G,
     heuristic: H,
     weight: HeuristicWeight,
-) -> GameResult<Option<Path>>
+) -> Option<Path>
 where
     G: Fn(Point, Point) -> Option<Cost>,
     H: Fn(Point, Point) -> Cost,
@@ -276,6 +279,7 @@ where
         heuristic,
         weight,
     )
+    .ok()?
 }
 
 /// Returns a weighted A* path using `topology` to resolve movement beyond the
@@ -284,7 +288,18 @@ where
 /// For toroidal maps, supply a heuristic that accounts for wrapped distances
 /// to retain A*'s usual efficiency. The start and goal are normalized with
 /// `topology` before searching.
+///
+/// # Panics
+///
+/// Panics if `map` is empty or `start`/`goal` are out of bounds.
+///
+/// # Errors
+///
+/// Returns an error if invalid parameters are used for `HeuristicWeight`
 #[allow(clippy::too_many_arguments)] // Mirrors `a_star_weighted` with explicit topology.
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_precision_loss)]
 pub fn a_star_weighted_with_topology<T, G, H>(
     map: &Grid<T>,
     start: Point,
@@ -315,6 +330,8 @@ where
     }
 
     let mut frontier = MinPriorityQ::new();
+    // note: this cannot panic because `map` already validated `Grid` dimensions
+    // when constructed
     let mut costs = Grid::<Option<Cost>>::new(map.size(), None).expect("map.size() must be valid");
     let mut reached_from =
         Grid::<Option<Point>>::new(map.size(), None).expect("map.size() must be valid");
@@ -404,6 +421,9 @@ fn path_from_forward_search(
 ///
 /// Ultimately, the effect is that the algorithm is standard A* until about ½ way to the goal,
 /// at which point the weight increases the contribution of the heuristic in the path fitness calculation.
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_precision_loss)]
 fn pxwd_dynamic_weight(weight: f32, new_cost: Cost, estimated_cost_left: Cost) -> Cost {
     if new_cost < estimated_cost_left {
         new_cost + estimated_cost_left

@@ -16,6 +16,7 @@ pub type FovMap = Grid<bool>;
 /// Blocking cells are marked visible and stop the ray that reached them.
 /// `radius` is a Chebyshev-distance limit; `None` scans to the map boundary.
 #[must_use]
+#[allow(clippy::missing_panics_doc)]
 pub fn perimeter_raycasting<T, F>(
     map: &Grid<T>,
     source: Point,
@@ -25,6 +26,8 @@ pub fn perimeter_raycasting<T, F>(
 where
     F: Fn(Point, &T) -> bool,
 {
+    // note: this can never panic because the size is inherited from the source grid,
+    // which has already validated the GridSize.
     let mut visible = Grid::new(map.size(), false).expect("inherited map size must be valid");
     perimeter_raycasting_into(map, &mut visible, source, radius, blocks_vision);
     visible
@@ -34,6 +37,9 @@ where
 ///
 /// Reusing `visible` avoids repeated allocation in hot loops. The visibility
 /// grid must have the same size as `map`.
+///
+/// # Panics
+/// * if the map and visibility grids have different dimensions
 pub fn perimeter_raycasting_into<T, F>(
     map: &Grid<T>,
     visible: &mut FovMap,
@@ -109,6 +115,7 @@ pub fn perimeter_raycasting_into<T, F>(
 /// because it only visits cells inside visible angular bands. `radius` is a
 /// Chebyshev-distance limit; `None` scans to the map boundary.
 #[must_use]
+#[allow(clippy::missing_panics_doc)]
 pub fn recursive_shadowcasting<T, F>(
     map: &Grid<T>,
     source: Point,
@@ -118,6 +125,8 @@ pub fn recursive_shadowcasting<T, F>(
 where
     F: Fn(Point, &T) -> bool,
 {
+    // note: GridSize is inherited from the source map which has already validated it
+    // on creation, so this can never panic.
     let mut visible = Grid::new(map.size(), false).expect("inherited map size must be valid");
     recursive_shadowcasting_into(map, &mut visible, source, radius, blocks_vision);
     visible
@@ -127,6 +136,9 @@ where
 ///
 /// Reusing `visible` avoids repeated allocation in hot loops. The visibility
 /// grid must have the same size as `map`.
+///
+/// # Panics
+/// * if the visibility grid and source grid have different dimensions
 pub fn recursive_shadowcasting_into<T, F>(
     map: &Grid<T>,
     visible: &mut FovMap,
@@ -221,13 +233,13 @@ impl BlockingRect {
     /// Returns the rectangle width in cells.
     #[must_use]
     pub fn width(&self) -> u32 {
-        (self.max.col - self.min.col + 1) as u32
+        (self.max.col - self.min.col + 1).cast_unsigned()
     }
 
     /// Returns the rectangle height in cells.
     #[must_use]
     pub fn height(&self) -> u32 {
-        (self.max.row - self.min.row + 1) as u32
+        (self.max.row - self.min.row + 1).cast_unsigned()
     }
 
     /// Returns whether `point` is inside this blocking rectangle.
@@ -289,10 +301,13 @@ impl RectangleFov {
     /// rectangles of blocking cells without adding dependencies or requiring a
     /// more expensive minimal rectilinear decomposition step.
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn new<T, F>(map: &Grid<T>, blocks_vision: F) -> Self
     where
         F: Fn(Point, &T) -> bool,
     {
+        // note: GridSize is inherited from the source map which has already validated it
+        // on creation, so this can never panic.
         let mut visited = Grid::new(map.size(), false).expect("inherited map size must be valid");
         let mut rectangles = Vec::new();
 
@@ -356,6 +371,7 @@ impl RectangleFov {
     ///
     /// `radius` is a Chebyshev-distance limit; `None` scans to the map boundary.
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn visible_from(&self, source: Point, radius: Option<u32>) -> FovMap {
         let mut visible = Grid::new(self.size, false).expect("inherited map size must be valid");
         self.visible_from_into(&mut visible, source, radius);
@@ -366,6 +382,9 @@ impl RectangleFov {
     ///
     /// Reusing `visible` avoids repeated allocation in hot loops. The visibility
     /// grid must have the same size as the map used to build this cache.
+    ///
+    /// # Panics
+    /// * if the visibility grid and source grid have different dimensions
     pub fn visible_from_into(&self, visible: &mut FovMap, source: Point, radius: Option<u32>) {
         assert_eq!(
             self.size,
@@ -634,6 +653,7 @@ impl RectangleShadow {
         (start.cross(end) > EPSILON).then_some(Self { source, start, end })
     }
 
+    #[allow(clippy::unused_self)]
     fn candidate_bounds(
         &self,
         size: GridSize,

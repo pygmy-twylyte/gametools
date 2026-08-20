@@ -101,7 +101,7 @@ impl PointDelta {
     /// ```
     #[must_use]
     pub fn distance_taxicab(&self) -> u32 {
-        self.dc.abs().saturating_add(self.dr.abs()) as u32
+        self.dc.abs().saturating_add(self.dr.abs()).cast_unsigned()
     }
 
     /// Returns the Chebyshev distance covered by a delta.
@@ -116,7 +116,7 @@ impl PointDelta {
     /// ```
     #[must_use]
     pub fn distance_chebyshev(&self) -> u32 {
-        self.dc.abs().max(self.dr.abs()) as u32
+        self.dc.abs().max(self.dr.abs()).cast_unsigned()
     }
 
     /// One row up.
