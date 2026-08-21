@@ -1,3 +1,29 @@
+//! Pathfinding over [`Grid`] maps.
+//!
+//! Use [`dijkstra_map`] when several callers need paths to the same goal set,
+//! then recover an individual path with [`path_from_search_map`]. Use [`a_star`]
+//! when searching from one start point to one goal. Movement is selected with
+//! [`MoveSet`], and the edge callback returns `None` for an impassable move.
+//!
+//! ```
+//! use gametools::{Grid, GridSize, MoveSet, Point, a_star};
+//!
+//! let map = Grid::new(GridSize::new(3, 1).unwrap(), ()) .unwrap();
+//! let path = a_star(
+//!     &map,
+//!     Point::new(0, 0),
+//!     Point::new(2, 0),
+//!     MoveSet::Cardinal,
+//!     |_, _| Some(1),
+//!     |from, to| (to - from).distance_taxicab(),
+//! )
+//! .unwrap();
+//!
+//! assert_eq!(path.total_cost, 2);
+//! assert_eq!(path.points.front(), Some(&Point::new(0, 0)));
+//! assert_eq!(path.points.back(), Some(&Point::new(2, 0)));
+//! ```
+
 use std::{collections::VecDeque, fmt::Debug};
 
 use smallvec::SmallVec;
@@ -13,28 +39,67 @@ pub type Cost = u32;
 /// Map structure used for holding movement costs and parent nodes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SearchMap {
+    /// Cheapest known cost from each point to the goal set, or `None` when unreachable.
     pub costs: Grid<Option<Cost>>,
+    /// The next point toward a goal for each reachable point.
     pub reached_from: Grid<Option<Point>>,
 }
 
 /// A constructed path from one point to another.
 #[derive(Debug, Clone, PartialEq, Default, Eq)]
 pub struct Path {
+    /// Points from the requested start through the reached goal, inclusive.
     pub points: VecDeque<Point>,
+    /// Sum of the edge costs along [`Self::points`].
     pub total_cost: Cost,
 }
 
 /// The set of move directions the pathing algorithms must consider.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoveSet {
+    /// North, west, east, and south one-cell moves.
     Cardinal,
+    /// The four one-cell diagonal moves.
     Diagonal,
+    /// All cardinal and diagonal one-cell moves.
     EightWay,
-    CardinalJump { distance: u32 },
-    DiagonalJump { distance: u32 },
+    /// Cardinal moves that land exactly `distance` cells away.
+    CardinalJump {
+        /// Number of cells between the origin and landing point.
+        distance: u32,
+    },
+    /// Diagonal moves that land exactly `distance` cells away.
+    DiagonalJump {
+        /// Number of cells between the origin and landing point.
+        distance: u32,
+    },
+    /// Moves described by caller-provided deltas, in either traversal order.
     Custom(&'static [PointDelta]),
 }
 
+/// Builds a Dijkstra search map from `goals` using bounded movement.
+///
+/// Although the search expands outward from the goals, `edge_cost` receives
+/// `(from, to)` in the forward direction of the resulting path. Return `None`
+/// for an impassable edge. When multiple equal-cost paths exist, their chosen
+/// route is intentionally not stable.
+///
+/// # Panics
+///
+/// Panics when a goal is outside `map`.
+///
+/// # Examples
+///
+/// ```
+/// use gametools::{Grid, GridSize, MoveSet, Point, dijkstra_map, path_from_search_map};
+///
+/// let map = Grid::new(GridSize::new(3, 1).unwrap(), ()) .unwrap();
+/// let goal = Point::new(2, 0);
+/// let search = dijkstra_map(&map, &[goal], MoveSet::Cardinal, |from, to| {
+///     (to.col == from.col + 1).then_some(1)
+/// });
+/// assert_eq!(path_from_search_map(&search, Point::new(0, 0)).unwrap().total_cost, 2);
+/// ```
 pub fn dijkstra_map<T, F>(
     map: &Grid<T>,
     goals: &[Point],
@@ -49,7 +114,15 @@ where
 
 /// Builds a Dijkstra search map using `topology` to resolve movement beyond
 /// the map edges.
-#[allow(clippy::missing_panics_doc)]
+///
+/// For [`GridTopology::Toroidal`], each goal is normalized before searching.
+/// `edge_cost` still receives points in the forward path direction. See
+/// [`dijkstra_map`] for tie-breaking behavior.
+///
+/// # Panics
+///
+/// Panics when a goal is outside `map` and `topology` is
+/// [`GridTopology::Bounded`].
 pub fn dijkstra_map_with_topology<T, F>(
     map: &Grid<T>,
     goals: &[Point],
@@ -161,6 +234,12 @@ fn collect_neighbors<T>(
 
 /// Takes a result from dijkstra map and returns a best path from start to the
 /// goal set by the search map.
+///
+/// Returns `None` when `start` is not reachable from the goal set.
+///
+/// # Panics
+///
+/// Panics when `start` is outside the search map.
 #[must_use]
 pub fn path_from_search_map(search_map: &SearchMap, start: Point) -> Option<Path> {
     search_map.costs[start]?;
@@ -177,9 +256,16 @@ pub fn path_from_search_map(search_map: &SearchMap, start: Point) -> Option<Path
     })
 }
 
-/// Returns a near-optimal path from start to goal using the original A* algorithm.
-/// - `edge_cost` is a function that returns the cost (distance, turns, etc.) to move from one point to another
-/// - `heuristic` is a function that estimates the cost to reach the goal from a given point
+/// Returns an A* path from `start` to `goal` using bounded movement.
+///
+/// `edge_cost` receives `(from, to)` and returns `None` for an impassable move.
+/// `heuristic` estimates the remaining cost from its first argument to its
+/// second. An admissible heuristic preserves A*'s optimal-path guarantee.
+/// Equal-cost paths may produce different routes between calls.
+///
+/// # Panics
+///
+/// Panics when `start` or `goal` is outside `map`.
 pub fn a_star<T, G, H>(
     map: &Grid<T>,
     start: Point,
@@ -209,6 +295,11 @@ where
 /// For toroidal maps, supply a heuristic that accounts for wrapped distances
 /// to retain A*'s usual efficiency. The start and goal are normalized with
 /// `topology` before searching.
+///
+/// # Panics
+///
+/// Panics when `start` or `goal` is outside `map` and `topology` is
+/// [`GridTopology::Bounded`].
 pub fn a_star_with_topology<T, G, H>(
     map: &Grid<T>,
     start: Point,
@@ -235,13 +326,12 @@ where
     .ok()?
 }
 
-/// Returns a near-optimal path from start to goal using the A* algorithm with a weight factor.
+/// Returns a weighted A* path from `start` to `goal` using bounded movement.
 ///
-/// Weight must be >= 1.0 and <= 2.0. At weight = 1.0, it is the same as standard A*. At 2.0, it behaves
-/// like greedy Best First Search. For weights inbetween, it *leans* more toward one or the other.
-///
-/// *Note: if weight were 0.0, this would be theoretically equivalent to Dijkstra, but values < 1.0 can
-/// cause an overflow in the weighted fitness calculation.*
+/// [`HeuristicWeight::Static`] accepts `0.0..=2.0`: `0.0` ignores the
+/// heuristic, `1.0` is standard A*, and larger values increasingly favor the
+/// heuristic over the known path cost. [`HeuristicWeight::Dynamic`] accepts
+/// `1.0..=2.0` and uses the pxWD weighting function.
 ///
 /// # Parameters
 ///
@@ -253,9 +343,13 @@ where
 /// * `heuristic` - The heuristic function for estimating the cost to the goal.
 /// * `weight` - The weight factor for the heuristic. See [`HeuristicWeight`]
 ///
-/// # Errors
+/// Invalid weights and unreachable goals both return `None`; use
+/// [`a_star_weighted_with_topology`] when the invalid-weight error must be
+/// distinguished from an unreachable goal.
 ///
-/// Returns an error if the weight is outside the valid range.
+/// # Panics
+///
+/// Panics when `start` or `goal` is outside `map`.
 pub fn a_star_weighted<T, G, H>(
     map: &Grid<T>,
     start: Point,
@@ -291,11 +385,12 @@ where
 ///
 /// # Panics
 ///
-/// Panics if `map` is empty or `start`/`goal` are out of bounds.
+/// Panics when `start` or `goal` is outside `map` and `topology` is
+/// [`GridTopology::Bounded`].
 ///
 /// # Errors
 ///
-/// Returns an error if invalid parameters are used for `HeuristicWeight`
+/// Returns [`PathfindingError`] when `weight` is outside its valid range.
 #[allow(clippy::too_many_arguments)] // Mirrors `a_star_weighted` with explicit topology.
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]
@@ -435,11 +530,14 @@ fn pxwd_dynamic_weight(weight: f32, new_cost: Cost, estimated_cost_left: Cost) -
 /// The weight factor for the heuristic in the A* algorithm.
 ///
 /// This can be a static value or a dynamic weight calculated using the pxWD function.
-/// Static values may range from 0.0 (no heuristic, == Dijkstra) to 1.0 (standard A*) to 2.0 (BFS).
-/// Dynamic values are used by the pxWD function and must be in the range (1.0..=2.0).
+/// Static values range from `0.0` (no heuristic) through `1.0` (standard A*)
+/// to `2.0` (a more heuristic-biased A* search). Dynamic values use pxWD and
+/// must be in the range `1.0..=2.0`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum HeuristicWeight {
+    /// A fixed multiplier for the heuristic, in the range `0.0..=2.0`.
     Static(f32),
+    /// A pxWD dynamic weight, in the range `1.0..=2.0`.
     Dynamic(f32),
 }
 

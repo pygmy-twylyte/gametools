@@ -120,8 +120,11 @@ pub struct Wedge<T>
 where
     T: Clone,
 {
+    /// Outcome selected when this wedge is landed on.
     pub value: T,
+    /// Relative probability weight; larger widths are selected more often.
     pub width: usize,
+    /// Whether this wedge can currently be selected.
     pub active: bool,
 }
 impl<T: Clone> Wedge<T> {

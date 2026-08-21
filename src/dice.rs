@@ -15,6 +15,7 @@
 //! # Ok::<(), gametools::DiceError>(())
 //! ```
 //!
+/// Result type returned by fallible dice constructors.
 pub type DieResult<T> = Result<T, DiceError>;
 
 use std::collections::BTreeMap;

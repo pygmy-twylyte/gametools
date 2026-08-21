@@ -84,19 +84,33 @@ impl CardFaces for StandardCard {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Rank {
+    /// Numeric rank two.
     Two = 2,
+    /// Numeric rank three.
     Three,
+    /// Numeric rank four.
     Four,
+    /// Numeric rank five.
     Five,
+    /// Numeric rank six.
     Six,
+    /// Numeric rank seven.
     Seven,
+    /// Numeric rank eight.
     Eight,
+    /// Numeric rank nine.
     Nine,
+    /// Numeric rank ten.
     Ten,
+    /// Jack face-card rank.
     Jack,
+    /// Queen face-card rank.
     Queen,
+    /// King face-card rank.
     King,
+    /// Ace rank, ordered above king by this enum.
     Ace,
+    /// Optional joker rank, ordered above ace.
     Joker = 255,
 }
 impl std::fmt::Display for Rank {
@@ -190,10 +204,15 @@ impl Rank {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Suit {
+    /// Clubs suit.
     Clubs,
+    /// Hearts suit.
     Hearts,
+    /// Diamonds suit.
     Diamonds,
+    /// Spades suit.
     Spades,
+    /// Joker or other suitless wildcard suit.
     Wild,
 }
 impl std::fmt::Display for Suit {
@@ -257,14 +276,19 @@ pub fn standard_52() -> Vec<StandardCard> {
 
 /// Trait that extends a `Vec<StandardCard>` to assist in building modified decks.
 pub trait DeckModifier {
+    /// Appends `count` joker cards to the deck.
     #[must_use]
     fn add_jokers(self, count: u8) -> Self;
+    /// Removes every card whose rank occurs in `ranks`.
     #[must_use]
     fn remove_ranks(self, ranks: &[Rank]) -> Self;
+    /// Removes every card whose suit occurs in `suits`.
     #[must_use]
     fn remove_suits(self, suits: &[Suit]) -> Self;
+    /// Appends cards yielded by `cards`.
     #[must_use]
     fn add_cards(self, cards: impl Iterator<Item = StandardCard>) -> Self;
+    /// Doubles the deck `times` times, yielding `2.pow(times)` copies.
     #[must_use]
     fn duplicate(self, times: usize) -> Self;
 }

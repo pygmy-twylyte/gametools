@@ -1,4 +1,8 @@
-//! Uno Card Module
+//! Standard Uno card faces and deck-building helpers.
+//!
+//! [`full_uno_set`] creates the classic 108-card deck. [`UnoCard::plays_on`]
+//! provides face-level eligibility checking, while [`super::Hand::playable_on`]
+//! finds eligible cards in a hand.
 
 use crate::{Card, cards::CardFaces};
 
@@ -9,7 +13,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct UnoCard {
+    /// Printed color, or [`UnoColor::Black`] for wild cards.
     pub color: UnoColor,
+    /// Number, action, or wild-card kind.
     pub kind: UnoCardKind,
 }
 
@@ -73,11 +79,17 @@ impl UnoCard {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// A card color, including black for wild cards.
 pub enum UnoColor {
+    /// Red playable-card color.
     Red,
+    /// Blue playable-card color.
     Blue,
+    /// Green playable-card color.
     Green,
+    /// Yellow playable-card color.
     Yellow,
+    /// Black wild-card color.
     Black,
 }
 impl std::fmt::Display for UnoColor {
@@ -94,10 +106,15 @@ impl std::fmt::Display for UnoColor {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// The face category of an Uno card.
 pub enum UnoCardKind {
+    /// A numbered card from zero through nine in a standard deck.
     Number(u8),
+    /// A colored action card.
     Action(UnoAction),
+    /// A wild card that permits a declared color.
     Wild,
+    /// A wild card that also directs the next player to draw four cards.
     WildDrawFour,
 }
 impl UnoCardKind {
@@ -120,9 +137,13 @@ impl std::fmt::Display for UnoCardKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// An action printed on a non-wild Uno card.
 pub enum UnoAction {
+    /// The next player draws two cards.
     DrawTwo,
+    /// The next player loses a turn.
     Skip,
+    /// The direction of play reverses.
     Reverse,
 }
 impl std::fmt::Display for UnoAction {
@@ -137,6 +158,7 @@ impl std::fmt::Display for UnoAction {
 
 /// Counts of each number card per color, 0-9.
 pub const UNO_NUMBER_CARD_COUNTS: &[u8] = &[1, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+/// The four colors used by numbered and action cards.
 pub const MAIN_UNO_COLORS: &[UnoColor] = &[
     UnoColor::Red,
     UnoColor::Blue,

@@ -4,11 +4,17 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ---
-## [Unreleased]
+## [0.11.0] - 2026-08-19
 
 ### Added
+- New `fov` module with perimeter raycasting, recursive shadowcasting, and reusable rectangle-based field-of-view calculations over `Grid<T>` maps.
+- New `pathfinding` module with Dijkstra search maps, A*, weighted A*, configurable move sets, and runnable examples.
 - `GridTopology` plus topology-aware `Grid` point resolution, stepping, and neighbor traversal, including toroidal wrapping.
 - Topology-aware Dijkstra and A* entry points for wrapped pathfinding.
+- New interactive FOV visualizer and terminal pathfinding example.
+
+### Changed
+- Expanded README and API documentation for field of view, pathfinding, and toroidal grid traversal.
 
 ---
 ## [0.10.0] - 2026-05-27
