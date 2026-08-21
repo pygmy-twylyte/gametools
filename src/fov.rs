@@ -1,8 +1,23 @@
-//! Field-of-view algorithms for point-addressed [`Grid`](crate::Grid) maps.
+//! Field-of-view algorithms for point-addressed [`Grid`] maps.
 //!
 //! The algorithms in this module take a caller-provided opacity function so the
 //! map can store any tile type. Results are represented as a [`Grid<bool>`],
 //! where `true` means the cell is visible from the source point.
+//!
+//! Perimeter raycasting is straightforward and useful for small maps;
+//! recursive shadowcasting avoids tracing fully blocked angular regions; and
+//! [`RectangleFov`] preprocesses static blockers for repeated calculations.
+//! All algorithms use a Chebyshev radius and mark blocking cells themselves as
+//! visible. An out-of-bounds source produces an all-false visibility map.
+//!
+//! ```
+//! use gametools::{Grid, GridSize, Point, recursive_shadowcasting};
+//!
+//! let map = Grid::from_vec(GridSize::new(3, 1).unwrap(), vec!['.', '#', '.']).unwrap();
+//! let visible = recursive_shadowcasting(&map, Point::new(0, 0), None, |_, tile| *tile == '#');
+//! assert!(visible[Point::new(1, 0)]);
+//! assert!(!visible[Point::new(2, 0)]);
+//! ```
 
 use std::f64::consts::TAU;
 
@@ -16,6 +31,7 @@ pub type FovMap = Grid<bool>;
 /// Blocking cells are marked visible and stop the ray that reached them.
 /// `radius` is a Chebyshev-distance limit; `None` scans to the map boundary.
 #[must_use]
+#[allow(clippy::missing_panics_doc)]
 pub fn perimeter_raycasting<T, F>(
     map: &Grid<T>,
     source: Point,
@@ -25,6 +41,8 @@ pub fn perimeter_raycasting<T, F>(
 where
     F: Fn(Point, &T) -> bool,
 {
+    // note: this can never panic because the size is inherited from the source grid,
+    // which has already validated the GridSize.
     let mut visible = Grid::new(map.size(), false).expect("inherited map size must be valid");
     perimeter_raycasting_into(map, &mut visible, source, radius, blocks_vision);
     visible
@@ -33,7 +51,11 @@ where
 /// Writes a perimeter-raycast field of view into an existing visibility grid.
 ///
 /// Reusing `visible` avoids repeated allocation in hot loops. The visibility
-/// grid must have the same size as `map`.
+/// grid must have the same size as `map`. An out-of-bounds `source` clears
+/// `visible` and returns without marking any cells.
+///
+/// # Panics
+/// * if the map and visibility grids have different dimensions
 pub fn perimeter_raycasting_into<T, F>(
     map: &Grid<T>,
     visible: &mut FovMap,
@@ -109,6 +131,7 @@ pub fn perimeter_raycasting_into<T, F>(
 /// because it only visits cells inside visible angular bands. `radius` is a
 /// Chebyshev-distance limit; `None` scans to the map boundary.
 #[must_use]
+#[allow(clippy::missing_panics_doc)]
 pub fn recursive_shadowcasting<T, F>(
     map: &Grid<T>,
     source: Point,
@@ -118,6 +141,8 @@ pub fn recursive_shadowcasting<T, F>(
 where
     F: Fn(Point, &T) -> bool,
 {
+    // note: GridSize is inherited from the source map which has already validated it
+    // on creation, so this can never panic.
     let mut visible = Grid::new(map.size(), false).expect("inherited map size must be valid");
     recursive_shadowcasting_into(map, &mut visible, source, radius, blocks_vision);
     visible
@@ -126,7 +151,11 @@ where
 /// Writes a recursive-shadowcasting field of view into an existing visibility grid.
 ///
 /// Reusing `visible` avoids repeated allocation in hot loops. The visibility
-/// grid must have the same size as `map`.
+/// grid must have the same size as `map`. An out-of-bounds `source` clears
+/// `visible` and returns without marking any cells.
+///
+/// # Panics
+/// * if the visibility grid and source grid have different dimensions
 pub fn recursive_shadowcasting_into<T, F>(
     map: &Grid<T>,
     visible: &mut FovMap,
@@ -171,6 +200,7 @@ pub fn recursive_shadowcasting_into<T, F>(
 ///
 /// This is a convenience wrapper around [`RectangleFov`]. Prefer
 /// [`RectangleFov`] directly when the blocking terrain is reused across frames.
+/// An out-of-bounds `source` produces an all-false visibility map.
 #[must_use]
 pub fn rectangle_based_fov<T, F>(
     map: &Grid<T>,
@@ -188,6 +218,12 @@ where
 ///
 /// This convenience wrapper rebuilds the rectangle cache. Prefer
 /// [`RectangleFov::visible_from_into`] when the blocking terrain is reused.
+/// The visibility grid must match `map`'s dimensions. An out-of-bounds `source`
+/// clears `visible` and returns without marking any cells.
+///
+/// # Panics
+///
+/// Panics if `visible` and `map` have different dimensions.
 pub fn rectangle_based_fov_into<T, F>(
     map: &Grid<T>,
     visible: &mut FovMap,
@@ -221,13 +257,13 @@ impl BlockingRect {
     /// Returns the rectangle width in cells.
     #[must_use]
     pub fn width(&self) -> u32 {
-        (self.max.col - self.min.col + 1) as u32
+        (self.max.col - self.min.col + 1).cast_unsigned()
     }
 
     /// Returns the rectangle height in cells.
     #[must_use]
     pub fn height(&self) -> u32 {
-        (self.max.row - self.min.row + 1) as u32
+        (self.max.row - self.min.row + 1).cast_unsigned()
     }
 
     /// Returns whether `point` is inside this blocking rectangle.
@@ -275,7 +311,8 @@ impl BlockingRect {
 /// This follows the rectangle representation described by Debenham and
 /// Solis-Oba's rectangle-based FOV algorithm: blocking cells are grouped into
 /// rectangles once, then each FOV calculation marks the row-major shadowed
-/// cells cast by those rectangles.
+/// cells cast by those rectangles. Rebuild the cache whenever the map's
+/// blocking terrain changes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RectangleFov {
     size: GridSize,
@@ -289,10 +326,13 @@ impl RectangleFov {
     /// rectangles of blocking cells without adding dependencies or requiring a
     /// more expensive minimal rectilinear decomposition step.
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn new<T, F>(map: &Grid<T>, blocks_vision: F) -> Self
     where
         F: Fn(Point, &T) -> bool,
     {
+        // note: GridSize is inherited from the source map which has already validated it
+        // on creation, so this can never panic.
         let mut visited = Grid::new(map.size(), false).expect("inherited map size must be valid");
         let mut rectangles = Vec::new();
 
@@ -355,7 +395,9 @@ impl RectangleFov {
     /// Calculates a field of view from `source`.
     ///
     /// `radius` is a Chebyshev-distance limit; `None` scans to the map boundary.
+    /// An out-of-bounds `source` produces an all-false visibility map.
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn visible_from(&self, source: Point, radius: Option<u32>) -> FovMap {
         let mut visible = Grid::new(self.size, false).expect("inherited map size must be valid");
         self.visible_from_into(&mut visible, source, radius);
@@ -365,7 +407,11 @@ impl RectangleFov {
     /// Writes a field of view from `source` into an existing visibility grid.
     ///
     /// Reusing `visible` avoids repeated allocation in hot loops. The visibility
-    /// grid must have the same size as the map used to build this cache.
+    /// grid must have the same size as the map used to build this cache. An
+    /// out-of-bounds `source` clears `visible` and returns without marking any cells.
+    ///
+    /// # Panics
+    /// * if the visibility grid and cache dimensions differ
     pub fn visible_from_into(&self, visible: &mut FovMap, source: Point, radius: Option<u32>) {
         assert_eq!(
             self.size,
@@ -634,6 +680,7 @@ impl RectangleShadow {
         (start.cross(end) > EPSILON).then_some(Self { source, start, end })
     }
 
+    #[allow(clippy::unused_self)]
     fn candidate_bounds(
         &self,
         size: GridSize,

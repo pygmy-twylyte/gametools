@@ -14,6 +14,7 @@
 - `dominos`: domino set creation, trains, hands, and longest-train solving.
 - `grid`: point-addressed rectangular grids with bounded or toroidal neighbor traversal, row, and column helpers for boards, maps, pathfinding, and line-of-sight style algorithms.
 - `fov`: field-of-view maps over `Grid<T>` using perimeter raycasting, recursive shadowcasting, and a reusable rectangle-based blocker cache.
+- `pathfinding`: Dijkstra search maps plus A* and weighted A* paths with cardinal, diagonal, jump, custom, bounded, or toroidal movement.
 - `metered_resource`: bounded unsigned counters for resources such as health, mana, stamina, or ammunition.
 - `spinners`: weighted wedges with optional covering/blocking and chainable updates.
 - `refilling_pool`: a randomized pool of any clonable type that refills itself when empty, with conditional and contextual draw helpers.
@@ -116,7 +117,8 @@ See additional usage examples in the module docs:
 - [Dice module](https://docs.rs/gametools/latest/gametools/dice/index.html): regular and exploding dice plus `Rolls` helpers
 - [Dominos module](https://docs.rs/gametools/latest/gametools/dominos/index.html): longest-train solver
 - [Grid module](https://docs.rs/gametools/latest/gametools/grid/index.html): point-addressed grids, neighbors, and row/column traversal
-- `fov` module: field-of-view algorithms over `Grid<T>` maps
+- [FOV module](https://docs.rs/gametools/latest/gametools/fov/index.html): perimeter raycasting, recursive shadowcasting, and reusable rectangle caches
+- [Pathfinding module](https://docs.rs/gametools/latest/gametools/pathfinding/index.html): Dijkstra maps and A* search over bounded or toroidal grids
 - [MeteredResource module](https://docs.rs/gametools/latest/gametools/metered_resource/index.html): bounded resources with saturating increase and reduction helpers
 - [Ordering module](https://docs.rs/gametools/latest/gametools/ordering/index.html): ranked lists and priority queues
 - [RefillingPool module](https://docs.rs/gametools/latest/gametools/refilling_pool/index.html): self-refilling random pools with contextual draws
@@ -125,6 +127,7 @@ See additional usage examples in the module docs:
 - `cargo run --example dice`: basic roll analysis, exploding dice, and poker-style histogram checks
 - `cargo run --example grid`: point-addressed board traversal and chess-like attack maps
 - `cargo run --example fov --features fov-egui`: interactive egui field-of-view visualization
+- `cargo run --example pathfinding`: terminal Dijkstra and weighted-A* terrain-path demo
 - `cargo run --example metered_resource`: bounded depletion, refill, and fraction-full behavior
 - `cargo run --example refilling_pool`: an "infinite chest" that prefers loot based on character context
 - `cargo run --example priority_queue`: ship attack ordering with `MinPriorityQ`

@@ -61,14 +61,17 @@ impl Domino {
     pub fn new(left: u8, right: u8, id: usize) -> Self {
         Self { left, right, id }
     }
+    /// Returns the value on the left side of the tile.
     #[must_use]
     pub fn left(&self) -> u8 {
         self.left
     }
+    /// Returns the value on the right side of the tile.
     #[must_use]
     pub fn right(&self) -> u8 {
         self.right
     }
+    /// Returns this tile's caller-assigned identifier.
     #[must_use]
     pub fn id(&self) -> usize {
         self.id

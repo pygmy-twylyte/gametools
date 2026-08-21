@@ -1,14 +1,16 @@
 //! # gametools
 //!
 //! `gametools` provides reusable utilities for common game-building needs such as card decks,
-//! dice, spinners, dominos, grids, ranked ordering, and bounded resources. The goal is to
+//! dice, spinners, dominos, grids, field of view, pathfinding, ranked ordering, and bounded
+//! resources. The goal is to
 //! provide flexible, modular tools to simplify prototyping and building games and simulations.
 //!
 //! ## Features
 //! - `cards`: generic card faces plus deck, hand, and pile abstractions, with standard 52-card and Uno helpers.
 //! - `dice`: `Die` and `Rolls` support for regular and exploding dice along with common roll-analysis helpers.
-//! - `grid`: point-addressed rectangular grids with row, column, and neighbor traversal helpers.
+//! - `grid`: point-addressed rectangular grids with bounded or toroidal row, column, and neighbor traversal helpers.
 //! - `fov`: field-of-view maps with raycasting, shadowcasting, and rectangle-based algorithms.
+//! - `pathfinding`: Dijkstra maps plus A* variants for bounded or toroidal grids.
 //! - `ordering`: stable ranked lists (`RankedOrder`) and heap-backed queues (`PriorityQueue`) for turn order and scheduling.
 //! - `metered_resource`: bounded unsigned counters with saturating increase and reduction helpers.
 //! - `refilling_pool`: infinitely reusable random pools with conditional and contextual draw helpers.
@@ -38,8 +40,8 @@ pub use spinners::{Spinner, Wedge, wedges_from_tuples, wedges_from_values};
 
 pub mod gameerror;
 pub use gameerror::{
-    CardError, DiceError, DominoError, GameError, GridError, RefillingPoolError, SpinnerError,
-    ValueError,
+    CardError, DiceError, DominoError, GameError, GridError, PathfindingError, RefillingPoolError,
+    SpinnerError, ValueError,
 };
 
 pub mod grid;
@@ -60,12 +62,17 @@ pub use ordering::{
 
 pub mod pathfinding;
 pub use pathfinding::{
-    MoveSet, Path, SearchMap, a_star, a_star_weighted, a_star_weighted_with_topology,
-    a_star_with_topology, dijkstra_map, dijkstra_map_with_topology,
+    Cost, HeuristicWeight, MoveSet, Path, SearchMap, a_star, a_star_weighted,
+    a_star_weighted_with_topology, a_star_with_topology, dijkstra_map, dijkstra_map_with_topology,
+    path_from_search_map,
 };
 
+/// The crate-wide result type for APIs that can return [`GameError`].
 pub type GameResult<T> = Result<T, GameError>;
 
+/// Returns early with the supplied error when a condition is false.
+///
+/// The error is converted into the enclosing function's error type with [`Into`].
 #[macro_export]
 macro_rules! ensure {
     ($cond:expr, $err:expr) => {

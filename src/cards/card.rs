@@ -45,9 +45,15 @@ use super::deck::DeckId;
 /// able to match only on certain combinatons of aspects of their cards' faces, which
 /// should be implemented as methods on the specific card type.
 pub trait CardFaces {
+    /// Returns a display representation of the face visible to the player.
     fn display_front(&self) -> String;
+    /// Returns an optional display representation of the card back.
+    ///
+    /// Return `None` when the face type does not define a shared card back.
     fn display_back(&self) -> Option<String>;
+    /// Returns whether two faces are interchangeable for collection operations.
     fn matches(&self, other: &Self) -> bool;
+    /// Compares two faces for ordering within a game-defined card type.
     fn compare(&self, other: &Self) -> std::cmp::Ordering;
 }
 

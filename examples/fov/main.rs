@@ -246,7 +246,7 @@ impl FovDemo {
             painter.rect_stroke(
                 source_rect,
                 1.0,
-                Stroke::new(1.4, Color32::WHITE),
+                Stroke::new(1.4_f32, Color32::WHITE),
                 StrokeKind::Inside,
             );
         }
@@ -254,7 +254,7 @@ impl FovDemo {
         painter.rect_stroke(
             rect,
             0.0,
-            Stroke::new(1.0, Color32::from_rgb(85, 95, 90)),
+            Stroke::new(1.0_f32, Color32::from_rgb(85, 95, 90)),
             StrokeKind::Inside,
         );
     }

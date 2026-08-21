@@ -491,6 +491,7 @@ impl<T> Grid<T> {
     }
 
     /// Converts a point to an index for a corresponding flat vector representation, returning `None` if the point is out of bounds.
+    #[must_use]
     pub fn point_to_index(&self, point: Point) -> Option<usize> {
         let row = usize::try_from(point.row).ok()?;
         let col = usize::try_from(point.col).ok()?;
@@ -506,6 +507,7 @@ impl<T> Grid<T> {
         Some(index)
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn resolve_coordinates(&self, col: i64, row: i64, topology: GridTopology) -> Option<Point> {
         match topology {
             GridTopology::Bounded => {
@@ -528,8 +530,9 @@ impl<T> Grid<T> {
     ///
     /// Results follow `deltas` order. Toroidal traversal is directional: on a
     /// narrow grid, multiple deltas may resolve to the same point and are each
-    /// yielded. This is useful for cellular automata whose rules count each
-    /// directional neighbor.
+    /// yielded.
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn neighbors<'a>(
         &'a self,
         center: Point,
@@ -537,6 +540,8 @@ impl<T> Grid<T> {
         topology: GridTopology,
     ) -> impl DoubleEndedIterator<Item = (Point, &'a T)> + 'a {
         deltas.iter().filter_map(move |delta| {
+            // note: step calls resolve_coordinates which returns None
+            // if `center` is out of bounds, so this will never panic
             self.step(center, *delta, topology).map(|point| {
                 (
                     point,
@@ -554,12 +559,16 @@ impl<T> Grid<T> {
     /// The iterator yields each cell at most once, because it cannot safely
     /// yield multiple mutable references to an aliased wrapped destination.
     /// Results are yielded in backing storage order rather than delta order.
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn neighbors_mut(
         &mut self,
         center: Point,
         deltas: &[PointDelta],
         topology: GridTopology,
     ) -> impl DoubleEndedIterator<Item = (Point, &mut T)> {
+        // note: step() calls resolve_coordinates() which returns None
+        // if `center` is out of bounds, so this will never panic
         let neighbors: Vec<(Point, usize)> = deltas
             .iter()
             .filter_map(|delta| {
@@ -614,6 +623,7 @@ impl<T> Grid<T> {
     /// );
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn cardinal_neighbors(
         &self,
         center: Point,
@@ -670,6 +680,7 @@ impl<T> Grid<T> {
     /// assert_eq!(neighbors, vec![(Point::new(1, 1), 4)]);
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn diagonal_neighbors(
         &self,
         center: Point,
@@ -721,6 +732,7 @@ impl<T> Grid<T> {
     /// assert_eq!(grid.all_neighbors(Point::new(0, 0)).count(), 3);
     /// # Ok(()) }
     /// ```
+    #[must_use]
     pub fn all_neighbors(&self, center: Point) -> impl DoubleEndedIterator<Item = (Point, &T)> {
         self.neighbors(center, &PointDelta::ALL_DIRECTIONS, GridTopology::Bounded)
     }

@@ -55,7 +55,7 @@ fn main() -> GameResult<()> {
         build_edge_cost_function(&map, TERRAIN),
         |node, goal| MEAN_COST * (goal - node).distance_chebyshev(),
         HeuristicWeight::Dynamic(1.2),
-    )? {
+    ) {
         show_path_grid(&map, &path, format!("A* Path from {start:?} to {goal:?}"));
     }
 
